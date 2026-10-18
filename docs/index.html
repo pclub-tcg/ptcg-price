@@ -585,19 +585,37 @@ function matchRows(r){
     return[o,s]});
   const exact=num?scored.filter(x=>!x[0].box&&nz(x[0].num)===num&&x[1]>=6):[];return (exact.length?exact:scored.filter(x=>x[1]>=6)).sort((a,b)=>b[1]-a[1]||(a[0].sold-b[0].sold)).slice(0,6).map(x=>x[0]);
 }
+const CLAUDE_URL="https://claude.ai/artifact/4zUp4uN63W77EcmRmG8u36";
+async function shrink(f){/* 網站版先把照片縮到長邊 1600px，傳得快也比較省 */
+  try{const bm=await createImageBitmap(f);const k=Math.min(1,1600/Math.max(bm.width,bm.height));if(k===1&&f.size<1.5e6&&/jpe?g/.test(f.type))return f;
+    const c=document.createElement("canvas");c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext("2d").drawImage(bm,0,0,c.width,c.height);
+    return await new Promise(r=>c.toBlob(b=>r(b||f),"image/jpeg",.88))}catch(e){return f}}
 (async()=>{
   const btn=$("imgbtn"),file=$("imgfile"),box=$("imgres");
-  const sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;if(!sample)return;
-  const lim=await sample.limits().catch(()=>null);if(!lim||!lim.images)return;
-  btn.hidden=false;file.accept=(lim.images.mediaTypes||["image/jpeg","image/png","image/webp"]).join(",");
+  let ask=null,who="Claude";
+  const sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;
+  const lim=sample?await sample.limits().catch(()=>null):null;
+  if(sample&&lim&&lim.images){file.accept=(lim.images.mediaTypes||["image/jpeg","image/png","image/webp"]).join(",");ask=(f,signal)=>sample.json(IMG_PROMPT,{images:[f],signal})}
+  else{/* 獨立網站：改用自己的 Cloudflare Worker 辨識（金鑰放在 Worker，不在網頁裡） */
+    let cfg=null;try{cfg=await (await fetch("config.json",{cache:"no-store"})).json()}catch(e){}
+    file.accept="image/jpeg,image/png,image/webp";
+    if(cfg&&cfg.identify){ask=async(f,signal)=>{const body=await shrink(f);const r=await fetch(cfg.identify,{method:"POST",body,headers:{"content-type":body.type||"image/jpeg"},signal});
+      let j=null;try{j=await r.json()}catch(e){}
+      if(!r.ok){const e=new Error("identify");e.code=(j&&j.code)||(r.status===429?"rate_limited":"failed");throw e}return j}}
+    else if(!sample&&location.protocol.startsWith("http")&&!/claude\.ai|claudeusercontent/.test(location.host)){
+      btn.hidden=false;btn.onclick=()=>{box.hidden=false;box.innerHTML=`<div class="ir-main" style="grid-column:1/-1"><div class="ir-status"><b>網站版的以圖搜尋還在設定中</b><div class="ir-note">等 LINE 機器人的 Cloudflare 設定好就會自動開啟。現在可以先到 Claude 裡的版本上傳照片搜尋。</div></div><div><a class="ir-q" style="display:inline-block;margin:0;text-decoration:none" href="${CLAUDE_URL}" target="_blank" rel="noopener">開啟 Claude 版以圖搜尋</a></div></div><button type="button" class="ir-x" id="ir-x" aria-label="關閉">×</button>`;$("ir-x").onclick=()=>box.hidden=true};
+      return}
+  }
+  if(!ask)return;
+  btn.hidden=false;
   let ctl=null,url=null;
   btn.onclick=()=>file.click();
   file.onchange=async()=>{const f=file.files&&file.files[0];file.value="";if(!f)return;
     if(ctl)ctl.abort();ctl=new AbortController();if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(f);
-    box.hidden=false;box.innerHTML=`<img class="ir-prev" src="${url}" alt="你上傳的照片"><div class="ir-main"><div class="ir-status">正在請 Claude 辨識這張卡…<button type="button" class="ir-stop" id="ir-stop">停止</button></div><div class="ir-list" id="ir-list"></div></div><button type="button" class="ir-x" id="ir-x" aria-label="關閉以圖搜尋">×</button>`;
+    box.hidden=false;box.innerHTML=`<img class="ir-prev" src="${url}" alt="你上傳的照片"><div class="ir-main"><div class="ir-status">正在辨識這張卡…<button type="button" class="ir-stop" id="ir-stop">停止</button></div><div class="ir-list" id="ir-list"></div></div><button type="button" class="ir-x" id="ir-x" aria-label="關閉以圖搜尋">×</button>`;
     $("ir-x").onclick=()=>{if(ctl)ctl.abort();box.hidden=true};$("ir-stop").onclick=()=>ctl&&ctl.abort();
     try{
-      const r=await sample.json(IMG_PROMPT,{images:[f],signal:ctl.signal});
+      const r=await ask(f,ctl.signal);
       const hits=matchRows(r||{});
       const label=[r.name_zh||r.name_ja,r.number,r.set,r.rarity,r.grade,r.box?"原盒":""].filter(Boolean).join("・");
       const st=box.querySelector(".ir-status");st.innerHTML=`辨識結果：<b>${esc(label||"看不出是哪張卡")}</b>${r.confidence&&r.confidence!=="high"?`<span class="ir-conf">把握度 ${r.confidence==="medium"?"中":"低"}</span>`:""}${r.note?`<div class="ir-note">${esc(r.note)}</div>`:""}`;
@@ -607,7 +625,8 @@ function matchRows(r){
       $("ir-list").querySelectorAll(".ir-hit").forEach(b=>b.onclick=()=>openDetail({o:ROWS[+b.dataset.r]}));
       const q=$("ir-q");if(q)q.onclick=()=>{$("q").value=r.number;setTab("tcg")};
     }catch(e){const st=box.querySelector(".ir-status");if(!st)return;
-      const M={cancelled:"已停止辨識。",not_granted:"需要允許這個頁面使用 Claude 才能以圖搜尋。",sampling_disabled:"你的帳號目前不能使用 Claude 辨識。",rate_limited:"Claude 用量已達上限或太頻繁，請稍後再試。",image_rejected:"這個檔案無法讀取，請換一張 JPG 或 PNG 照片。",refused:"Claude 無法辨識這張圖片，請換一張清楚的卡片照片。",invalid_json:"辨識結果格式有誤，請再試一次。",session_expired:"登入已過期，請重新登入 Claude。"};
+      if(e&&e.name==="AbortError")e.code="cancelled";
+      const M={too_large:"照片太大，請換一張小一點的照片。",bad_origin:"這個網址不能使用以圖搜尋。",not_configured:"以圖搜尋還沒開啟。",daily_limit:"今天的以圖搜尋次數已用完，明天再試。",failed:"辨識失敗，請再試一次。",cancelled:"已停止辨識。",not_granted:"需要允許這個頁面使用 Claude 才能以圖搜尋。",sampling_disabled:"你的帳號目前不能使用 Claude 辨識。",rate_limited:"Claude 用量已達上限或太頻繁，請稍後再試。",image_rejected:"這個檔案無法讀取，請換一張 JPG 或 PNG 照片。",refused:"Claude 無法辨識這張圖片，請換一張清楚的卡片照片。",invalid_json:"辨識結果格式有誤，請再試一次。",session_expired:"登入已過期，請重新登入 Claude。"};
       st.textContent=M[e&&e.code]||"辨識失敗，請再試一次。";if(e&&(e.code==="not_granted"||e.code==="sampling_disabled"||e.code==="images_unavailable"))btn.hidden=true}
   };
 })();

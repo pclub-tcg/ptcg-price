@@ -4,6 +4,7 @@
 //   ANTHROPIC_API_KEY                               選填：以圖搜尋用
 //   SITE_URL   你的 GitHub Pages 網址，例如 https://帳號.github.io/ptcg-price/
 //   CLAUDE_MODEL 選填，預設 claude-sonnet-5-5
+//   IMAGE_LIMIT_PER_IP 選填，網站以圖搜尋每個 IP 每天幾次，預設 30
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -11,6 +12,7 @@ let DATA = null, DATA_AT = 0;
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    if (url.pathname === "/identify") return identifyRoute(req, env);
     if (req.method === "GET") return new Response("卡價套利王 LINE bot OK");
     if (req.method !== "POST" || url.pathname !== "/webhook") return new Response("Not found", { status: 404 });
     const body = await req.text();
@@ -169,6 +171,31 @@ async function identify(buf, mediaType, env) {
   const t = (j.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   const m = t.match(/\{[\s\S]*\}/);
   return m ? JSON.parse(m[0]) : {};
+}
+
+// ---------- 網站以圖搜尋：POST /identify（照片原始位元組） ----------
+async function identifyRoute(req, env) {
+  const site = env.SITE_URL ? new URL(env.SITE_URL).origin : "";
+  const origin = req.headers.get("origin") || "";
+  const cors = { "access-control-allow-origin": site || "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type", "access-control-max-age": "86400", vary: "origin" };
+  const out = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "content-type": "application/json; charset=utf-8" } });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") return out({ code: "failed" }, 405);
+  if (site && origin !== site) return out({ code: "bad_origin" }, 403);
+  if (!env.ANTHROPIC_API_KEY) return out({ code: "not_configured" }, 503);
+  const type = req.headers.get("content-type") || "";
+  if (!/^image\/(jpeg|png|webp|gif)/.test(type)) return out({ code: "image_rejected" }, 415);
+  const buf = new Uint8Array(await req.arrayBuffer());
+  if (!buf.length) return out({ code: "image_rejected" }, 400);
+  if (buf.length > 4.5 * 1024 * 1024) return out({ code: "too_large" }, 413);
+  // 簡單的每日次數限制（依 IP，存在 Cloudflare 快取，避免別人狂用你的 API 額度）
+  const ip = req.headers.get("cf-connecting-ip") || "x", day = new Date().toISOString().slice(0, 10);
+  const key = new Request(`https://rate.limit/${day}/${encodeURIComponent(ip)}`), cache = caches.default;
+  const used = +((await (await cache.match(key))?.text()) || 0), max = +(env.IMAGE_LIMIT_PER_IP || 30);
+  if (used >= max) return out({ code: "daily_limit" }, 429);
+  await cache.put(key, new Response(String(used + 1), { headers: { "cache-control": "max-age=90000" } }));
+  try { return out(await identify(buf, type, env)); }
+  catch (e) { console.error(e); return out({ code: "failed" }, 502); }
 }
 
 // ---------- Flex 訊息 ----------
