@@ -131,13 +131,13 @@ for r in cat["rows"]:
         "mq": mq, "cn": None, "sold": r[2], "tcg": r[1],
     })
 
-# 5. 走勢圖（給 LINE 卡片用，皮卡屋風格的咖啡色底）＋ 統計數字
+# 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
 import datetime
 KL = json.load(open(kline, encoding="utf-8"))["d"]
 FB = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 F = ImageFont.truetype(FB, 17)
-BG, GRID, LINE, TXT = (91, 58, 30), (122, 88, 52), (255, 210, 31), (236, 214, 170)
+BG, GRID, LINE, TXT = (42, 28, 23), (74, 52, 40), (255, 182, 39), (255, 214, 176)  # 噴火龍配色：炭黑底、火焰金線
 
 
 def kpts(key):
@@ -187,9 +187,9 @@ def chart(pts, name):
     xy = [(X(d), Y(v)) for d, v in pts]
     if len(xy) == 1:
         xy = [(x0, xy[0][1]), (x1, xy[0][1])]
-    ov = Image.new("RGB", im.size, (150, 108, 44))
+    ov = Image.new("RGB", im.size, (226, 86, 27))
     mask = Image.new("L", im.size, 0)
-    ImageDraw.Draw(mask).polygon(xy + [(xy[-1][0], y1), (xy[0][0], y1)], fill=120)
+    ImageDraw.Draw(mask).polygon(xy + [(xy[-1][0], y1), (xy[0][0], y1)], fill=95)
     im.paste(ov, (0, 0), mask)
     dr.line(xy, fill=LINE, width=4 * S, joint="curve")
     lx, ly = xy[-1]

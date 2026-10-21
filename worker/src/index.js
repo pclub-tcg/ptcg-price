@@ -229,13 +229,13 @@ async function identifyRoute(req, env) {
   catch (e) { console.error(e); return out({ code: "failed" }, 502); }
 }
 
-// ---------- Flex 訊息（皮卡屋風格：黃色標題區＋咖啡色行情區） ----------
+// ---------- Flex 訊息（噴火龍配色：火焰橘標題區＋炭黑行情區） ----------
 const yen = v => "¥" + Math.round(v).toLocaleString("en-US");
 const nt = v => "NT$" + Math.round(v).toLocaleString("en-US");
-const C = { y: "#FFD21F", ink: "#1C2333", or: "#F28C28", br: "#5B3A1E", br2: "#6E4826", cream: "#F3E3C3", mute: "#C9B48C", up: "#FF6B70", down: "#34D1BD" };
+const C = { y: "#FF8A2B", gold: "#FFB627", ink: "#2A1C17", or: "#C8341B", br: "#2A1C17", br2: "#3A2620", cream: "#FFE0C2", mute: "#BFA08A", up: "#FF6B5A", down: "#3CC8B4" };
 const T = (text, o = {}) => ({ type: "text", text: String(text), ...o });
 const pill = (t, bg, color = "#FFFFFF", size = "xxs") => ({ type: "box", layout: "vertical", backgroundColor: bg, cornerRadius: "20px", paddingStart: "8px", paddingEnd: "8px", paddingTop: "2px", paddingBottom: "2px", flex: 0, contents: [T(t, { size, color, weight: "bold" })] });
-const stat = (k, v) => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.y, weight: "bold", flex: 0 }), T(v, { size: "sm", color: "#FFFFFF", weight: "bold", align: "end" })] });
+const stat = (k, v) => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.gold, weight: "bold", flex: 0 }), T(v, { size: "sm", color: "#FFFFFF", weight: "bold", align: "end" })] });
 const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.cream, flex: 6, wrap: true }), T(v, { size: "sm", color, weight: "bold", align: "end", flex: 5 })] });
 
 function bubble(p, D, env) {
@@ -244,19 +244,19 @@ function bubble(p, D, env) {
   const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
     ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
     { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
-      T("⚡ 卡價套利王・日本行情", { size: "xxs", color: C.br, weight: "bold" }),
+      T("🔥 卡價套利王・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
       { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },
-      { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, "#E8590C")) },
-      ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.br, wrap: true, maxLines: 2 })] : []),
-      ...(p.note ? [T(p.note, { size: "xxs", color: "#9A3412", wrap: true, maxLines: 2 })] : []),
+      { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, C.ink, "#FFC48A")) },
+      ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.ink, wrap: true, maxLines: 2 })] : []),
+      ...(p.note ? [T(p.note, { size: "xxs", color: "#5A1408", wrap: true, maxLines: 2 })] : []),
     ] },
   ] };
   const body = [top];
   if (p.k1) {
     const chg = p.c30 == null ? null : p.c30;
     body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
-      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.y, C.br, "xs"),
-        T("最新 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.k1 * R), { size: "lg", color: C.y, weight: "bold", flex: 0 })] },
+      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.gold, C.ink, "xs"),
+        T("最新 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.k1 * R), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
       { type: "box", layout: "horizontal", contents: [T(yen(p.k1) + "（" + (p.kd || "") + "）", { size: "xxs", color: C.mute }),
         ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
       ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
@@ -267,11 +267,11 @@ function bubble(p, D, env) {
   const rows = [];
   if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆`, yen(p.m[0])));
   if (p.s && !p.k1) rows.push(line(`SNKRDUNK 中位・${p.s[1]}筆`, yen(p.s[0])));
-  if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.y));
+  if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
   if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
   if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
   if (!p.k1) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
-    pill("SNKRDUNK 成交走勢", C.y, C.br, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
+    pill("SNKRDUNK 成交走勢", C.gold, C.ink, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
   if (!rows.length) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
   if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
   body.push({ type: "box", layout: "vertical", flex: 1, contents: [] }); // 撐滿高度，避免輪播時下面出現白色空白
@@ -279,8 +279,8 @@ function bubble(p, D, env) {
     T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}`, { size: "xxs", color: C.mute, align: "end" })] });
   const actions = [{ type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
   const links = [];
-  if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
-  if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
+  if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
+  if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
   if (links.length) actions.push({ type: "box", layout: "horizontal", contents: links });
   return { type: "bubble", size: "giga",
     body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: C.br, contents: body },
