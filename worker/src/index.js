@@ -117,7 +117,9 @@ const HELP = `卡價套利王｜日本成交價 × 台灣社團價
 💱 試算 25000：算日圓價格的到手成本
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
-點卡片上的「看 K 線」可以看日 K、週 K 走勢。`;
+點卡片上的「看 K 線」可以看日 K、週 K 走勢。
+
+ℹ️ 本服務為個人製作的比價工具，與寶可夢公司、任天堂、SNKRDUNK、Mercari 無關；價格與圖片取自各平台公開資訊，僅供參考。如有權利疑慮請來訊，會立即處理。`;
 
 // ---------- 資料 ----------
 async function data(env) {
@@ -316,20 +318,26 @@ function carousel(list, D, env, alt) {
 // ---------- 圖文選單（開一次網址 /setup/richmenu 就會建立） ----------
 async function setupRichMenu(env) {
   const H = { authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN, "content-type": "application/json" };
-  const site = env.SITE_URL, cols = [30, 441, 851, 1262, 1673, 2083];
+  const site = env.SITE_URL;
   const msg = t => ({ type: "message", text: t });
+  const A = (x, y, width, height, action) => ({ bounds: { x, y, width, height }, action });
+  // 位置要跟 tools/richmenu.py 印出的 AREAS 一致
   const areas = [
-    { bounds: { x: 30, y: 200, width: 1610, height: 800 }, action: { type: "uri", uri: site } },
-    { bounds: { x: 1680, y: 200, width: 790, height: 385 }, action: msg("有賺頭") },
-    { bounds: { x: 1680, y: 615, width: 790, height: 385 }, action: msg("漲最多") },
-    ...["說明", "拍照", "查價", "原盒行情", "鑑定卡行情", "匯率試算"].map((t, i) => ({ bounds: { x: cols[i], y: 1040, width: 387, height: 616 },
-      action: t === "拍照" ? { type: "uri", uri: "https://line.me/R/nv/camera/" } : msg(t) })),
+    A(28, 28, 1124, 932, msg("查價")),
+    A(96, 1010, 524, 570, { type: "uri", uri: site }),
+    A(652, 1010, 460, 570, msg("說明")),
+    A(1208, 28, 618, 524, { type: "uri", uri: "https://line.me/R/nv/camera/" }),
+    A(1854, 28, 618, 524, msg("有賺頭")),
+    A(1208, 580, 618, 524, msg("漲最多")),
+    A(1854, 580, 618, 524, msg("原盒行情")),
+    A(1208, 1132, 618, 524, msg("鑑定卡行情")),
+    A(1854, 1132, 618, 524, msg("匯率試算")),
   ];
   const old = await (await fetch("https://api.line.me/v2/bot/richmenu/list", { headers: H })).json();
   const r = await fetch("https://api.line.me/v2/bot/richmenu", { method: "POST", headers: H, body: JSON.stringify({ size: { width: 2500, height: 1686 }, selected: true, name: "卡價套利王 主選單", chatBarText: "選單｜查卡價", areas }) });
   if (!r.ok) return new Response("建立失敗：" + await r.text(), { status: 500 });
   const { richMenuId } = await r.json();
-  const img = await fetch(new URL("richmenu.jpg", site).href);
+  const img = await fetch(new URL("richmenu.jpg?t=" + Date.now(), site).href); // 加時間避免拿到快取的舊圖
   const up = await fetch(`https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`, { method: "POST", headers: { authorization: H.authorization, "content-type": "image/jpeg" }, body: await img.arrayBuffer() });
   if (!up.ok) return new Response("上傳圖片失敗：" + await up.text(), { status: 500 });
   const def = await fetch(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, { method: "POST", headers: H });
