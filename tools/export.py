@@ -154,6 +154,9 @@ if bd_path and os.path.exists(bd_path):
         if d.get("k"):
             EXTRA_K["%d~b" % b["sid"]] = d["k"]
         nb += 1
+    json.dump([{"n": q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"]}
+               for q in prods if q["k"].startswith("x:") and q.get("s")],
+              open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False)
     print("extra boxes", nb)
 
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
