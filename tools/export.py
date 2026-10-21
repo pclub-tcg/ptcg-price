@@ -131,10 +131,32 @@ for r in cat["rows"]:
         "mq": mq, "cn": None, "sold": r[2], "tcg": r[1],
     })
 
+# 4b. 額外原盒（tools/boxes.json＋GitHub Actions 每天抓的 boxdata.json，publish.sh 用 BOX_DATA 傳進來）
+EXTRA_K = {}
+bd_path = os.environ.get("BOX_DATA")
+if bd_path and os.path.exists(bd_path):
+    bd = json.load(open(bd_path, encoding="utf-8"))["boxes"]
+    have = {p.get("sid") for p in prods if p.get("b") and p.get("sid")}
+    nb = 0
+    for b in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxes.json"), encoding="utf-8")):
+        d = bd.get(str(b["sid"]))
+        if not d or b["sid"] in have:
+            continue
+        name = (b["zh"] or b["jp"]) + " BOX"
+        prods.append({"k": "x:%d" % b["sid"], "n": name, "j": b["jp"] + " ボックス", "kw": " ".join([b["zh"], b["jp"], b["set"], "box 原盒"]),
+                      "num": "", "set": b["set"], "rar": "BOX", "p": 0, "b": 1, "img": None, "m": None,
+                      "s": d.get("s"), "sid": b["sid"], "kk": "%d~b" % b["sid"], "tw": None, "tt": "", "note": "",
+                      "mq": b["jp"] + " BOX シュリンク付き", "cn": None, "sold": 0})
+        if d.get("k"):
+            EXTRA_K["%d~b" % b["sid"]] = d["k"]
+        nb += 1
+    print("extra boxes", nb)
+
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
 import datetime
 KL = json.load(open(kline, encoding="utf-8"))["d"]
+KL.update(EXTRA_K)
 FB = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
 F = ImageFont.truetype(FB, 17)
 BG, GRID, LINE, TXT = (42, 28, 23), (74, 52, 40), (255, 182, 39), (255, 214, 176)  # 噴火龍配色：炭黑底、火焰金線

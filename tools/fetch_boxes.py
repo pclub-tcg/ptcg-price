@@ -19,7 +19,7 @@ for b in boxes:
     try:
         pid = get("https://snkrdunk.com/v1/apparels/%d" % sid)["productCatalogId"]
         h = get("https://snkrdunk.com/v3/products/%s/trading-history?range=all" % pid)
-        trades = [t["price"] for t in h.get("trades", []) if "個" in str(t.get("label", "1個")) and t.get("price")]
+        trades = [t["price"] for t in h.get("trades", []) if str(t.get("title", "1個")).startswith("1個") and t.get("price")]
         r = {}
         if trades:
             r["s"] = [round(statistics.median(trades[:8])), len(trades[:8])]
