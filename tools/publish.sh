@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# 產生網站並推到 GitHub 的 site 分支（GitHub Pages 從這個分支發佈）。
+# site 分支每次都只保留一個 commit，避免每天的價格圖檔把儲存庫越塞越大。
+# 用法：tools/publish.sh <artifact.html> <kline.json> <sprites 資料夾>
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$HERE")"
+OUT="$(mktemp -d)"
+python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
+python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
+touch "$OUT/.nojekyll"
+REMOTE="$(git -C "$REPO" remote get-url origin)"
+cd "$OUT"
+git init -q -b site
+git add -A
+git -c user.name="spickertop-afk" -c user.email="spickertop@gmail.com" commit -qm "網站資料 $(date -u +%F)"
+git push -q --force "$REMOTE" site
+echo "published $(du -sh "$OUT" | cut -f1)"

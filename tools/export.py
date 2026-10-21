@@ -131,6 +131,97 @@ for r in cat["rows"]:
         "mq": mq, "cn": None, "sold": r[2], "tcg": r[1],
     })
 
+# 5. 走勢圖（給 LINE 卡片用，皮卡屋風格的咖啡色底）＋ 統計數字
+from PIL import ImageDraw, ImageFont
+import datetime
+KL = json.load(open(kline, encoding="utf-8"))["d"]
+FB = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+F = ImageFont.truetype(FB, 17)
+BG, GRID, LINE, TXT = (91, 58, 30), (122, 88, 52), (255, 210, 31), (236, 214, 170)
+
+
+def kpts(key):
+    a = KL.get(key)
+    if not a:
+        return []
+    d, o = a[0], [(a[0], a[1])]
+    for i in range(2, len(a) - 1, 2):
+        d += a[i]
+        o.append((d, a[i + 1]))
+    return o
+
+
+def yen(v):
+    return "%.0fk" % (v / 1000) if v >= 10000 else format(round(v), ",")
+
+
+def chart(pts, name):
+    S = 2  # 先畫兩倍大再縮小，線條比較平滑
+    W, H = 600, 300
+    im = Image.new("RGB", (W * S, H * S), BG)
+    dr = ImageDraw.Draw(im)
+    f = ImageFont.truetype(FB, 17 * S)
+    lo, hi = min(v for _, v in pts), max(v for _, v in pts)
+    if hi == lo:
+        hi, lo = hi * 1.05, lo * 0.95
+    pad = (hi - lo) * 0.12
+    lo, hi = lo - pad, hi + pad
+    x0, x1, y0, y1 = 62 * S, (W - 14) * S, 14 * S, (H - 34) * S
+    d0, d1 = pts[0][0], pts[-1][0]
+    X = lambda d: x0 + (d - d0) / max(1, d1 - d0) * (x1 - x0)
+    Y = lambda v: y1 - (v - lo) / (hi - lo) * (y1 - y0)
+    for i in range(5):
+        v = lo + (hi - lo) * i / 4
+        y = Y(v)
+        dr.line([(x0, y), (x1, y)], fill=GRID, width=S)
+        dr.text((x0 - 8 * S, y), yen(v), fill=TXT, font=f, anchor="rm")
+    seen = set()
+    for d in range(d0, d1 + 1):  # 月份刻度
+        dt = datetime.date(1970, 1, 1) + datetime.timedelta(days=d)
+        if dt.day == 1 or d == d0:
+            k = (dt.year, dt.month)
+            if k in seen or (d == d0 and dt.day > 20):
+                continue
+            seen.add(k)
+            dr.text((X(d), y1 + 10 * S), "%d月" % dt.month, fill=TXT, font=f, anchor="mt")
+    xy = [(X(d), Y(v)) for d, v in pts]
+    if len(xy) == 1:
+        xy = [(x0, xy[0][1]), (x1, xy[0][1])]
+    ov = Image.new("RGB", im.size, (150, 108, 44))
+    mask = Image.new("L", im.size, 0)
+    ImageDraw.Draw(mask).polygon(xy + [(xy[-1][0], y1), (xy[0][0], y1)], fill=120)
+    im.paste(ov, (0, 0), mask)
+    dr.line(xy, fill=LINE, width=4 * S, joint="curve")
+    lx, ly = xy[-1]
+    dr.ellipse([lx - 9 * S, ly - 9 * S, lx + 9 * S, ly + 9 * S], fill=LINE)
+    dr.ellipse([lx - 4 * S, ly - 4 * S, lx + 4 * S, ly + 4 * S], fill=(255, 255, 255))
+    im = im.resize((W, H), Image.LANCZOS).quantize(64)
+    im.save(os.path.join(out, "img", name), optimize=True)
+    return "img/" + name
+
+
+nch = 0
+for p in prods:
+    pts = kpts(p.get("kk") or "")
+    if not pts:
+        continue
+    last = pts[-1][0]
+    w = [v for d, v in pts if d >= last - 90]
+    p["k1"] = pts[-1][1]
+    p["kh"], p["kl"], p["ka"], p["kn"] = max(w), min(w), round(sum(w) / len(w)), len(w)
+    p["kd"] = str(datetime.date(1970, 1, 1) + datetime.timedelta(days=last))
+    old = [v for d, v in pts if d <= last - 30]
+    if old:
+        p["c30"] = round((pts[-1][1] - old[-1]) / old[-1] * 100, 1)
+    p["ch"] = chart([q for q in pts if q[0] >= last - 120] or pts[-2:], "k%s.png" % re.sub(r"[^0-9a-z]", "_", p["kk"]))
+    nch += 1
+print("charts", nch)
+
+# 6. 網站設定（以圖搜尋的 Worker 網址）
+cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site-config.json")
+if os.path.exists(cfg):
+    shutil.copy(cfg, os.path.join(out, "config.json"))
+
 for p in prods:  # 去掉空值，縮小檔案
     for k in [k for k, v in p.items() if v in (None, "", 0) and k not in ("k", "n")]:
         del p[k]

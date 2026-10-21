@@ -13,6 +13,7 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
+    if (url.pathname === "/setup/richmenu") return setupRichMenu(env);
     if (req.method === "GET") return new Response("卡價套利王 LINE bot OK");
     if (req.method !== "POST" || url.pathname !== "/webhook") return new Response("Not found", { status: 404 });
     const body = await req.text();
@@ -38,11 +39,29 @@ async function reply(env, token, messages) {
   const r = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN },
-    body: JSON.stringify({ replyToken: token, messages: messages.slice(0, 5) }),
+    body: JSON.stringify({ replyToken: token, messages: withQuick(messages.slice(0, 5)) }),
   });
   if (!r.ok) console.error("reply failed", r.status, await r.text());
 }
 const text = t => ({ type: "text", text: t.slice(0, 4900) });
+
+const QUICK = [
+  { type: "action", action: { type: "message", label: "💰 有賺頭", text: "有賺頭" } },
+  { type: "action", action: { type: "message", label: "📈 漲最多", text: "漲最多" } },
+  { type: "action", action: { type: "camera", label: "拍照查價" } },
+  { type: "action", action: { type: "cameraRoll", label: "選照片查價" } },
+  { type: "action", action: { type: "message", label: "📦 原盒", text: "原盒行情" } },
+  { type: "action", action: { type: "message", label: "🏅 鑑定卡", text: "鑑定卡行情" } },
+  { type: "action", action: { type: "message", label: "使用說明", text: "說明" } },
+];
+function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
+
+const RANK = {
+  gap: (D) => D.products.map(p => ({ p, c: calc(p, D) })).filter(x => x.c && x.c.gap != null && x.c.gap > 0).sort((a, b) => b.c.gap / b.c.cost - a.c.gap / a.c.cost).map(x => x.p),
+  up: (D) => D.products.filter(p => p.c30 != null && (p.kn || 0) >= 8 && (p.k1 || 0) >= 3000).sort((a, b) => b.c30 - a.c30),
+  box: (D) => D.products.filter(p => p.b && p.k1).sort((a, b) => b.k1 - a.k1),
+  psa: (D) => D.products.filter(p => p.p && p.k1).sort((a, b) => (b.c30 ?? -99) - (a.c30 ?? -99)),
+};
 
 async function handle(ev, env) {
   if (ev.type === "follow") return reply(env, ev.replyToken, [text(HELP)]);
@@ -50,12 +69,20 @@ async function handle(ev, env) {
   const D = await data(env);
   if (ev.message.type === "text") {
     const q = ev.message.text.trim();
-    if (/^(說明|help|使用說明|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
-    if (/^(有賺頭|賺|推薦|熱門)$/.test(q)) {
-      const list = D.products.map(p => ({ p, c: calc(p, D) })).filter(x => x.c && x.c.gap != null && x.c.gap > 0)
-        .sort((a, b) => b.c.gap / b.c.cost - a.c.gap / a.c.cost).slice(0, 10).map(x => x.p);
-      if (!list.length) return reply(env, ev.replyToken, [text("目前沒有價差為正的商品。")]);
-      return reply(env, ev.replyToken, [text("目前價差最大的商品（日本成本 → 台灣社團價）："), carousel(list, D, env, "有賺頭的商品")]);
+    if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
+    if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
+      quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
+    if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
+    const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
+    if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
+      return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
+    const lists = [[/^(有賺頭|賺|推薦)$/, "gap", "價差最大的商品（台灣價 − 日本到手成本）", "目前沒有價差為正的商品。"],
+      [/^(漲最多|漲幅|熱門|市場趨勢)$/, "up", "SNKRDUNK 近 30 天漲最多", "目前沒有足夠的成交資料。"],
+      [/^(原盒行情|原盒|box)$/i, "box", "原盒行情（SNKRDUNK 成交價高到低）", "目前沒有原盒資料。"],
+      [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
+    for (const [re, k, title, none] of lists) if (re.test(q)) {
+      const list = RANK[k](D).slice(0, 10);
+      return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
     }
     const hits = search(q, D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
@@ -80,12 +107,16 @@ async function handle(ev, env) {
 
 const HELP = `卡價套利王｜日本成交價 × 台灣社團價
 
-📝 文字查價：傳卡號、卡名或系列
+🔍 查價：直接傳卡號、卡名或系列
 　例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX
-📷 以圖搜尋：直接傳卡片照片
-💰 傳「有賺頭」：看目前價差最大的商品
+📷 拍照查價：傳卡片照片，自動辨識
+💰 有賺頭：台灣價差最大的商品
+📈 漲最多：SNKRDUNK 近 30 天漲幅排行
+📦 原盒行情／🏅 鑑定卡行情
+💱 試算 25000：算日圓價格的到手成本
 
-價格說明：日本價為 Mercari / SNKRDUNK 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。`;
+價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
+點卡片上的「看 K 線」可以看日 K、週 K 走勢。`;
 
 // ---------- 資料 ----------
 async function data(env) {
@@ -198,42 +229,89 @@ async function identifyRoute(req, env) {
   catch (e) { console.error(e); return out({ code: "failed" }, 502); }
 }
 
-// ---------- Flex 訊息 ----------
+// ---------- Flex 訊息（皮卡屋風格：黃色標題區＋咖啡色行情區） ----------
 const yen = v => "¥" + Math.round(v).toLocaleString("en-US");
 const nt = v => "NT$" + Math.round(v).toLocaleString("en-US");
-const row = (k, v, color) => ({ type: "box", layout: "horizontal", contents: [
-  { type: "text", text: k, size: "xs", color: "#8a8778", flex: 5 },
-  { type: "text", text: v, size: "sm", color: color || "#1c2333", align: "end", flex: 6, weight: "bold" }] });
+const C = { y: "#FFD21F", ink: "#1C2333", or: "#F28C28", br: "#5B3A1E", br2: "#6E4826", cream: "#F3E3C3", mute: "#C9B48C", up: "#FF6B70", down: "#34D1BD" };
+const T = (text, o = {}) => ({ type: "text", text: String(text), ...o });
+const pill = (t, bg, color = "#FFFFFF", size = "xxs") => ({ type: "box", layout: "vertical", backgroundColor: bg, cornerRadius: "20px", paddingStart: "8px", paddingEnd: "8px", paddingTop: "2px", paddingBottom: "2px", flex: 0, contents: [T(t, { size, color, weight: "bold" })] });
+const stat = (k, v) => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.y, weight: "bold", flex: 0 }), T(v, { size: "sm", color: "#FFFFFF", weight: "bold", align: "end" })] });
+const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.cream, flex: 5 }), T(v, { size: "sm", color, weight: "bold", align: "end", flex: 6 })] });
 
 function bubble(p, D, env) {
-  const c = calc(p, D), site = env.SITE_URL;
-  const rows = [];
-  if (p.s) rows.push(row("SNKRDUNK 成交中位", `${yen(p.s[0])}（${p.s[1]}筆）`));
-  if (p.m) rows.push(row("Mercari 成交中位", `${yen(p.m[0])}（${p.m[1]}筆）`));
-  if (c) rows.push(row(`到手成本（${c.src}）`, nt(c.cost)));
-  if (p.tw) rows.push(row("台灣社團" + (p.tt || ""), nt(p.tw)));
-  if (c && c.gap != null) rows.push(row("價差", (c.gap >= 0 ? "+" : "") + Math.round(c.gap).toLocaleString("en-US"), c.gap > 0 ? "#d6363d" : "#0f8f80"));
-  if (!rows.length) rows.push({ type: "text", text: "還沒有日本成交價", size: "sm", color: "#8a8778" });
-  const actions = [];
-  actions.push({ type: "button", style: "primary", color: "#1c2333", height: "sm", action: { type: "uri", label: p.kk ? "看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } });
-  if (p.sid) actions.push({ type: "button", style: "link", height: "sm", action: { type: "uri", label: "SNKRDUNK 成交紀錄", uri: "https://snkrdunk.com/apparels/" + p.sid } });
-  if (p.mq) actions.push({ type: "button", style: "link", height: "sm", action: { type: "uri", label: "Mercari 成交紀錄", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
-  const b = {
-    type: "bubble", size: "kilo",
-    body: { type: "box", layout: "vertical", spacing: "sm", contents: [
-      { type: "text", text: p.n, weight: "bold", size: "md", wrap: true, maxLines: 3 },
-      ...(p.j && p.j !== p.n ? [{ type: "text", text: p.j, size: "xxs", color: "#8a8778", wrap: true, maxLines: 2 }] : []),
-      ...(p.note ? [{ type: "text", text: p.note, size: "xxs", color: "#b26a00", wrap: true, maxLines: 3 }] : []),
-      { type: "separator", margin: "md" },
-      { type: "box", layout: "vertical", spacing: "xs", margin: "md", contents: rows },
+  const c = calc(p, D), site = env.SITE_URL, R = D.rate;
+  const tags = [p.b ? "原盒" : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
+  const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
+    ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
+    { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
+      T("⚡ 卡價套利王・日本行情", { size: "xxs", color: C.br, weight: "bold" }),
+      { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },
+      { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, "#E8590C")) },
+      ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.br, wrap: true, maxLines: 2 })] : []),
+      ...(p.note ? [T(p.note, { size: "xxs", color: "#9A3412", wrap: true, maxLines: 2 })] : []),
     ] },
-    footer: { type: "box", layout: "vertical", spacing: "xs", contents: actions },
-  };
-  if (p.img) b.hero = { type: "image", url: new URL(p.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "fit", backgroundColor: "#232a3b" };
-  return b;
+  ] };
+  const body = [top];
+  if (p.k1) {
+    const chg = p.c30 == null ? null : p.c30;
+    body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
+      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.y, C.br, "xs"),
+        T("最新 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.k1 * R), { size: "lg", color: C.y, weight: "bold", flex: 0 })] },
+      { type: "box", layout: "horizontal", contents: [T(yen(p.k1) + "（" + (p.kd || "") + "）", { size: "xxs", color: C.mute }),
+        ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
+      ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
+      { type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", yen(p.kh)), stat("均", yen(p.ka)), stat("低", yen(p.kl))] },
+      T(`近 90 天有 ${p.kn} 天成交`, { size: "xxs", color: C.mute, align: "end" }),
+    ] });
+  }
+  const rows = [];
+  if (p.m) rows.push(line(`Mercari 成交中位（${p.m[1]}筆）`, yen(p.m[0])));
+  if (p.s && !p.k1) rows.push(line(`SNKRDUNK 成交中位（${p.s[1]}筆）`, yen(p.s[0])));
+  if (c) rows.push(line(`日本到手成本（${c.src}）`, nt(c.cost), C.y));
+  if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
+  if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
+  if (!rows.length && !p.k1) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
+  if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
+  body.push({ type: "box", layout: "horizontal", backgroundColor: C.br, paddingStart: "14px", paddingEnd: "14px", paddingTop: "6px", paddingBottom: "8px", contents: [
+    T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}・成交價未含手續費關稅`, { size: "xxs", color: C.mute, align: "end" })] });
+  const actions = [{ type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
+  const links = [];
+  if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
+  if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
+  if (links.length) actions.push({ type: "box", layout: "horizontal", contents: links });
+  return { type: "bubble", size: "mega",
+    body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", contents: body },
+    footer: { type: "box", layout: "vertical", spacing: "xs", backgroundColor: C.y, paddingAll: "10px", contents: actions } };
 }
 function carousel(list, D, env, alt) {
-  return { type: "flex", altText: (alt || "查價結果").slice(0, 380), contents: { type: "carousel", contents: list.slice(0, 10).map(p => bubble(p, D, env)) } };
+  const bs = list.slice(0, 10).map(p => bubble(p, D, env));
+  while (bs.length > 1 && JSON.stringify(bs).length > 46000) bs.pop(); // LINE 輪播訊息上限 50KB
+  return { type: "flex", altText: (alt || "查價結果").slice(0, 380), contents: { type: "carousel", contents: bs } };
 }
 
-export { search, matchImage, calc, bubble, carousel, verify };
+// ---------- 圖文選單（開一次網址 /setup/richmenu 就會建立） ----------
+async function setupRichMenu(env) {
+  const H = { authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN, "content-type": "application/json" };
+  const site = env.SITE_URL, cols = [30, 441, 851, 1262, 1673, 2083];
+  const msg = t => ({ type: "message", text: t });
+  const areas = [
+    { bounds: { x: 30, y: 200, width: 1610, height: 800 }, action: { type: "uri", uri: site } },
+    { bounds: { x: 1680, y: 200, width: 790, height: 385 }, action: msg("有賺頭") },
+    { bounds: { x: 1680, y: 615, width: 790, height: 385 }, action: msg("漲最多") },
+    ...["說明", "拍照", "查價", "原盒行情", "鑑定卡行情", "匯率試算"].map((t, i) => ({ bounds: { x: cols[i], y: 1040, width: 387, height: 616 },
+      action: t === "拍照" ? { type: "uri", uri: "https://line.me/R/nv/camera/" } : msg(t) })),
+  ];
+  const old = await (await fetch("https://api.line.me/v2/bot/richmenu/list", { headers: H })).json();
+  const r = await fetch("https://api.line.me/v2/bot/richmenu", { method: "POST", headers: H, body: JSON.stringify({ size: { width: 2500, height: 1686 }, selected: true, name: "卡價套利王 主選單", chatBarText: "選單｜查卡價", areas }) });
+  if (!r.ok) return new Response("建立失敗：" + await r.text(), { status: 500 });
+  const { richMenuId } = await r.json();
+  const img = await fetch(new URL("richmenu.jpg", site).href);
+  const up = await fetch(`https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`, { method: "POST", headers: { authorization: H.authorization, "content-type": "image/jpeg" }, body: await img.arrayBuffer() });
+  if (!up.ok) return new Response("上傳圖片失敗：" + await up.text(), { status: 500 });
+  const def = await fetch(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, { method: "POST", headers: H });
+  if (!def.ok) return new Response("設為預設失敗：" + await def.text(), { status: 500 });
+  for (const m of old.richmenus || []) await fetch(`https://api.line.me/v2/bot/richmenu/${m.richMenuId}`, { method: "DELETE", headers: H });
+  return new Response("圖文選單已更新 ✅", { headers: { "content-type": "text/plain; charset=utf-8" } });
+}
+
+export { search, matchImage, calc, bubble, carousel, verify, RANK };
