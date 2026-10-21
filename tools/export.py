@@ -266,6 +266,7 @@ if HI and os.path.isdir(HI):
                 shutil.copy(f, dst)
             p["img"] = "hi/" + os.path.basename(f)
             nhi += 1
+json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os.path.isdir(os.path.join(out, "hi")) else [], open(os.path.join(out, "hi.json"), "w"))
 print("hi-res images", nhi)
 
 for p in prods:  # 去掉空值，縮小檔案
