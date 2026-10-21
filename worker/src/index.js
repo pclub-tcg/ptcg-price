@@ -236,7 +236,7 @@ const C = { y: "#FFD21F", ink: "#1C2333", or: "#F28C28", br: "#5B3A1E", br2: "#6
 const T = (text, o = {}) => ({ type: "text", text: String(text), ...o });
 const pill = (t, bg, color = "#FFFFFF", size = "xxs") => ({ type: "box", layout: "vertical", backgroundColor: bg, cornerRadius: "20px", paddingStart: "8px", paddingEnd: "8px", paddingTop: "2px", paddingBottom: "2px", flex: 0, contents: [T(t, { size, color, weight: "bold" })] });
 const stat = (k, v) => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.y, weight: "bold", flex: 0 }), T(v, { size: "sm", color: "#FFFFFF", weight: "bold", align: "end" })] });
-const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.cream, flex: 5 }), T(v, { size: "sm", color, weight: "bold", align: "end", flex: 6 })] });
+const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.cream, flex: 6, wrap: true }), T(v, { size: "sm", color, weight: "bold", align: "end", flex: 5 })] });
 
 function bubble(p, D, env) {
   const c = calc(p, D), site = env.SITE_URL, R = D.rate;
@@ -265,22 +265,25 @@ function bubble(p, D, env) {
     ] });
   }
   const rows = [];
-  if (p.m) rows.push(line(`Mercari 成交中位（${p.m[1]}筆）`, yen(p.m[0])));
-  if (p.s && !p.k1) rows.push(line(`SNKRDUNK 成交中位（${p.s[1]}筆）`, yen(p.s[0])));
-  if (c) rows.push(line(`日本到手成本（${c.src}）`, nt(c.cost), C.y));
+  if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆`, yen(p.m[0])));
+  if (p.s && !p.k1) rows.push(line(`SNKRDUNK 中位・${p.s[1]}筆`, yen(p.s[0])));
+  if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.y));
   if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
   if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
-  if (!rows.length && !p.k1) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
+  if (!p.k1) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
+    pill("SNKRDUNK 成交走勢", C.y, C.br, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
+  if (!rows.length) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
   if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
+  body.push({ type: "box", layout: "vertical", flex: 1, contents: [] }); // 撐滿高度，避免輪播時下面出現白色空白
   body.push({ type: "box", layout: "horizontal", backgroundColor: C.br, paddingStart: "14px", paddingEnd: "14px", paddingTop: "6px", paddingBottom: "8px", contents: [
-    T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}・成交價未含手續費關稅`, { size: "xxs", color: C.mute, align: "end" })] });
+    T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}`, { size: "xxs", color: C.mute, align: "end" })] });
   const actions = [{ type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
   const links = [];
   if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
   if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.br, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
   if (links.length) actions.push({ type: "box", layout: "horizontal", contents: links });
-  return { type: "bubble", size: "mega",
-    body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", contents: body },
+  return { type: "bubble", size: "giga",
+    body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: C.br, contents: body },
     footer: { type: "box", layout: "vertical", spacing: "xs", backgroundColor: C.y, paddingAll: "10px", contents: actions } };
 }
 function carousel(list, D, env, alt) {
