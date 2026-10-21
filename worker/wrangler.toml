@@ -6,3 +6,6 @@ compatibility_date = "2025-09-01"
 SITE_URL = "https://spickertop-afk.github.io/ptcg-price/"
 # CLAUDE_MODEL = "claude-sonnet-5-5"
 # 密碼類請用 `npx wrangler secret put LINE_CHANNEL_SECRET` 等指令設定，不要寫在這裡
+
+[ai]
+binding = "AI"

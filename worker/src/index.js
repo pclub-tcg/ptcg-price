@@ -1,7 +1,8 @@
 // 卡價套利王 LINE 機器人（Cloudflare Worker）
 // 環境變數（在 Cloudflare 設定頁填，不要寫進程式）：
 //   LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN  必填
-//   ANTHROPIC_API_KEY                               選填：以圖搜尋用
+//   ANTHROPIC_API_KEY                               選填：以圖搜尋用（有填就用 Claude，比較準）
+//   AI 繫結（Workers AI）                           沒有 Claude 金鑰時，用 Cloudflare 免費 AI 看圖
 //   SITE_URL   你的 GitHub Pages 網址，例如 https://帳號.github.io/ptcg-price/
 //   CLAUDE_MODEL 選填，預設 claude-sonnet-5-5
 //   IMAGE_LIMIT_PER_IP 選填，網站以圖搜尋每個 IP 每天幾次，預設 30
@@ -89,7 +90,7 @@ async function handle(ev, env) {
     return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果")]);
   }
   if (ev.message.type === "image") {
-    if (!env.ANTHROPIC_API_KEY) return reply(env, ev.replyToken, [text("以圖搜尋還沒開啟。請先用文字查詢，例如「SV8 132/106」或「噴火龍 PSA10」。")]);
+    if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, ev.replyToken, [text("以圖搜尋還沒開啟。請先用文字查詢，例如「SV8 132/106」或「噴火龍 PSA10」。")]);
     const img = await fetch(`https://api-data.line.me/v2/bot/message/${ev.message.id}/content`, { headers: { authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN } });
     if (!img.ok) return reply(env, ev.replyToken, [text("讀不到這張照片，請再傳一次。")]);
     const buf = new Uint8Array(await img.arrayBuffer());
@@ -184,8 +185,28 @@ Read the card number printed at the bottom (e.g. "132/106", "143/S-P", "020/M-P"
 Reply with only one JSON object and nothing else:
 {"name_ja": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
 
+// Cloudflare Workers AI（免費額度）能看圖的模型，依序嘗試
+const CF_MODELS = ["@cf/meta/llama-4-scout-17b-16e-instruct", "@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/google/gemma-3-12b-it"];
+async function identifyCF(b64, mediaType, env) {
+  let last;
+  for (const model of CF_MODELS) {
+    try {
+      const r = await env.AI.run(model, { max_tokens: 400, temperature: 0, messages: [{ role: "user", content: [
+        { type: "text", text: PROMPT },
+        { type: "image_url", image_url: { url: `data:${/png|webp|gif/.test(mediaType) ? mediaType : "image/jpeg"};base64,${b64}` } },
+      ] }] });
+      const t = typeof r === "string" ? r : (r.response ?? r.choices?.[0]?.message?.content ?? "");
+      const m = String(typeof t === "object" ? JSON.stringify(t) : t).match(/\{[\s\S]*\}/);
+      if (m) { const j = JSON.parse(m[0]); j._model = model; if (!j.confidence || j.confidence === "high") j.confidence = "medium"; return j; }
+      last = new Error("no json from " + model);
+    } catch (e) { last = e; console.error("workers ai", model, e && e.message); }
+  }
+  throw last || new Error("workers ai failed");
+}
+
 async function identify(buf, mediaType, env) {
   let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  if (!env.ANTHROPIC_API_KEY) return identifyCF(btoa(bin), mediaType, env);
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
@@ -213,7 +234,7 @@ async function identifyRoute(req, env) {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return out({ code: "failed" }, 405);
   if (site && origin !== site) return out({ code: "bad_origin" }, 403);
-  if (!env.ANTHROPIC_API_KEY) return out({ code: "not_configured" }, 503);
+  if (!env.ANTHROPIC_API_KEY && !env.AI) return out({ code: "not_configured" }, 503);
   const type = req.headers.get("content-type") || "";
   if (!/^image\/(jpeg|png|webp|gif)/.test(type)) return out({ code: "image_rejected" }, 415);
   const buf = new Uint8Array(await req.arrayBuffer());
