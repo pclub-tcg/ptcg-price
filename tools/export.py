@@ -165,7 +165,7 @@ def chart(pts, name):
     if hi == lo:
         hi, lo = hi * 1.05, lo * 0.95
     pad = (hi - lo) * 0.12
-    lo, hi = lo - pad, hi + pad
+    lo, hi = max(0, lo - pad), hi + pad
     x0, x1, y0, y1 = 62 * S, (W - 14) * S, 14 * S, (H - 34) * S
     d0, d1 = pts[0][0], pts[-1][0]
     X = lambda d: x0 + (d - d0) / max(1, d1 - d0) * (x1 - x0)
@@ -200,11 +200,37 @@ def chart(pts, name):
     return "img/" + name
 
 
+def clean(pts, ref, box):
+    """SNKRDUNK 每日均價有時會混到別的規格（例如原盒混到整箱、無膠膜），
+    以最近成交中位數為基準，把差太多的日子拿掉。"""
+    if not pts:
+        return pts
+    if not ref:
+        recent = sorted(v for d, v in pts if d >= pts[-1][0] - 60)
+        ref = recent[len(recent) // 2]
+    lo, hi = (0.7, 1.4) if box else (0.5, 2.0)
+    return [(d, v) for d, v in pts if ref * lo <= v <= ref * hi]
+
+
+def encode(pts):
+    a = [pts[0][0], pts[0][1]]
+    for (d0, _), (d1, v) in zip(pts, pts[1:]):
+        a += [d1 - d0, v]
+    return a
+
+
+KL_OUT = dict(KL)
 nch = 0
 for p in prods:
-    pts = kpts(p.get("kk") or "")
-    if not pts:
+    kk = p.get("kk") or ""
+    raw = kpts(kk)
+    if not raw:
         continue
+    pts = clean(raw, (p.get("s") or [None])[0], kk.endswith("~b"))
+    if len(pts) < 3:
+        KL_OUT.pop(kk, None)
+        continue
+    KL_OUT[kk] = encode(pts)
     last = pts[-1][0]
     w = [v for d, v in pts if d >= last - 90]
     p["k1"] = pts[-1][1]
@@ -213,8 +239,12 @@ for p in prods:
     old = [v for d, v in pts if d <= last - 30]
     if old:
         p["c30"] = round((pts[-1][1] - old[-1]) / old[-1] * 100, 1)
-    p["ch"] = chart([q for q in pts if q[0] >= last - 120] or pts[-2:], "k%s.png" % re.sub(r"[^0-9a-z]", "_", p["kk"]))
+    p["ch"] = chart([q for q in pts if q[0] >= last - 120] or pts[-2:], "k%s.png" % re.sub(r"[^0-9a-z]", "_", kk))
     nch += 1
+# 網站的 K 線也用清理過的資料
+kd = json.load(open(kline, encoding="utf-8"))
+kd["d"] = KL_OUT
+json.dump(kd, open(os.path.join(out, "kline.json"), "w", encoding="utf-8"), separators=(",", ":"))
 print("charts", nch)
 
 # 6. 網站設定（以圖搜尋的 Worker 網址）

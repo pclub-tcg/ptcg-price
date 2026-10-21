@@ -59,7 +59,7 @@ function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[ms
 const RANK = {
   gap: (D) => D.products.map(p => ({ p, c: calc(p, D) })).filter(x => x.c && x.c.gap != null && x.c.gap > 0).sort((a, b) => b.c.gap / b.c.cost - a.c.gap / a.c.cost).map(x => x.p),
   up: (D) => D.products.filter(p => p.c30 != null && (p.kn || 0) >= 8 && (p.k1 || 0) >= 3000).sort((a, b) => b.c30 - a.c30),
-  box: (D) => D.products.filter(p => p.b && p.k1).sort((a, b) => b.k1 - a.k1),
+  box: (D) => D.products.filter(p => p.b && p.s).sort((a, b) => b.s[0] - a.s[0]),
   psa: (D) => D.products.filter(p => p.p && p.k1).sort((a, b) => (b.c30 ?? -99) - (a.c30 ?? -99)),
 };
 
@@ -252,25 +252,25 @@ function bubble(p, D, env) {
     ] },
   ] };
   const body = [top];
-  if (p.k1) {
+  if (p.k1 || p.s) {
     const chg = p.c30 == null ? null : p.c30;
+    const head = p.s ? p.s[0] : p.k1; // 以 SNKRDUNK 最近成交的中位數為準（跟到手成本用同一個價格）
     body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
       { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.gold, C.ink, "xs"),
-        T("最新 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.k1 * R), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
-      { type: "box", layout: "horizontal", contents: [T(yen(p.k1) + "（" + (p.kd || "") + "）", { size: "xxs", color: C.mute }),
+        T("成交中位 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(yen(head), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
+      { type: "box", layout: "horizontal", contents: [T(`約 ${nt(head * R)}${p.s ? `・最近 ${p.s[1]} 筆` : ""}`, { size: "xxs", color: C.mute }),
         ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
       ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
-      { type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", yen(p.kh)), stat("均", yen(p.ka)), stat("低", yen(p.kl))] },
-      T(`近 90 天有 ${p.kn} 天成交`, { size: "xxs", color: C.mute, align: "end" }),
+      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", yen(p.kh)), stat("均", yen(p.ka)), stat("低", yen(p.kl))] },
+        T(`近 90 天每日均價・${p.kn} 天有成交`, { size: "xxs", color: C.mute, align: "end" })] : []),
     ] });
   }
   const rows = [];
   if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆`, yen(p.m[0])));
-  if (p.s && !p.k1) rows.push(line(`SNKRDUNK 中位・${p.s[1]}筆`, yen(p.s[0])));
   if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
   if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
   if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
-  if (!p.k1) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
+  if (!p.k1 && !p.s) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
     pill("SNKRDUNK 成交走勢", C.gold, C.ink, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
   if (!rows.length) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
   if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
