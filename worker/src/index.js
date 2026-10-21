@@ -257,16 +257,16 @@ function bubble(p, D, env) {
     const head = p.s ? p.s[0] : p.k1; // 以 SNKRDUNK 最近成交的中位數為準（跟到手成本用同一個價格）
     body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
       { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.gold, C.ink, "xs"),
-        T("成交中位 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(yen(head), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
-      { type: "box", layout: "horizontal", contents: [T(`約 ${nt(head * R)}${p.s ? `・最近 ${p.s[1]} 筆` : ""}`, { size: "xxs", color: C.mute }),
+        T("成交中位 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(head * R), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
+      { type: "box", layout: "horizontal", contents: [T(`${yen(head)}${p.s ? `・最近 ${p.s[1]} 筆` : ""}`, { size: "xxs", color: C.mute }),
         ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
       ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
-      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", yen(p.kh)), stat("均", yen(p.ka)), stat("低", yen(p.kl))] },
+      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * R)), stat("均", nt(p.ka * R)), stat("低", nt(p.kl * R))] },
         T(`近 90 天每日均價・${p.kn} 天有成交`, { size: "xxs", color: C.mute, align: "end" })] : []),
     ] });
   }
   const rows = [];
-  if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆`, yen(p.m[0])));
+  if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆（${yen(p.m[0])}）`, nt(p.m[0] * R)));
   if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
   if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
   if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));

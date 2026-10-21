@@ -151,8 +151,9 @@ def kpts(key):
     return o
 
 
-def yen(v):
-    return "%.0fk" % (v / 1000) if v >= 10000 else format(round(v), ",")
+def ntd(v):  # 走勢圖座標用台幣
+    v *= rate
+    return "%.1fk" % (v / 1000) if v >= 10000 else format(round(v, -1), ",.0f")
 
 
 def chart(pts, name):
@@ -174,7 +175,7 @@ def chart(pts, name):
         v = lo + (hi - lo) * i / 4
         y = Y(v)
         dr.line([(x0, y), (x1, y)], fill=GRID, width=S)
-        dr.text((x0 - 8 * S, y), yen(v), fill=TXT, font=f, anchor="rm")
+        dr.text((x0 - 8 * S, y), ntd(v), fill=TXT, font=f, anchor="rm")
     seen = set()
     for d in range(d0, d1 + 1):  # 月份刻度
         dt = datetime.date(1970, 1, 1) + datetime.timedelta(days=d)
