@@ -136,11 +136,15 @@ EXTRA_K = {}
 bd_path = os.environ.get("BOX_DATA")
 if bd_path and os.path.exists(bd_path):
     bd = json.load(open(bd_path, encoding="utf-8"))["boxes"]
-    have = {p.get("sid") for p in prods if p.get("b") and p.get("sid")}
+    have = {p.get("sid"): p for p in prods if p.get("b") and p.get("sid")}
     nb = 0
     for b in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxes.json"), encoding="utf-8")):
         d = bd.get(str(b["sid"]))
-        if not d or b["sid"] in have:
+        if b["sid"] in have:  # 已經有的原盒：補上中日文名稱方便搜尋
+            q = have[b["sid"]]
+            q["kw"] = " ".join(x for x in [q.get("kw", ""), b["zh"], b["jp"], b["set"]] if x)
+            continue
+        if not d:
             continue
         name = (b["zh"] or b["jp"]) + " BOX"
         prods.append({"k": "x:%d" % b["sid"], "n": name, "j": b["jp"] + " ボックス", "kw": " ".join([b["zh"], b["jp"], b["set"], "box 原盒"]),
