@@ -253,6 +253,21 @@ cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site-config.json
 if os.path.exists(cfg):
     shutil.copy(cfg, os.path.join(out, "config.json"))
 
+# 7. 商品大圖（GitHub Actions 從 SNKRDUNK 下載好的 600x840 JPEG，放在 img 分支，publish.sh 會傳進來）
+HI = os.environ.get("HI_DIR")
+nhi = 0
+if HI and os.path.isdir(HI):
+    os.makedirs(os.path.join(out, "hi"), exist_ok=True)
+    for p in prods:
+        f = os.path.join(HI, "%s.jpg" % p.get("sid"))
+        if p.get("sid") and os.path.exists(f):
+            dst = os.path.join(out, "hi", os.path.basename(f))
+            if not os.path.exists(dst):
+                shutil.copy(f, dst)
+            p["img"] = "hi/" + os.path.basename(f)
+            nhi += 1
+print("hi-res images", nhi)
+
 for p in prods:  # 去掉空值，縮小檔案
     for k in [k for k, v in p.items() if v in (None, "", 0) and k not in ("k", "n")]:
         del p[k]

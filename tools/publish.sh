@@ -5,10 +5,13 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$HERE")"
 OUT="$(mktemp -d)"
-python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
+REMOTE="$(git -C "$REPO" remote get-url origin)"
+# 商品大圖在 img 分支（GitHub Actions 下載的）
+IMGDIR="$(mktemp -d)"
+if git -C "$REPO" fetch -q origin img 2>/dev/null; then git -C "$REPO" --work-tree="$IMGDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
+HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 touch "$OUT/.nojekyll"
-REMOTE="$(git -C "$REPO" remote get-url origin)"
 cd "$OUT"
 git init -q -b site
 git add -A
