@@ -1,0 +1,25 @@
+name: 更新原盒行情
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 0 * * *"   # 每天台灣時間 08:17
+  push:
+    branches: [main]
+    paths: [tools/boxes.json, tools/fetch_boxes.py, .github/workflows/boxes.yml]
+permissions:
+  contents: write
+jobs:
+  boxes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: 抓 SNKRDUNK 原盒成交
+        run: mkdir -p /tmp/out && python3 tools/fetch_boxes.py tools/boxes.json /tmp/out/boxdata.json
+      - name: 推到 boxdata 分支（只留一個 commit）
+        run: |
+          cd /tmp/out
+          git init -q -b boxdata
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "原盒行情"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" boxdata
