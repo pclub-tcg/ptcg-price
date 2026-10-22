@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""在 GitHub Actions 上執行：抓朱紫＋MEGA 系列高稀有度日版卡的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
+"""在 GitHub Actions 上執行：抓朱紫、MEGA、劍盾、太陽月亮系列與特典卡的高稀有度日版卡的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
 輸出 jp.json：{"updated": ..., "cards": [{sid, b 卡名, r 稀有度, set, num, pk 擴充包, img, a: {s:[中位,筆數], k:[...]}, p: {...}}]}
 用法：python3 fetch_jp.py <輸出 jp.json>"""
 import json, re, statistics, sys, time, urllib.parse, urllib.request
@@ -7,10 +7,21 @@ from concurrent.futures import ThreadPoolExecutor
 
 SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "SV4M", "SV4a", "SV5K", "SV5M", "SV5a",
         "SV6", "SV6a", "SV7", "SV7a", "SV8", "SV8a", "SV9", "SV9a", "SV10", "SV11B", "SV11W",
-        "M1L", "M1S", "M2", "M2a", "M3", "M4", "M5", "M6", "M6a"]
-RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S"}
+        "M1L", "M1S", "M2", "M2a", "M3", "M4", "M5", "M6", "M6a",
+        # 劍盾
+        "S1W", "S1H", "S1a", "S2", "S2a", "S3", "S3a", "S4", "S4a", "S5I", "S5R", "S5a", "S6H", "S6K", "S6a", "S7D", "S7R",
+        "S8", "S8a", "S8b", "S9", "S9a", "S10D", "S10P", "S10a", "S10b", "S11", "S11a", "S12", "S12a",
+        # 太陽月亮
+        "SM1S", "SM1M", "SM1+", "SM2K", "SM2L", "SM2+", "SM3H", "SM3N", "SM3+", "SM4S", "SM4A", "SM4+", "SM5S", "SM5M", "SM5+",
+        "SM6", "SM6a", "SM6b", "SM7", "SM7a", "SM7b", "SM8", "SM8a", "SM8b", "SM9", "SM9a", "SM9b", "SM10", "SM10a", "SM10b",
+        "SM11", "SM11a", "SM11b", "SM12", "SM12a",
+        # 特典卡
+        "S-P", "SV-P", "SM-P", "M-P"]
+RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
+SETS_U = {x.upper() for x in SETS}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
-TITLE = re.compile(r"^(.*?)\s+([A-Z]{1,4})\s+\[([A-Za-z0-9]+)\s+(\d{1,3}/\d{1,3})\]\s*\((.*?)\)")
+# 一般卡「[SV8 132/106]」、特典卡「[S-P 143]」「[SV-P 291]」
+TITLE = re.compile(r"^(.*?)\s+([A-Z]{1,4})\s+\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*\((.*?)\)")
 
 
 def get(url, js=True, tries=3):
@@ -69,7 +80,7 @@ def one(sid):
     try:
         a = get("https://snkrdunk.com/v1/apparels/%s" % sid)
         m = TITLE.match(a.get("localizedName") or "")
-        if not m or m.group(2) not in RARE or m.group(3) not in SETS:
+        if not m or m.group(2) not in RARE or m.group(3).upper() not in SETS_U:
             return None
         c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2), "set": m.group(3), "num": m.group(4), "pk": m.group(5),
              "en": (a.get("name") or "").split(" [")[0], "img": ((a.get("primaryMedia") or {}).get("imageUrl")) or ""}

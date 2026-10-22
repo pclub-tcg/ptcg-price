@@ -11,7 +11,7 @@ permissions:
 jobs:
   jp:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - name: 抓 SNKRDUNK 日版高稀有度卡
