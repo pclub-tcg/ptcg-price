@@ -1,0 +1,25 @@
+name: 更新日版卡行情
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 23 * * *"   # 每天台灣時間 07:37
+  push:
+    branches: [main]
+    paths: [tools/fetch_jp.py, .github/workflows/jp.yml]
+permissions:
+  contents: write
+jobs:
+  jp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: 抓 SNKRDUNK 日版高稀有度卡
+        run: mkdir -p /tmp/out && python3 tools/fetch_jp.py /tmp/out/jp.json 2>&1 | tail -40 | tee /tmp/out/log.txt
+      - name: 推到 jpdata 分支
+        run: |
+          cd /tmp/out
+          git init -q -b jpdata
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "日版卡行情"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" jpdata
