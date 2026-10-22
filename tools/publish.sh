@@ -11,7 +11,10 @@ IMGDIR="$(mktemp -d)"
 if git -C "$REPO" fetch -q origin img 2>/dev/null; then git -C "$REPO" --work-tree="$IMGDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
 BOXDIR="$(mktemp -d)"
 if git -C "$REPO" fetch -q origin boxdata 2>/dev/null; then git -C "$REPO" --work-tree="$BOXDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
-BOX_DATA="$BOXDIR/boxdata.json" HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
+JPDIR="$(mktemp -d)"; USDIR="$(mktemp -d)"
+if git -C "$REPO" fetch -q origin jpdata 2>/dev/null; then git -C "$REPO" --work-tree="$JPDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
+if git -C "$REPO" fetch -q origin usdata 2>/dev/null; then git -C "$REPO" --work-tree="$USDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
+JP_DATA="$JPDIR/jp.json" US_DATA="$USDIR/us.json" BOX_DATA="$BOXDIR/boxdata.json" HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 touch "$OUT/.nojekyll"
 cd "$OUT"

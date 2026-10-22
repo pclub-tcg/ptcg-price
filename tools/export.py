@@ -363,8 +363,8 @@ json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q
            for q in prods if q["k"][:2] in ("x:", "j:") and q.get("s")],
           open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 # 美版另外給網站用
-json.dump([{"id": int(q["k"][2:]), "n": q["n"], "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
-            "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", "")} for q in prods if q.get("us")],
+json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["n"], "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
+            "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", "")} for q in prods if q.get("us")]},
           open(os.path.join(out, "us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 for p in prods:
     p.pop("cat", None); p.pop("uimg", None)

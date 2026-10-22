@@ -127,12 +127,13 @@ async function data(env) {
   const r = await fetch(new URL("data/bot.json", env.SITE_URL).href, { cf: { cacheTtl: 300 } });
   if (!r.ok) { if (DATA) return DATA; throw new Error("bot.json " + r.status); }
   DATA = await r.json(); DATA_AT = Date.now();
-  for (const p of DATA.products) p.h = norm([p.n, p.j, p.kw, p.cn, p.num, p.set, p.rar, p.b ? "box 原盒" : "", p.p ? "psa10 鑑定" : ""].join(" "));
+  for (const p of DATA.products) p.h = norm([p.n, p.j, p.kw, p.cn, p.num, p.set, p.rar, p.b ? "box 原盒" : "", p.p ? "psa10 鑑定" : "", p.us ? "" : "日版 jp"].join(" "));
   return DATA;
 }
 const norm = s => String(s || "").normalize("NFKC").toLowerCase();
 
 function calc(p, D) {
+  if (p.us) return p.um ? { src: "TCGplayer", med: p.um, n: 0, cost: p.um * (D.usd || 32), gap: null } : null;
   const a = p.m ? { src: "Mercari", med: p.m[0], n: p.m[1], cost: Math.max(0, p.m[0] * D.rate - D.coupon) + D.ship } : null;
   const b = p.s ? { src: "SNKRDUNK", med: p.s[0], n: p.s[1], cost: p.s[0] * D.rate + D.sship } : null;
   const c = a && b ? (a.cost <= b.cost ? a : b) : (a || b);
@@ -263,11 +264,11 @@ const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", 
 
 function bubble(p, D, env) {
   const c = calc(p, D), site = env.SITE_URL, R = D.rate;
-  const tags = [p.b ? "原盒" : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
+  const tags = [p.us ? "美版" : "日版", p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
   const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
     ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
     { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
-      T("🔥 卡價套利王・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
+      T(p.us ? "🔥 卡價套利王・美國行情" : "🔥 卡價套利王・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
       { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },
       { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, C.ink, "#FFC48A")) },
       ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.ink, wrap: true, maxLines: 2 })] : []),
@@ -275,7 +276,19 @@ function bubble(p, D, env) {
     ] },
   ] };
   const body = [top];
-  if (p.k1 || p.s) {
+  const FX = p.fx || R; // 每日均價換台幣的倍率（日版：日圓匯率；美版：美分→台幣）
+  if (p.us) {
+    const chg = p.c30 == null ? null : p.c30;
+    body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
+      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "美版未拆・TCGplayer" : "美版・TCGplayer 市場價", C.gold, C.ink, "xs"),
+        T("市場價 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.um * (D.usd || 32)), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
+      { type: "box", layout: "horizontal", contents: [T(`US$${p.um.toFixed(2)}${p.ul ? `・最低 US$${p.ul.toFixed(2)}` : ""}`, { size: "xxs", color: C.mute }),
+        ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
+      ...(p.ch && p.kn > 2 ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
+      ...(p.kh && p.kn > 2 ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * FX)), stat("均", nt(p.ka * FX)), stat("低", nt(p.kl * FX))] }] : []),
+      T(`${p.set}${p.num ? "・" + p.num : ""}${p.rar ? "・" + p.rar : ""}・美元匯率 ${D.usd || 32}`, { size: "xxs", color: C.mute, wrap: true }),
+    ] });
+  } else if (p.k1 || p.s) {
     const chg = p.c30 == null ? null : p.c30;
     const head = p.s ? p.s[0] : p.k1; // 以 SNKRDUNK 最近成交的中位數為準（跟到手成本用同一個價格）
     body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
@@ -284,23 +297,24 @@ function bubble(p, D, env) {
       { type: "box", layout: "horizontal", contents: [T(`${yen(head)}${p.s ? `・最近 ${p.s[1]} 筆` : ""}`, { size: "xxs", color: C.mute }),
         ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
       ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
-      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * R)), stat("均", nt(p.ka * R)), stat("低", nt(p.kl * R))] },
+      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * FX)), stat("均", nt(p.ka * FX)), stat("低", nt(p.kl * FX))] },
         T(`近 90 天每日均價・${p.kn} 天有成交`, { size: "xxs", color: C.mute, align: "end" })] : []),
     ] });
   }
   const rows = [];
   if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆（${yen(p.m[0])}）`, nt(p.m[0] * R)));
-  if (c) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
+  if (c && !p.us) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
   if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
   if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
-  if (!p.k1 && !p.s) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
+  if (!p.us && !p.k1 && !p.s) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
     pill("SNKRDUNK 成交走勢", C.gold, C.ink, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
   if (!rows.length) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
   if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
   body.push({ type: "box", layout: "vertical", flex: 1, contents: [] }); // 撐滿高度，避免輪播時下面出現白色空白
   body.push({ type: "box", layout: "horizontal", backgroundColor: C.br, paddingStart: "14px", paddingEnd: "14px", paddingTop: "6px", paddingBottom: "8px", contents: [
     T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}`, { size: "xxs", color: C.mute, align: "end" })] });
-  const actions = [{ type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
+  const actions = [p.us ? { type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: "🇺🇸 TCGplayer 商品頁", uri: p.uurl || "https://www.tcgplayer.com" } }
+    : { type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
   const links = [];
   if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
   if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
