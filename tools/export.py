@@ -404,15 +404,13 @@ json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os
 CUT = os.path.join(os.path.dirname(HI.rstrip("/")), "cut") if HI else None
 ncut = 0
 if CUT and os.path.isdir(CUT):
-    os.makedirs(os.path.join(out, "cut"), exist_ok=True); os.makedirs(os.path.join(out, "ct"), exist_ok=True)
+    os.makedirs(os.path.join(out, "cut"), exist_ok=True)
     for p in prods:
         f = os.path.join(CUT, "%s.png" % p.get("sid"))
         if p.get("sid") and os.path.exists(f):
             b = os.path.basename(f)
             if not os.path.exists(os.path.join(out, "cut", b)):
                 shutil.copy(f, os.path.join(out, "cut", b))
-                t = Image.open(f).convert("RGBA"); t.thumbnail((144, 202))
-                t.quantize(colors=255, method=Image.Quantize.FASTOCTREE).save(os.path.join(out, "ct", b), optimize=True)
             p["img"] = "cut/" + b
             ncut += 1
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "cut"))) if os.path.isdir(os.path.join(out, "cut")) else [], open(os.path.join(out, "cut.json"), "w"))
@@ -444,6 +442,15 @@ def to_bot(p):
     return p["k"][:2] not in ("j:", "e:") or (p.get("s") or [0])[0] >= BOT_JP
 import unicodedata
 bprods = [p for p in prods if to_bot(p)]
+# 去背圖只給 LINE 用：機器人沒收的商品就不放上網站（省空間，GitHub Pages 上限 1GB）
+if os.path.isdir(os.path.join(out, "cut")):
+    keep = {os.path.basename(p["img"]) for p in bprods if str(p.get("img", "")).startswith("cut/")}
+    for f in os.listdir(os.path.join(out, "cut")):
+        if f not in keep:
+            os.remove(os.path.join(out, "cut", f))
+    for p in prods:
+        if str(p.get("img", "")).startswith("cut/") and os.path.basename(p["img"]) not in keep:
+            p["img"] = "hi/" + os.path.basename(p["img"])[:-4] + ".jpg"
 for p in bprods:  # 搜尋用字串先算好（Worker 不用每次冷啟動都做 NFKC，省 CPU）
     p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
                                    + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + (" 美版 us en" if p.get("us") or p.get("en") else " 日版 jp")).lower()
