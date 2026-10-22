@@ -441,7 +441,7 @@ for p in prods:  # 去掉空值，縮小檔案
         del p[k]
 
 BOT_US_C, BOT_US_S = float(os.environ.get("BOT_US_C", 100)), float(os.environ.get("BOT_US_S", 200))  # 美版進機器人的門檻（US$）
-BOT_JP = float(os.environ.get("BOT_JP", 5000))  # 日版卡進機器人的門檻（成交中位 ¥）
+BOT_JP = float(os.environ.get("BOT_JP", 8000))  # 日版卡進機器人的門檻（成交中位 ¥）
 def to_bot(p):
     if p.get("us"):
         return p.get("um", 0) >= (BOT_US_S if p.get("b") else BOT_US_C)
