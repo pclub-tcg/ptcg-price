@@ -11,6 +11,8 @@
   site/data/bot.json   機器人用的精簡價格資料
 """
 import base64, io, json, os, re, shutil, sys, statistics
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from zhname import ja2zh, en2zh  # 日文／英文卡名翻成繁中
 from PIL import Image
 
 src, kline, sprites, out = sys.argv[1:5]
@@ -177,7 +179,7 @@ if jp_path and os.path.exists(jp_path):
                 EN2ZH.setdefault(en.lower(), zh)
     nj = 0
     for c in jcards:
-        zh = setnum.get((c["set"].upper(), c["num"])) or JP2ZH.get(c["b"])
+        zh = setnum.get((c["set"].upper(), c["num"])) or JP2ZH.get(c["b"]) or ja2zh(c["b"])
         name = zh or c["b"]
         for kind, d in (("a", c.get("a") or {}), ("p", c.get("p") or {})):
             kk = "%d~%s" % (c["sid"], kind)
@@ -190,7 +192,7 @@ if jp_path and os.path.exists(jp_path):
                           "num": c["num"], "set": c["set"], "rar": c["r"], "p": 1 if psa else 0, "b": 0, "img": None, "m": None,
                           "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "",
                           "mq": "%s %s%s" % (c["num"], c["r"], " PSA10" if psa else ""), "cn": None, "sold": 0,
-                          "cat": "%s【%s】{%s} [%s]%s" % (name, c["r"], c["num"], c["set"], "_PSA10" if psa else "")})
+                          "cat": "%s【%s】{%s} [%s]%s" % (name, c["r"], c["num"], c["set"], "_PSA10" if psa else ""), "jn": c["b"]})
             if d.get("k"):
                 EXTRA_K[kk] = d["k"]
             nj += 1
@@ -208,7 +210,11 @@ if us_path and os.path.exists(us_path):
     nu = 0
     for it in ud["items"]:
         kk = "u%d" % it["id"]
-        prods.append({"k": "u:%d" % it["id"], "n": it["n"], "j": it["set"], "kw": " ".join(x for x in [zh_for(it["n"]), it.get("v", ""), "美版 英文 us en", "box 原盒 未拆" if it["t"] == "s" else ""] if x),
+        zh = en2zh(it["n"], it["t"] == "s")
+        if it["t"] == "s" and zh:  # 原盒名稱裡的寶可夢名也翻
+            zh = re.sub(r"[A-Z][a-z]+(?: [A-Z][a-z]+)?(?: (?:VSTAR|VMAX|ex|EX|GX|V))?", lambda m: en2zh(m.group(0)) or m.group(0), zh)
+        nzh = (zh + (" " + it["num"] if it.get("num") else "")) if zh else it["n"]
+        prods.append({"k": "u:%d" % it["id"], "n": nzh, "j": it["n"], "zh": zh or "", "kw": " ".join(x for x in [zh or "", zh_for(it["n"]), it.get("v", ""), "美版 英文 us en", "box 原盒 未拆" if it["t"] == "s" else ""] if x),
                       "num": it.get("num", ""), "set": it["set"], "rar": it.get("r", ""), "p": 0, "b": 1 if it["t"] == "s" else 0,
                       "us": 1, "um": it["m"], "ul": it.get("l"), "uurl": it.get("url"), "uimg": it.get("img"), "img": it.get("img"),
                       "kk": kk, "fx": round(USD / 100, 5)})
@@ -360,17 +366,17 @@ json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os
 print("hi-res images", nhi)
 
 # 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
-json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"]}
+json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {})}
            for q in prods if q["k"][:2] in ("x:", "j:") and q.get("s")],
           open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 # 美版另外給網站用
-json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["n"], "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
+json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["j"], "zh": q.get("zh", ""), "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
             "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", "")} for q in prods if q.get("us")]},
           open(os.path.join(out, "us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 for p in prods:
-    p.pop("cat", None); p.pop("uimg", None)
+    p.pop("cat", None); p.pop("uimg", None); p.pop("jn", None); p.pop("zh", None)
     if p.get("us"):  # 機器人用 id 自己組 TCGplayer 圖片／商品網址，bot.json 小很多
-        p.pop("img", None); p.pop("uurl", None); p.pop("j", None); p.pop("kk", None); p.pop("fx", None)
+        p.pop("img", None); p.pop("uurl", None); p.pop("kk", None); p.pop("fx", None)
 
 for p in prods:  # 去掉空值，縮小檔案
     for k in [k for k, v in p.items() if v in (None, "", 0) and k not in ("k", "n")]:

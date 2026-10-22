@@ -29,17 +29,20 @@ rep('const cf={stock:true,', 'const cf={us:false,stock:true,')
 rep('function crow(o,P){', r'''function urow(o){
   const x=o.x,sp=x.img?`<img class="cimg" src="${esc(x.img)}" alt="${esc(x.n)} 商品圖" loading="lazy">`:`<span class="cimg none">無圖</span>`;
   return `<a class="crow" href="${esc(x.url||("https://www.tcgplayer.com/product/"+x.id))}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${sp}<div class="rar ${o.box?"r-box":"r-hi"}"><b>${esc(o.box?"未拆":(x.r||"美版"))}</b><small>美版</small></div>
-  <div class="cmain"><div class="nm">${esc(x.n)}</div><div class="meta"><span>${esc(x.set)}</span>${x.num?`<span>${esc(x.num)}</span>`:""}<span style="color:var(--rev);font-weight:700">TCGplayer 商品頁 ›</span></div></div>
+  <div class="cmain"><div class="nm">${esc(x.zh?(x.zh+(x.num?" "+x.num:"")):x.n)}</div><div class="meta">${x.zh?`<span>${esc(x.n)}</span>`:""}<span>${esc(x.set)}</span>${x.num?`<span>${esc(x.num)}</span>`:""}<span style="color:var(--rev);font-weight:700">TCGplayer 商品頁 ›</span></div></div>
   <div class="cprice"><span class="gp g-na" style="font-weight:600">美國市場價 US$${x.m.toFixed(2)}</span><span class="lbl">約 NT$${fmt(o.price)}（未含運費關稅）</span></div></a>`}
 function crow(o,P){if(o.us)return urow(o);''')
 rep('let list=ROWS.filter(o=>{if(q&&', 'let list=ROWS.filter(o=>{if(cf.us&&!o.us)return false;if(q&&')
 rep('$("csub").textContent=`TCG Japan 收錄 ${fmt(ROWS.length)} 項（${CAT.updated||""} 更新）',
     '$("csub").textContent=`日版 ${fmt(ROWS.filter(o=>!o.us).length)} 項（${CAT.updated||""} 更新）＋美版 ${fmt(ROWS.filter(o=>o.us).length)} 項')
+# 日版高稀有度卡：日文卡名放在細項
+rep('o.extra=1;', 'o.extra=1;o.jn=e.jn||"";')
+rep('<div class="meta">${o.num?`<span>${esc(o.num)}</span>`:""}', '<div class="meta">${o.jn?`<span>${esc(o.jn)}</span>`:""}${o.num?`<span>${esc(o.num)}</span>`:""}')
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄
 rep('/* ---------- 商品詳情 + K 線 ---------- */', r'''/* 美版（TCGplayer）：us.json 由 publish 每天產生 */
-if(/github\.io$/.test(location.hostname))fetch("us.json").then(r=>r.ok?r.json():null).then(j=>{if(!j)return;const fx=j.usd||32;for(const x of j.items){const box=x.t==="s";ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,price:Math.round(x.m*fx),sold:false,psa:false,box,base:x.n,rar:x.r||"",num:x.num||"",set:x.set,mq:null,hay:(x.n+" "+x.set+" "+(x.num||"")+" "+(x.r||"")+" "+(x.kw||"")+" 美版 us"+(box?" box 原盒 未拆":"")).toLowerCase()})}try{render(false)}catch(e){}}).catch(()=>{});
+if(/github\.io$/.test(location.hostname))fetch("us.json").then(r=>r.ok?r.json():null).then(j=>{if(!j)return;const fx=j.usd||32;for(const x of j.items){const box=x.t==="s";ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,price:Math.round(x.m*fx),sold:false,psa:false,box,base:x.n,rar:x.r||"",num:x.num||"",set:x.set,mq:null,hay:(x.n+" "+(x.zh||"")+" "+x.set+" "+(x.num||"")+" "+(x.r||"")+" "+(x.kw||"")+" 美版 us"+(box?" box 原盒 未拆":"")).toLowerCase()})}try{render(false)}catch(e){}}).catch(()=>{});
 /* ---------- 商品詳情 + K 線 ---------- */''')
 
 # 4. LINE 的「看 K 線」連結：日版高稀有度卡（j:sid、j:sidp）與額外原盒（x:sid）在 extra.json 載入後才打開
