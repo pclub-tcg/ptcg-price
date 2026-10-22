@@ -70,6 +70,24 @@ if _os.path.exists(_rn):
                 it["cn"] = REN[it["cn"]]
         _put(m, d)
 
+# 1e. 頁面內建的額外原盒清單（extra-data）也翻成中文名（台灣官方名稱優先），舊名稱留在搜尋關鍵字
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import zhname as _zh
+_bx = {x["sid"]: x for x in _json.load(open(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "boxes.json"), encoding="utf-8"))}
+_m = _re.search(r'(<script id="extra-data" type="application/json">)(.*?)(</script>)', h, _re.S)
+if _m:
+    ex = _json.loads(_m.group(2))
+    for e in ex:
+        bx = _bx.get(e.get("sid"))
+        if not bx:
+            continue
+        zh = _zh.SET_TW.get(bx["jp"]) or bx.get("zh") or _zh.set_ja(bx["jp"])
+        if zh and e["n"] != zh + " BOX":
+            e["kw"] = (str(e.get("kw") or "") + " " + e["n"] + " " + bx["jp"]).strip()
+            e["n"] = zh + " BOX"
+    h = h[:_m.start(2)] + _json.dumps(ex, ensure_ascii=False, separators=(",", ":")) + h[_m.end(2):]
+
 # 2. 分頁名稱
 rep('aria-controls="panel-tcg">卡片目錄（TCG Japan）</button>', 'aria-controls="panel-tcg">卡片目錄</button>')
 
