@@ -49,6 +49,9 @@ rep('const o={ix,n,price,sold:!!sold,spr,psa,box,base:m?m[1]:n,', 'const o={ix,n
 LINE_URL = "https://line.me/R/ti/p/@916ctmro"
 rep('<small id="stamp"></small>', '<span style="display:flex;align-items:center;gap:10px"><a href="%s" target="_blank" rel="noopener" style="background:#06c755;color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap">加入 LINE 好友</a><small id="stamp"></small></span>' % LINE_URL)
 h = h.replace("LINE 官方帳號 @916ctmro", '<a href="%s" target="_blank" rel="noopener">LINE 官方帳號 @916ctmro</a>' % LINE_URL)
+# 卡片目錄清單改用小縮圖 ht/（大圖 hi/ 只在點開商品時用）
+rep('const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid);',
+    'const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid)&&hiOf(hsid).replace("hi/","ht/");')
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄

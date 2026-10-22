@@ -389,6 +389,10 @@ if HI and os.path.isdir(HI):
             dst = os.path.join(out, "hi", os.path.basename(f))
             if not os.path.exists(dst):
                 shutil.copy(f, dst)
+                # 清單用的小縮圖（手機載入快很多），大圖只在點開商品時用
+                os.makedirs(os.path.join(out, "ht"), exist_ok=True)
+                t = Image.open(f).convert("RGB"); t.thumbnail((144, 202))
+                t.save(os.path.join(out, "ht", os.path.basename(f)), quality=72, optimize=True)
             p["img"] = "hi/" + os.path.basename(f)
             nhi += 1
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os.path.isdir(os.path.join(out, "hi")) else [], open(os.path.join(out, "hi.json"), "w"))
