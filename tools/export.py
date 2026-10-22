@@ -394,8 +394,8 @@ if HI and os.path.isdir(HI):
         f = os.path.join(HI, "%s.jpg" % p.get("sid"))
         if p.get("sid") and os.path.exists(f):
             dst = os.path.join(out, "hi", os.path.basename(f))
-            if not os.path.exists(dst):
-                shutil.copy(f, dst)
+            if not os.path.exists(dst):  # 網站用的大圖縮到 360x504 再存（GitHub Pages 有 1GB 上限）
+                t = Image.open(f).convert("RGB"); t.thumbnail((360, 504)); t.save(dst, quality=78, optimize=True)
                 # 清單用的小縮圖（手機載入快很多），大圖只在點開商品時用
                 os.makedirs(os.path.join(out, "ht"), exist_ok=True)
                 t = Image.open(f).convert("RGB"); t.thumbnail((144, 202))
@@ -445,6 +445,15 @@ def to_bot(p):
     return p["k"][:2] not in ("j:", "e:") or (p.get("s") or [0])[0] >= BOT_JP
 import unicodedata
 bprods = [p for p in prods if to_bot(p)]
+# 走勢圖、縮圖只有 LINE 卡片用得到：機器人沒收的商品就不放上網站
+used = {os.path.basename(str(p.get(k) or "")) for p in bprods for k in ("ch", "img") if str(p.get(k) or "").startswith("img/")}
+for f in os.listdir(os.path.join(out, "img")):
+    if f not in used:
+        os.remove(os.path.join(out, "img", f))
+for p in prods:
+    for k in ("ch", "img"):
+        if str(p.get(k) or "").startswith("img/") and os.path.basename(p[k]) not in used:
+            p.pop(k, None) if k == "ch" else None
 # 去背圖只給 LINE 用：機器人沒收的商品就不放上網站（省空間，GitHub Pages 上限 1GB）
 if os.path.isdir(os.path.join(out, "cut")):
     keep = {os.path.basename(p["img"]) for p in bprods if str(p.get("img", "")).startswith("cut/")}
