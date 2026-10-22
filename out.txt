@@ -1,0 +1,4 @@
+https://snkrdunk.com/search?keywords=%5BSV8%20 (200, 206094, b'<!DOCTYPE html><html lang="ja" class="inter_62c113fc-module__M00GeW__variable"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1"/><link rel="preload" as="image" href="https://cdn.snkrdunk.com/upload_bg_removed/79302385-1b7d-4fb5-bd23-b7')
+https://api.pokemontcg.io/v2/cards?q=set.id:sv8&pageSize=2 ('ERR', 0, 'HTTP Error 502: Bad Gateway')
+https://tcgcsv.com/tcgplayer/3/groups (200, 42987, b'{"totalItems": 220, "success": true, "errors": [], "results": [{"groupId": 24831, "name": "ME06: Delta Reign", "abbreviation": "DLR", "isSupplemental": false, "publishedOn": "2026-11-06T00:00:00", "modifiedOn": "2026-10-19T20:12:05.4", "categoryId": 3}, {"groupId": 24722, "name": "ME: 30th Celebrati')
+https://snkrdunk.com/v1/search?keyword=SV8%20SAR ('ERR', 0, 'HTTP Error 404: Not Found')
