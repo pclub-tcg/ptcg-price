@@ -81,14 +81,64 @@ def ja2zh(name):
     return _core(unicodedata.normalize("NFKC", name), JA, JA_PRE, True)
 
 
-SEALED = [("elite trainer box", "精英訓練家禮盒"), ("booster box", "補充包盒"), ("booster bundle", "補充包組"), ("booster pack", "補充包"),
-          ("3 pack blister", "三包吊卡"), ("blister", "吊卡"), ("premium collection", "高級收藏組"), ("collection box", "收藏盒"),
-          ("collection", "收藏組"), ("tin", "鐵盒"), ("build & battle box", "組牌對戰盒"), ("build & battle", "組牌對戰"),
-          ("booster display", "補充包盒"), ("display", "盒"), ("binder", "卡冊"), ("theme deck", "主題牌組"), ("deck", "牌組"), ("box", "盒")]
+SEALED = [("ultra-premium collection", "極致高級收藏組"), ("ultra premium collection", "極致高級收藏組"), ("premium figure collection", "高級公仔收藏組"),
+          ("figure collection", "公仔收藏組"), ("poster collection", "海報收藏組"), ("binder collection", "卡冊收藏組"), ("pin collection", "徽章收藏組"),
+          ("premium collection", "高級收藏組"), ("special collection", "特別收藏組"), ("collection box", "收藏盒"), ("collection", "收藏組"),
+          ("pokemon center elite trainer box", "寶可夢中心限定 精英訓練家禮盒"), ("elite trainer box", "精英訓練家禮盒"),
+          ("sleeved booster", "套袋補充包"), ("booster box", "補充包盒"), ("booster bundle", "補充包組"), ("booster display", "補充包盒"),
+          ("booster pack", "補充包"), ("booster", "補充包"), ("3 pack blister", "三包吊卡"), ("3-pack blister", "三包吊卡"), ("checklane blister", "單包吊卡"),
+          ("blister", "吊卡"), ("build & battle stadium", "組牌對戰場"), ("build & battle box", "組牌對戰盒"), ("build & battle", "組牌對戰盒"),
+          ("mini tin", "迷你鐵盒"), ("tin", "鐵盒"), ("master carton", "大箱"), ("half booster box", "半盒"), ("art bundle", "畫作組"),
+          ("pokemon center", "寶可夢中心限定"), ("trainer's toolkit", "訓練家工具箱"), ("battle deck", "對戰牌組"), ("league battle deck", "聯盟對戰牌組"),
+          ("theme deck", "主題牌組"), ("starter deck", "入門牌組"), ("deck", "牌組"), ("bundle", "組合"), ("display", "盒"), ("case", "整箱"),
+          ("binder", "卡冊"), ("box", "盒"), ("pack", "包"), ("sleeves", "卡套"), ("playmat", "卡墊"), ("set", "組")]
 
 
-def en2zh(name, sealed=False):
+WORDS = [("scarlet & violet", "朱&紫"), ("sword & shield", "劍&盾"), ("sun & moon", "太陽&月亮"), ("black & white", "黑&白"), ("x & y", "X&Y"),
+         ("first partner", "御三家"), ("collector chest", "收藏家寶箱"), ("tech sticker", "科技貼紙"), ("single pack", "單包"), ("stacking tins", "疊疊鐵盒"),
+         ("pokemon", "寶可夢"), ("pokémon", "寶可夢"), ("premium", "高級"), ("galar", "伽勒爾"), ("paldea", "帕底亞"), ("kanto", "關都"), ("johto", "城都"),
+         ("hoenn", "豐緣"), ("sinnoh", "神奧"), ("unova", "合眾"), ("kalos", "卡洛斯"), ("alola", "阿羅拉"), ("hisui", "洗翠"), ("legends", "傳說"),
+         ("powers", "力量"), ("power", "力量"), ("partners", "夥伴"), ("league", "聯盟"), ("battle", "對戰"), ("mega", "超級"), ("mini", "迷你"),
+         ("tins", "鐵盒"), ("sticker", "貼紙"), ("evolutions", "進化"), ("chest", "寶箱"), ("single", "單"), ("collector", "收藏家"), ("trainer", "訓練家"),
+         ("gallery", "畫廊"), ("holiday", "節日"), ("calendar", "日曆"), ("advent", "倒數"), ("lunch box", "便當盒"), ("treasures of ruin", "災禍寶物"),
+         ("paradox", "悖謬"), ("ancient", "古代"), ("future", "未來"), ("celebration", "慶典"), ("championship", "錦標賽"), ("world", "世界")]
+
+
+def sealed2zh(name, setname=""):
+    """美版原盒／周邊：系列名用中文對照（52poke），商品類型翻成中文"""
+    n = re.sub(r"\s*\[.*?\]|\s*\(.*?\)", "", name)
+    n = re.sub(r"pok[eé]mon tcg:?", "", n, flags=re.I)
+    zs = set_en(setname)
+    base = re.sub(r"^[A-Z]{1,4}\d*[a-z]?:\s*", "", setname or "").strip()
+    if zs and base and base.lower() in n.lower():
+        n = re.sub(re.escape(base), " ", n, flags=re.I)
+    else:  # 名稱裡如果有其他系列名也換掉
+        for en, z in sorted(SET_EN.items(), key=lambda x: -len(x[0])):
+            if len(en) > 5 and en in n.lower():
+                n = re.sub(re.escape(en), " " + z + " ", n, flags=re.I); break
+    for a, b in SEALED:
+        n = re.sub(r"(?<![a-z])" + re.escape(a) + r"(?![a-z])", " " + b + " ", n, flags=re.I)
+    def run(m):  # 剩下的英文詞組（寶可夢、訓練家名）逐段試著翻
+        w = m.group(0).split()
+        for i in range(len(w)):
+            for j in range(len(w), i, -1):
+                z = _core(" ".join(w[i:j]), EN, EN_PRE, False)
+                if z:
+                    return " ".join(w[:i] + [z] + w[j:]) if j - i == len(w) else " ".join(w[:i]) + " " + z + " " + run_s(" ".join(w[j:]))
+        return m.group(0)
+    def run_s(t):
+        return re.sub(r"[A-Z][\w'’.-]*(?:\s+(?:[A-Z][\w'’.-]*|ex|EX|GX|V|VMAX|VSTAR|&))*", run, t)
+    n = run_s(n)
+    for a2, b2 in WORDS:
+        n = re.sub(r"(?<![A-Za-z])" + re.escape(a2) + r"(?![A-Za-z])", b2, n, flags=re.I)
+    n = re.sub(r"\s+", " ", (zs or "") + " " + n).strip(" -:")
+    return "美版 " + n
+
+
+def en2zh(name, sealed=False, setname=""):
     """美版名稱，例如「Charizard ex - 199/165」「Mega Charizard X ex - 125/094 (Special Illustration Rare)」"""
+    if sealed:
+        return sealed2zh(name, setname)
     base = re.split(r"\s+-\s*|\s+\(", name)[0].strip()
     base = re.sub(r"\s*\[.*?\]|\s+\d+/\d+$|\s+on the ball$|\s+oversized$", "", base, flags=re.I).strip()
     star = ""
@@ -96,16 +146,5 @@ def en2zh(name, sealed=False):
     if m:
         star = {"prism star": "◇", "star": "☆"}.get(m.group(1).lower(), "LV.X" if "x" in m.group(1).lower() else m.group(1).upper().replace(" ", ""))
         base = base[:m.start()]
-    if not sealed:
-        r = _core(base, EN, EN_PRE, False)
-        return r + star if r else None
-    low = name.lower()
-    case = " case" in low
-    for a, b in SEALED:
-        if a in low:
-            sub = re.sub(r"\s*\[.*?\]|\s*\(.*?\)", "", name)
-            sub = re.sub(re.escape(a) + "|\\bcase\\b|pokemon tcg:?|pokemon", "", sub, flags=re.I)
-            sub = re.sub(r"\s+", " ", sub).strip(" -:")
-            sub = set_en(sub) or sub  # 系列名翻成中文
-            return ("美版 " + (sub + " " if sub else "") + b + ("整箱" if case and b != "整箱" else "")).strip()
-    return None
+    r = _core(base, EN, EN_PRE, False)
+    return r + star if r else None

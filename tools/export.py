@@ -212,7 +212,7 @@ if us_path and os.path.exists(us_path):
     nu = 0
     for it in ud["items"]:
         kk = "u%d" % it["id"]
-        zh = en2zh(it["n"], it["t"] == "s")
+        zh = en2zh(it["n"], it["t"] == "s", it.get("set", ""))
         if it["t"] == "s" and zh:  # 原盒名稱裡的寶可夢名也翻
             zh = re.sub(r"[A-Z][a-z]+(?: [A-Z][a-z]+)?(?: (?:VSTAR|VMAX|ex|EX|GX|V))?", lambda m: en2zh(m.group(0)) or m.group(0), zh)
         nzh = (zh + (" " + it["num"] if it.get("num") else "")) if zh else it["n"]
