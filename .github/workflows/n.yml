@@ -1,0 +1,11 @@
+name: names
+on: {push: {branches: [namesrc]}}
+permissions: {contents: write}
+jobs:
+  n:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir /tmp/o; python3 build.py > /tmp/o/log.txt 2>&1 || true; cp names.json /tmp/o/ || true
+          cd /tmp/o && git init -q -b namesout && git add -A && git -c user.name=a -c user.email=a@a commit -qm o && git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" namesout
