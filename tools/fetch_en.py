@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """在 GitHub Actions 上執行：抓 SNKRDUNK 美版（英文版）卡的 PSA10 與裸卡成交、每日均價。
 SNKRDUNK 標題像「リザードンex SIR [MEW EN 199/165]【英語版】(…)」，系列代號用 TCGplayer（tcgcsv）的 abbreviation 去搜。
-輸出 en.json：{"updated", "sets": {代號: TCGplayer 系列名}, "cards": [{sid, b 日文名, en 英文名, r, set 代號, num, p:{s,k}, a:{s,k}}]}
+輸出 en.json：{"updated", "sets": {代號: TCGplayer 系列名}, "cards": [{sid, b 日文名, en 英文名, r, set 代號, num, img, p:{s,k}}]}
 用法：python3 fetch_en.py <輸出 en.json>"""
 import json, re, statistics, sys, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -10,16 +10,22 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.3
 TITLE = re.compile(r"^(.*?)\s+([A-Z]{1,4})?\s*\[([A-Za-z0-9]+) EN ([\w-]+(?:/\d{1,3})?)\]")
 
 
-def get(url, js=True, tries=3):
+import collections
+STAT = collections.Counter()
+
+
+def get(url, js=True, tries=5):
     for i in range(tries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
                 b = r.read()
                 return json.loads(b) if js else b.decode("utf-8", "replace")
-        except Exception:
-            if i == tries - 1:
+        except Exception as e:
+            code = getattr(e, "code", None)
+            if code == 404 or i == tries - 1:
+                STAT["http %s" % code] += 1
                 raise
-            time.sleep(2 + i * 3)
+            time.sleep((10 if code == 429 else 2) * (i + 1))  # 被限速時多等一下
 
 
 groups = get("https://tcgcsv.com/tcgplayer/3/groups")["results"]
@@ -70,24 +76,25 @@ def one(sid):
         a = get("https://snkrdunk.com/v1/apparels/%s" % sid)
         loc = a.get("localizedName") or ""
         if "英語版" not in loc:
-            return None
+            STAT["not en"] += 1; return None
         m = TITLE.match(loc)
         if not m or m.group(3).upper() not in SETS:
-            return None
+            STAT["no match"] += 1; return None
         c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2) or "", "set": m.group(3).upper(), "num": m.group(4),
              "en": re.split(r"\s+[A-Z]{1,4}\s*\[|\s*\[", a.get("name") or "")[0].strip()}
         pid = a["productCatalogId"]
         c["p"] = hist(pid, "trading_card_single_psa10", "PSA10")
-        c["a"] = hist(pid, "trading_card_single_nearly_unused", "A")
-        time.sleep(0.2)
-        return c if (c["p"] or c["a"]) else None
+        c["img"] = ((a.get("primaryMedia") or {}).get("imageUrl")) or ""
+        time.sleep(0.4)
+        STAT["ok" if c["p"].get("s") else "no psa10 sales"] += 1
+        return c if c["p"] else None
     except Exception as e:
-        print("fail", sid, e)
+        STAT["fail"] += 1
         return None
 
 
-with ThreadPoolExecutor(4) as ex:
+with ThreadPoolExecutor(2) as ex:
     cards = [c for c in ex.map(one, sorted(ids)) if c]
 json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "sets": SETS, "cards": cards},
           open(sys.argv[1], "w"), ensure_ascii=False, separators=(",", ":"))
-print("cards", len(cards), "with PSA10", sum(1 for c in cards if c["p"].get("s")), "with A", sum(1 for c in cards if c["a"].get("s")))
+print("cards", len(cards), "with PSA10", sum(1 for c in cards if c["p"].get("s")), dict(STAT))
