@@ -187,6 +187,9 @@ if jp_path and os.path.exists(jp_path):
         if not zh or re.search(r"(.{2,}的)\1", zh):  # TCG Japan 偶爾有「奇樹的奇樹的…」這種重複，改用翻譯
             zh = ja2zh(c["b"]) or zh
         name = zh or c["b"]
+        if c.get("v"):  # 鏡面等版本
+            VAR = {"マスターボールミラー": "大師球鏡面", "モンスターボールミラー": "精靈球鏡面", "ミラー": "鏡面", "リバースホロ": "反閃", "ホロ": "閃卡"}
+            name += " " + VAR.get(c["v"], c["v"])
         for kind, d in (("a", c.get("a") or {}), ("p", c.get("p") or {})):
             kk = "%d~%s" % (c["sid"], kind)
             if kk in have_kk or not d.get("s"):

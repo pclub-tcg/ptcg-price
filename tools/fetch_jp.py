@@ -21,8 +21,10 @@ SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "
 RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
 SETS_U = {x.upper() for x in SETS}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
-TITLE = re.compile(r"^(.*?)\s+([A-Z]{1,4})\s+\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*\((.*?)\)")
+# 「ピカチュウex SAR [SV8 132/106](…)」「ピカチュウ C :マスターボールミラー [SV2a 025/165](…)」「ピカチュウ [S-P 143]」
+TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}))?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
 STAT = collections.Counter()
+SKIP_VER = 2  # 標題格式改過：舊的「不是日版卡」名單作廢重查
 
 
 def get(url, js=True, tries=5):
@@ -42,7 +44,7 @@ def get(url, js=True, tries=5):
 old_path = sys.argv[2] if len(sys.argv) > 2 else ""
 old = json.load(open(old_path)) if old_path and os.path.exists(old_path) else {"cards": [], "skip": {}}
 OLD = {c["sid"]: c for c in old.get("cards", [])}
-SKIP = {int(k): v for k, v in (old.get("skip") or {}).items()}  # 不是寶可夢日版卡、或沒有成交的商品 → 下次輪到才重查
+SKIP = {int(k): v for k, v in (old.get("skip") or {}).items()} if old.get("skip_ver") == SKIP_VER else {}  # 不是寶可夢日版卡、或沒有成交的商品 → 下次輪到才重查
 TODAY = int(time.time() // 86400)
 T0 = time.time()
 BUDGET = float(os.environ.get("BUDGET_MIN", 200)) * 60  # 時間快用完就停，剩下的沿用舊資料
@@ -110,11 +112,12 @@ def one(sid):
             c = {k: v for k, v in o.items() if k not in ("a", "p")}
         else:
             a = get("https://snkrdunk.com/v1/apparels/%s" % sid)
-            m = TITLE.match(a.get("localizedName") or "")
-            if not m or m.group(3).upper() not in SETS_U:
+            loc = a.get("localizedName") or ""
+            m = TITLE.match(loc)
+            if not m or m.group(4).upper() not in SETS_U or any(x in loc for x in ("英語版", "中国語版", "韓国語版")):
                 SKIP[sid] = TODAY; STAT["not jp card"] += 1
                 return None
-            c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2), "set": m.group(3), "num": m.group(4), "pk": m.group(5),
+            c = {"sid": int(sid), "b": m.group(1).strip(), "v": (m.group(3) or "").strip(),  # v：鏡面等版本 "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
                  "en": (a.get("name") or "").split(" [")[0], "img": ((a.get("primaryMedia") or {}).get("imageUrl")) or "",
                  "pid": a["productCatalogId"]}
         c["a"] = hist(c["pid"], "trading_card_single_nearly_unused", "A")
@@ -132,6 +135,6 @@ def one(sid):
 
 with ThreadPoolExecutor(4) as ex:
     cards = [c for c in ex.map(one, sorted(ids | set(OLD))) if c]
-json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "cards": cards, "skip": {str(k): v for k, v in SKIP.items()}},
+json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "cards": cards, "skip": {str(k): v for k, v in SKIP.items()}, "skip_ver": SKIP_VER},
           open(sys.argv[1], "w"), ensure_ascii=False, separators=(",", ":"))
 print("cards", len(cards), "with A", sum(1 for c in cards if c["a"].get("s")), "with PSA10", sum(1 for c in cards if c["p"].get("s")), dict(STAT))
