@@ -40,6 +40,10 @@ rep('o.extra=1;', 'o.extra=1;o.jn=e.jn||"";if(e.en){o.en=1;o.hay+=" 美版 us en
 rep('<div class="meta">${o.num?`<span>${esc(o.num)}</span>`:""}', '<div class="meta">${o.en?`<span class="tag">美版</span>`:""}${o.jn?`<span>${esc(o.jn)}</span>`:""}${o.num?`<span>${esc(o.num)}</span>`:""}')
 # TCG Japan 名稱偶爾重複（「奇樹的奇樹的…」），顯示時去掉
 rep('const o={ix,n,price,sold:!!sold,spr,psa,box,base:m?m[1]:n,', 'const o={ix,n,price,sold:!!sold,spr,psa,box,base:(m?m[1]:n).replace(/(.{1,6}的)\\1+/g,"$1"),')
+# 頁首「加入 LINE 好友」按鈕（公開的加好友連結，任何人都能加）
+LINE_URL = "https://line.me/R/ti/p/@916ctmro"
+rep('<small id="stamp"></small>', '<span style="display:flex;align-items:center;gap:10px"><a href="%s" target="_blank" rel="noopener" style="background:#06c755;color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap">加入 LINE 好友</a><small id="stamp"></small></span>' % LINE_URL)
+h = h.replace("LINE 官方帳號 @916ctmro", '<a href="%s" target="_blank" rel="noopener">LINE 官方帳號 @916ctmro</a>' % LINE_URL)
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄
