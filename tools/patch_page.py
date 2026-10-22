@@ -18,6 +18,11 @@ def rep(old, new):
 # 1. 網站名稱
 h = h.replace("卡價套利王", NAME)
 
+# 1b. 左上角 logo：閃電換成火焰；「’」在中文字型是全形，名稱改用英文字型、字距縮小
+rep('<path d="M18 8l-6 9h4.5l-2 7 7-10h-4.5z" fill="currentColor"/></svg>' + NAME + '</div>',
+    '<path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg>'
+    '<span style="font-family:\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;letter-spacing:.02em">' + NAME + '</span></div>')
+
 # 2. 分頁名稱
 rep('aria-controls="panel-tcg">卡片目錄（TCG Japan）</button>', 'aria-controls="panel-tcg">卡片目錄</button>')
 
