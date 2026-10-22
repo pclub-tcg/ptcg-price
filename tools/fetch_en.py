@@ -7,7 +7,8 @@ import json, re, statistics, sys, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
-TITLE = re.compile(r"^(.*?)\s+([A-Z]{1,4})?\s*\[([A-Za-z0-9]+) EN ([\w-]+(?:/\d{1,3})?)\]")
+# 標題的卡號格式：[MEW EN 199/165]、[BS 4/102]、[SWSH075]、[4/102]
+TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}))?\s*(?::[^\[]*)?\[(?:([A-Za-z0-9-]+)(?: EN)? )?([A-Za-z]*\d[\w-]*(?:/\d{1,3})?)\]")
 
 
 import collections
@@ -80,7 +81,7 @@ def one(sid):
         m = TITLE.match(loc)
         if not m:
             STAT["no match"] += 1; return None
-        c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2) or "", "set": m.group(3).upper(), "num": m.group(4),
+        c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2) or "", "set": (m.group(3) or "").upper(), "num": m.group(4),
              "en": re.split(r"\s+[A-Z]{1,4}\s*\[|\s*\[", a.get("name") or "")[0].strip()}
         pid = a["productCatalogId"]
         c["p"] = hist(pid, "trading_card_single_psa10", "PSA10")

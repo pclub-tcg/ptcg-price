@@ -241,11 +241,11 @@ if en_path and os.path.exists(en_path):
         sname = ed["sets"].get(c["set"], c["set"])
         zh = usz.get((sname, c["num"])) or usn.get((c["en"].lower(), c["num"])) or en2zh(c["en"]) or ja2zh(c["b"]) or c["en"]
         kk = "%d~p" % c["sid"]
-        prods.append({"k": "e:%d" % c["sid"], "n": "%s %s PSA10" % (zh, c["num"]), "j": "%s %s [%s EN %s]" % (c["en"], c["r"], c["set"], c["num"]),
+        prods.append({"k": "e:%d" % c["sid"], "n": "%s %s PSA10" % (zh, c["num"]), "j": "%s %s [%s]" % (c["en"], c["r"], (c["set"] + " EN " if c["set"] else "") + c["num"]),
                       "kw": " ".join(x for x in [c["en"], c["b"], c["set"], sname, c["r"], "美版 英文 us en psa10 鑑定"] if x),
-                      "num": c["num"], "set": c["set"] + " EN", "rar": c["r"], "p": 1, "b": 0, "en": 1, "img": None, "m": None,
+                      "num": c["num"], "set": (c["set"] or "PROMO") + " EN", "rar": c["r"], "p": 1, "b": 0, "en": 1, "img": None, "m": None,
                       "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "", "mq": "", "cn": None, "sold": 0,
-                      "cat": "%s【%s】{%s} [%s EN]_PSA10" % (zh, c["r"] or "-", c["num"], c["set"])})
+                      "cat": "%s【%s】{%s} [%s EN]_PSA10" % (zh, c["r"] or "-", c["num"], c["set"] or "PROMO")})
         if d.get("k"):
             EXTRA_K[kk] = d["k"]
         ne += 1
