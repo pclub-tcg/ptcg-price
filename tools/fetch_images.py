@@ -24,7 +24,7 @@ CUT = os.path.join(os.path.dirname(out.rstrip("/")), "cut")  # 去背 PNG（商�
 os.makedirs(CUT, exist_ok=True)
 
 
-def cutout(src, dst, W=300, H=420, edge=2):
+def cutout(src, dst, W=240, H=336, edge=2):
     """去背：來源有透明就用；沒有就把跟四周相連的白底去掉。再沿輪廓加一圈 edge px 的細白邊。"""
     im = src.convert("RGBA")
     a = im.split()[-1]
