@@ -1,0 +1,25 @@
+name: 更新美版 PSA10 行情
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "52 23 * * *"   # 每天台灣時間 07:52
+  push:
+    branches: [main]
+    paths: [tools/fetch_en.py, .github/workflows/en.yml]
+permissions:
+  contents: write
+jobs:
+  en:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: 抓 SNKRDUNK 美版卡 PSA10
+        run: mkdir -p /tmp/out && python3 tools/fetch_en.py /tmp/out/en.json 2>&1 | tail -40 | tee /tmp/out/log.txt
+      - name: 推到 endata 分支
+        run: |
+          cd /tmp/out
+          git init -q -b endata
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "美版PSA10行情"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" endata
