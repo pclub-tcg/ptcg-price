@@ -412,8 +412,11 @@ if CUT and os.path.isdir(CUT):
         f = os.path.join(CUT, "%s.png" % p.get("sid"))
         if p.get("sid") and os.path.exists(f):
             b = os.path.basename(f)
-            if not os.path.exists(os.path.join(out, "cut", b)):
-                shutil.copy(f, os.path.join(out, "cut", b))
+            if not os.path.exists(os.path.join(out, "cut", b)):  # 縮成 240x336 再放（LINE 卡片夠用，網站空間省一半）
+                t = Image.open(f).convert("RGBA")
+                if t.width > 240:
+                    t = t.resize((240, round(t.height * 240 / t.width)), Image.LANCZOS)
+                t.quantize(colors=255, method=Image.Quantize.FASTOCTREE).save(os.path.join(out, "cut", b), optimize=True)
             p["img"] = "cut/" + b
             ncut += 1
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "cut"))) if os.path.isdir(os.path.join(out, "cut")) else [], open(os.path.join(out, "cut.json"), "w"))
@@ -442,7 +445,9 @@ BOT_JP = float(os.environ.get("BOT_JP", 5000))  # 日版卡進機器人的門檻
 def to_bot(p):
     if p.get("us"):
         return p.get("um", 0) >= (BOT_US_S if p.get("b") else BOT_US_C)
-    return p["k"][:2] not in ("j:", "e:") or (p.get("s") or [0])[0] >= BOT_JP
+    if p["k"][:2] in ("i:", "x:") or p.get("tw"):  # 比價商品、原盒、有台灣價格的都收
+        return True
+    return max((p.get("s") or [0])[0], (p.get("m") or [0])[0]) >= BOT_JP
 import unicodedata
 bprods = [p for p in prods if to_bot(p)]
 # 走勢圖、縮圖只有 LINE 卡片用得到：機器人沒收的商品就不放上網站
