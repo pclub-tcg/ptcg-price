@@ -1,0 +1,11 @@
+name: probe3
+on: {push: {branches: [probe3]}}
+permissions: {contents: write}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir /tmp/o; python3 probe.py > /tmp/o/out.txt 2>&1 || true
+          cd /tmp/o && git init -q -b probeout && git add -A && git -c user.name=a -c user.email=a@a commit -qm o && git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" probeout
