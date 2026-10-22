@@ -38,6 +38,8 @@ rep('$("csub").textContent=`TCG Japan 收錄 ${fmt(ROWS.length)} 項（${CAT.upd
 # 日版高稀有度卡：日文卡名放在細項
 rep('o.extra=1;', 'o.extra=1;o.jn=e.jn||"";')
 rep('<div class="meta">${o.num?`<span>${esc(o.num)}</span>`:""}', '<div class="meta">${o.jn?`<span>${esc(o.jn)}</span>`:""}${o.num?`<span>${esc(o.num)}</span>`:""}')
+# TCG Japan 名稱偶爾重複（「奇樹的奇樹的…」），顯示時去掉
+rep('const o={ix,n,price,sold:!!sold,spr,psa,box,base:m?m[1]:n,', 'const o={ix,n,price,sold:!!sold,spr,psa,box,base:(m?m[1]:n).replace(/(.{1,6}的)\\1+/g,"$1"),')
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄
