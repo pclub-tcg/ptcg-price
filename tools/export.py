@@ -154,10 +154,66 @@ if bd_path and os.path.exists(bd_path):
         if d.get("k"):
             EXTRA_K["%d~b" % b["sid"]] = d["k"]
         nb += 1
-    json.dump([{"n": q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"]}
-               for q in prods if q["k"].startswith("x:") and q.get("s")],
-              open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False)
     print("extra boxes", nb)
+
+# 4c. 日版高稀有度卡（GitHub Actions 每天抓的 jp.json，publish.sh 用 JP_DATA 傳進來）
+jp_path = os.environ.get("JP_DATA")
+EN2ZH = {}
+if jp_path and os.path.exists(jp_path):
+    jcards = json.load(open(jp_path, encoding="utf-8"))["cards"]
+    have_kk = {p.get("kk") for p in prods if p.get("kk")}
+    setnum = {}
+    for r in cat["rows"]:  # 目錄裡已有的卡：用系列＋卡號對出中文名
+        m = R.match(r[0])
+        if m:
+            setnum[(m.group(4).upper(), m.group(3))] = m.group(1)
+    JP2ZH = {}
+    for c in jcards:
+        zh = setnum.get((c["set"].upper(), c["num"]))
+        if zh:
+            JP2ZH.setdefault(c["b"], zh)
+            if c.get("en"):
+                EN2ZH.setdefault(c["en"].lower(), zh)
+    nj = 0
+    for c in jcards:
+        zh = setnum.get((c["set"].upper(), c["num"])) or JP2ZH.get(c["b"])
+        name = zh or c["b"]
+        for kind, d in (("a", c.get("a") or {}), ("p", c.get("p") or {})):
+            kk = "%d~%s" % (c["sid"], kind)
+            if kk in have_kk or not d.get("s"):
+                continue
+            psa = kind == "p"
+            prods.append({"k": "j:%d%s" % (c["sid"], "p" if psa else ""), "n": "%s %s %s%s" % (name, c["r"], c["num"], " PSA10" if psa else ""),
+                          "j": "%s %s [%s %s]" % (c["b"], c["r"], c["set"], c["num"]),
+                          "kw": " ".join(x for x in [c["b"], c.get("en", ""), c["set"], c["r"], "psa10 鑑定" if psa else ""] if x),
+                          "num": c["num"], "set": c["set"], "rar": c["r"], "p": 1 if psa else 0, "b": 0, "img": None, "m": None,
+                          "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "",
+                          "mq": "%s %s%s" % (c["num"], c["r"], " PSA10" if psa else ""), "cn": None, "sold": 0,
+                          "cat": "%s【%s】{%s} [%s]%s" % (name, c["r"], c["num"], c["set"], "_PSA10" if psa else "")})
+            if d.get("k"):
+                EXTRA_K[kk] = d["k"]
+            nj += 1
+    print("jp cards", nj)
+
+# 4d. 美版（GitHub Actions 每天從 tcgcsv＝TCGplayer 抓的 us.json，publish.sh 用 US_DATA 傳進來）
+us_path = os.environ.get("US_DATA")
+USD = None
+if us_path and os.path.exists(us_path):
+    ud = json.load(open(us_path, encoding="utf-8"))
+    USD = ud.get("usd_twd") or 32.0
+    def zh_for(n):
+        b = n.split(" - ")[0].split(" (")[0].lower()
+        return EN2ZH.get(b, "")
+    nu = 0
+    for it in ud["items"]:
+        kk = "u%d" % it["id"]
+        prods.append({"k": "u:%d" % it["id"], "n": it["n"], "j": it["set"], "kw": " ".join(x for x in [zh_for(it["n"]), it.get("v", ""), "美版 英文 us en", "box 原盒 未拆" if it["t"] == "s" else ""] if x),
+                      "num": it.get("num", ""), "set": it["set"], "rar": it.get("r", ""), "p": 0, "b": 1 if it["t"] == "s" else 0,
+                      "us": 1, "um": it["m"], "ul": it.get("l"), "uurl": it.get("url"), "uimg": it.get("img"), "img": it.get("img"),
+                      "kk": kk, "fx": round(USD / 100, 5)})
+        EXTRA_K[kk] = it["k"]
+        nu += 1
+    print("us items", nu, "usd", USD)
 
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
@@ -180,8 +236,11 @@ def kpts(key):
     return o
 
 
+FX = rate
+
+
 def ntd(v):  # 走勢圖座標用台幣
-    v *= rate
+    v *= FX
     return "%.1fk" % (v / 1000) if v >= 10000 else format(round(v, -1), ",.0f")
 
 
@@ -256,8 +315,9 @@ for p in prods:
     raw = kpts(kk)
     if not raw:
         continue
-    pts = clean(raw, (p.get("s") or [None])[0], kk.endswith("~b"))
-    if len(pts) < 3:
+    FX = p.get("fx") or rate
+    pts = raw if p.get("us") else clean(raw, (p.get("s") or [None])[0], kk.endswith("~b"))
+    if len(pts) < (1 if p.get("us") else 3):
         KL_OUT.pop(kk, None)
         continue
     KL_OUT[kk] = encode(pts)
@@ -298,11 +358,22 @@ if HI and os.path.isdir(HI):
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os.path.isdir(os.path.join(out, "hi")) else [], open(os.path.join(out, "hi.json"), "w"))
 print("hi-res images", nhi)
 
+# 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
+json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"]}
+           for q in prods if q["k"][:2] in ("x:", "j:") and q.get("s")],
+          open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+# 美版另外給網站用
+json.dump([{"id": int(q["k"][2:]), "n": q["n"], "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
+            "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", "")} for q in prods if q.get("us")],
+          open(os.path.join(out, "us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+for p in prods:
+    p.pop("cat", None); p.pop("uimg", None)
+
 for p in prods:  # 去掉空值，縮小檔案
     for k in [k for k, v in p.items() if v in (None, "", 0) and k not in ("k", "n")]:
         del p[k]
 
-bot = {"updated": price.get("updated"), "rate": rate, "coupon": 600, "ship": 293, "sship": 600, "products": prods}
+bot = {"updated": price.get("updated"), "rate": rate, "usd": USD, "coupon": 600, "ship": 293, "sship": 600, "products": prods}
 json.dump(bot, open(os.path.join(out, "data", "bot.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 print("products", len(prods), "bot.json bytes", os.path.getsize(os.path.join(out, "data", "bot.json")),
       "thumbs", len(os.listdir(os.path.join(out, "img"))))

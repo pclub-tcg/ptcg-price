@@ -1,6 +1,9 @@
 name: 下載商品大圖
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["更新日版卡行情"]
+    types: [completed]
   push:
     branches: [main]
     paths: [tools/sids.json, tools/fetch_images.py, .github/workflows/images.yml]
@@ -9,7 +12,7 @@ permissions:
 jobs:
   images:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - name: 取出已經下載過的圖片
@@ -19,8 +22,12 @@ jobs:
           if git rev-parse --verify origin/img >/dev/null 2>&1; then git --work-tree=/tmp/img checkout origin/img -- . ; fi
           ls /tmp/img | wc -l
       - run: pip install pillow
+      - name: 取出日版卡清單
+        run: |
+          mkdir -p /tmp/jp
+          if git fetch -q origin jpdata; then git --work-tree=/tmp/jp checkout FETCH_HEAD -- jp.json || true; fi
       - name: 下載並轉檔
-        run: python3 tools/fetch_images.py tools/sids.json /tmp/img/hi
+        run: python3 tools/fetch_images.py tools/sids.json /tmp/img/hi /tmp/jp/jp.json
       - name: 推到 img 分支（只留一個 commit）
         run: |
           cd /tmp/img

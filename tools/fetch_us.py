@@ -65,6 +65,11 @@ for g in groups:
         it["k"] = k
         items.append(it)
     time.sleep(0.2)
-json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "items": items},
+usd = None  # 美元換台幣（open.er-api.com，每天更新）
+try:
+    usd = round(get("https://open.er-api.com/v6/latest/USD")["rates"]["TWD"], 3)
+except Exception as e:
+    print("fx fail", e)
+json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "usd_twd": usd, "items": items},
           open(sys.argv[2], "w"), ensure_ascii=False, separators=(",", ":"))
 print("groups", len(groups), "items", len(items), "cards", sum(1 for i in items if i["t"] == "c"), "sealed", sum(1 for i in items if i["t"] == "s"))
