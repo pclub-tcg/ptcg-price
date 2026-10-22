@@ -17,9 +17,17 @@ def get(url):
 known = {b["sid"] for b in boxes}
 found = []
 seen = set()
-BAD = ("英語版", "中国語版", "韓国語版", "カートン", "空箱", "シュリンクなし", "ケース", "スリーブ", "デッキシールド", "プレイマット", "ファイル")
-for kw in ["拡張パック BOX", "強化拡張パック BOX", "ハイクラスパック BOX", "スペシャルセット", "BOX シュリンク付き", "ポケモンカードゲーム BOX"]:
-    for pg in range(1, 31):
+BAD = ("英語版", "中国語版", "韓国語版", "カートン", "空箱", "シュリンクなし", "ケース", "スリーブ", "デッキシールド", "プレイマット", "ファイル", "切手", "ポケモンセンター", "未開封パック")
+import os
+_D = os.path.dirname(os.path.abspath(__file__))
+names = set()
+for f in ("setnames_tw.json", "setnames.json"):  # 已知的日版擴充包名稱，逐一搜「名稱 BOX」
+    if os.path.exists(os.path.join(_D, f)):
+        d = json.load(open(os.path.join(_D, f), encoding="utf-8"))
+        names |= set(d.get("ja", d) if f == "setnames.json" else d)
+KWS = sorted(n + " BOX" for n in names if n and len(n) > 1) + ["拡張パック BOX", "強化拡張パック BOX", "ハイクラスパック BOX", "BOX シュリンク付き"]
+for kw in KWS:
+    for pg in range(1, 4):
         try:
             with urllib.request.urlopen(urllib.request.Request("https://snkrdunk.com/search?keywords=%s&page=%d" % (urllib.parse.quote(kw), pg), headers=UA), timeout=30) as r:
                 h = r.read().decode("utf-8", "replace")
@@ -35,7 +43,7 @@ for sid in sorted(seen - known):
         t = get("https://snkrdunk.com/v1/apparels/%d" % sid).get("localizedName") or ""
     except Exception:
         continue
-    if "BOX" not in t.upper() or "ポケモン" not in t or any(x in t for x in BAD):
+    if "BOX" not in t.upper() or "ポケモン" not in t or not any(x in t for x in ("パック", "セット", "デッキ")) or any(x in t for x in BAD):
         continue
     m = re.search(r"[「『](.+?)[」』]", t)
     found.append({"sid": sid, "jp": (m.group(1) if m else re.sub(r"ポケモンカードゲーム|BOX.*", "", t)).strip(), "t": t})
