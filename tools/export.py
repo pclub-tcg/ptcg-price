@@ -317,7 +317,7 @@ for p in prods:
         continue
     FX = p.get("fx") or rate
     pts = raw if p.get("us") else clean(raw, (p.get("s") or [None])[0], kk.endswith("~b"))
-    if len(pts) < (1 if p.get("us") else 3):
+    if len(pts) < (5 if p.get("us") else 3):
         KL_OUT.pop(kk, None)
         continue
     KL_OUT[kk] = encode(pts)
@@ -368,12 +368,30 @@ json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["n"], "set": q["
           open(os.path.join(out, "us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 for p in prods:
     p.pop("cat", None); p.pop("uimg", None)
+    if p.get("us"):  # 機器人用 id 自己組 TCGplayer 圖片／商品網址，bot.json 小很多
+        p.pop("img", None); p.pop("uurl", None); p.pop("j", None); p.pop("kk", None); p.pop("fx", None)
 
 for p in prods:  # 去掉空值，縮小檔案
     for k in [k for k, v in p.items() if v in (None, "", 0) and k not in ("k", "n")]:
         del p[k]
 
-bot = {"updated": price.get("updated"), "rate": rate, "usd": USD, "coupon": 600, "ship": 293, "sship": 600, "products": prods}
+BOT_US_C, BOT_US_S = float(os.environ.get("BOT_US_C", 100)), float(os.environ.get("BOT_US_S", 200))  # 美版進機器人的門檻（US$）
+BOT_JP = float(os.environ.get("BOT_JP", 3000))  # 日版高稀有度卡進機器人的門檻（成交中位 ¥）
+def to_bot(p):
+    if p.get("us"):
+        return p.get("um", 0) >= (BOT_US_S if p.get("b") else BOT_US_C)
+    return p["k"][:2] != "j:" or (p.get("s") or [0])[0] >= BOT_JP
+import unicodedata
+bprods = [p for p in prods if to_bot(p)]
+for p in bprods:  # 搜尋用字串先算好（Worker 不用每次冷啟動都做 NFKC，省 CPU）
+    p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
+                                   + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + ("" if p.get("us") else " 日版 jp")).lower()
+    for k in ("kw", "cn", "kd"):  # 已併進 h，或機器人沒用到
+        p.pop(k, None)
+# 美版另存 bot-us.json：查英文或「美版」時機器人才載入
+json.dump({"products": [p for p in bprods if p.get("us")]}, open(os.path.join(out, "data", "bot-us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+bprods = [p for p in bprods if not p.get("us")]
+bot = {"updated": price.get("updated"), "rate": rate, "usd": USD, "coupon": 600, "ship": 293, "sship": 600, "products": bprods}
 json.dump(bot, open(os.path.join(out, "data", "bot.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-print("products", len(prods), "bot.json bytes", os.path.getsize(os.path.join(out, "data", "bot.json")),
+print("products", len(prods), "bot products", len(bprods), "bot.json bytes", os.path.getsize(os.path.join(out, "data", "bot.json")),
       "thumbs", len(os.listdir(os.path.join(out, "img"))))

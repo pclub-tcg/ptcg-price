@@ -14,7 +14,9 @@ if git -C "$REPO" fetch -q origin boxdata 2>/dev/null; then git -C "$REPO" --wor
 JPDIR="$(mktemp -d)"; USDIR="$(mktemp -d)"
 if git -C "$REPO" fetch -q origin jpdata 2>/dev/null; then git -C "$REPO" --work-tree="$JPDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
 if git -C "$REPO" fetch -q origin usdata 2>/dev/null; then git -C "$REPO" --work-tree="$USDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
-JP_DATA="$JPDIR/jp.json" US_DATA="$USDIR/us.json" BOX_DATA="$BOXDIR/boxdata.json" HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$1" "$2" "$3" "$OUT"
+# Artifact 模板沒有美版分頁，這裡自動補上
+TPL="$(mktemp --suffix=.html)"; python3 "$HERE/add_us_tab.py" "$1" "$TPL"
+JP_DATA="$JPDIR/jp.json" US_DATA="$USDIR/us.json" BOX_DATA="$BOXDIR/boxdata.json" HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$TPL" "$2" "$3" "$OUT"
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 touch "$OUT/.nojekyll"
 cd "$OUT"

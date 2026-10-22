@@ -85,7 +85,7 @@ async function handle(ev, env) {
       const list = RANK[k](D).slice(0, 10);
       return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
     }
-    const hits = search(q, D);
+    const hits = search(q.replace(/美版|美國|英文/g, " ").trim() || q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
     return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果")]);
   }
@@ -127,8 +127,22 @@ async function data(env) {
   const r = await fetch(new URL("data/bot.json", env.SITE_URL).href, { cf: { cacheTtl: 300 } });
   if (!r.ok) { if (DATA) return DATA; throw new Error("bot.json " + r.status); }
   DATA = await r.json(); DATA_AT = Date.now();
-  for (const p of DATA.products) p.h = norm([p.n, p.j, p.kw, p.cn, p.num, p.set, p.rar, p.b ? "box 原盒" : "", p.p ? "psa10 鑑定" : "", p.us ? "" : "日版 jp"].join(" "));
+  prep(DATA.products);
   return DATA;
+}
+// 美版另一個檔，只有查英文或「美版」時才載入（bot.json 小一點，Worker 冷啟動不會超過 CPU 時間）
+let US = null, US_AT = 0;
+async function dataUS(env) {
+  if (US && Date.now() - US_AT < CACHE_MS) return US;
+  const r = await fetch(new URL("data/bot-us.json", env.SITE_URL).href, { cf: { cacheTtl: 300 } });
+  if (!r.ok) return US || [];
+  US = (await r.json()).products; US_AT = Date.now(); prep(US);
+  return US;
+}
+const wantUS = q => /美版|美國|英文|tcgplayer|\bus\b|\ben\b/i.test(q) || /[a-z]{4,}/i.test(q.replace(/psa\s*\d*/ig, ""));
+function prep(list) {
+  for (const p of list) if (p.us) { const id = p.k.slice(2); p.img = p.img || `https://tcgplayer-cdn.tcgplayer.com/product/${id}_400w.jpg`; p.uurl = p.uurl || `https://www.tcgplayer.com/product/${id}`; p.kk = p.kk || "u" + id; }
+  for (const p of list) if (!p.h) p.h = norm([p.n, p.j, p.kw, p.cn, p.num, p.set, p.rar, p.b ? "box 原盒" : "", p.p ? "psa10 鑑定" : "", p.us ? "" : "日版 jp"].join(" "));
 }
 const norm = s => String(s || "").normalize("NFKC").toLowerCase();
 
