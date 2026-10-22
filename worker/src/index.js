@@ -72,7 +72,7 @@ async function handle(ev, env) {
     const q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
-      quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
+      quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
@@ -85,7 +85,9 @@ async function handle(ev, env) {
       const list = RANK[k](D).slice(0, 10);
       return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
     }
-    const hits = search(q.replace(/美版|美國|英文/g, " ").trim() || q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
+    const onlyUS = /美版|美國|英文|tcgplayer/i.test(q), q2 = q.replace(/美版|美國|英文|tcgplayer/gi, " ").trim();
+    const hits = onlyUS ? search(q2 || "box", { ...D, products: await dataUS(env) })
+      : search(q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
     return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果")]);
   }

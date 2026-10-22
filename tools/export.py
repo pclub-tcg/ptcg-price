@@ -172,8 +172,9 @@ if jp_path and os.path.exists(jp_path):
         zh = setnum.get((c["set"].upper(), c["num"]))
         if zh:
             JP2ZH.setdefault(c["b"], zh)
-            if c.get("en"):
-                EN2ZH.setdefault(c["en"].lower(), zh)
+            if c.get("en"):  # SNKRDUNK 英文名像「Charizard ex SAR」：去掉 [..] 和結尾稀有度，才能對上美版名稱
+                en = re.sub(r"\s+[A-Z]{1,4}$", "", c["en"].split("[")[0].strip())
+                EN2ZH.setdefault(en.lower(), zh)
     nj = 0
     for c in jcards:
         zh = setnum.get((c["set"].upper(), c["num"])) or JP2ZH.get(c["b"])
