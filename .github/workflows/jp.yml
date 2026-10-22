@@ -14,8 +14,14 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
-      - name: 抓 SNKRDUNK 日版高稀有度卡
-        run: mkdir -p /tmp/out && python3 tools/fetch_jp.py /tmp/out/jp.json 2>&1 | tail -40 | tee /tmp/out/log.txt
+      - name: 取出前一天的資料（分天輪流更新用）
+        run: |
+          mkdir -p /tmp/old /tmp/out
+          if git fetch -q origin jpdata; then git --work-tree=/tmp/old checkout FETCH_HEAD -- jp.json || true; fi
+      - name: 抓 SNKRDUNK 日版卡（所有稀有度，有成交的）
+        env:
+          BUDGET_MIN: "200"
+        run: python3 tools/fetch_jp.py /tmp/out/jp.json /tmp/old/jp.json 2>&1 | tail -40 | tee /tmp/out/log.txt
       - name: 推到 jpdata 分支
         run: |
           cd /tmp/out
