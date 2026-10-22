@@ -1,0 +1,8 @@
+name: probe2
+on: {push: {branches: [probe2]}}
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 probe.py
