@@ -7,7 +7,8 @@ from PIL import Image
 sids, out = json.load(open(sys.argv[1])), sys.argv[2]
 for extra in sys.argv[3:]:  # jp.json、en.json 的卡也一起抓
     if os.path.exists(extra):
-        sids = sorted(set(sids) | {c["sid"] for c in json.load(open(extra))["cards"]})
+        d = json.load(open(extra))
+        sids = sorted(set(sids) | {c["sid"] for c in d.get("cards", []) + d.get("found", [])})  # jp.json／en.json 的卡、boxdata.json 自動找到的原盒
 os.makedirs(out, exist_ok=True)
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "application/json, image/*"}
 

@@ -2,7 +2,7 @@ name: 下載商品大圖
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["更新日版卡行情", "更新美版 PSA10 行情"]
+    workflows: ["更新日版卡行情", "更新美版 PSA10 行情", "更新原盒行情"]
     types: [completed]
   push:
     branches: [main]
@@ -27,8 +27,9 @@ jobs:
           mkdir -p /tmp/jp
           if git fetch -q origin jpdata; then git --work-tree=/tmp/jp checkout FETCH_HEAD -- jp.json || true; fi
           if git fetch -q origin endata; then git --work-tree=/tmp/jp checkout FETCH_HEAD -- en.json || true; fi
+          if git fetch -q origin boxdata; then git --work-tree=/tmp/jp checkout FETCH_HEAD -- boxdata.json || true; fi
       - name: 下載並轉檔
-        run: python3 tools/fetch_images.py tools/sids.json /tmp/img/hi /tmp/jp/jp.json /tmp/jp/en.json
+        run: python3 tools/fetch_images.py tools/sids.json /tmp/img/hi /tmp/jp/jp.json /tmp/jp/en.json /tmp/jp/boxdata.json
       - name: 推到 img 分支（只留一個 commit）
         run: |
           cd /tmp/img

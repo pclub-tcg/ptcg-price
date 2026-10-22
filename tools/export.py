@@ -137,10 +137,14 @@ for r in cat["rows"]:
 EXTRA_K = {}
 bd_path = os.environ.get("BOX_DATA")
 if bd_path and os.path.exists(bd_path):
-    bd = json.load(open(bd_path, encoding="utf-8"))["boxes"]
+    bdj = json.load(open(bd_path, encoding="utf-8"))
+    bd = bdj["boxes"]
     have = {p.get("sid"): p for p in prods if p.get("b") and p.get("sid")}
     nb = 0
-    for b in json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxes.json"), encoding="utf-8")):
+    blist = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "boxes.json"), encoding="utf-8"))
+    kn = {x["sid"] for x in blist}
+    blist += [{"sid": f["sid"], "jp": f["jp"], "zh": "", "set": ""} for f in bdj.get("found", []) if f["sid"] not in kn]  # 自動找到的原盒
+    for b in blist:
         d = bd.get(str(b["sid"]))
         if b["sid"] in have:  # 已經有的原盒：補上中日文名稱方便搜尋
             q = have[b["sid"]]

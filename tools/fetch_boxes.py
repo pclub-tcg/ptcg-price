@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""在 GitHub Actions 上執行：抓 tools/boxes.json 裡原盒的 SNKRDUNK 最近成交與每日均價。
-輸出 boxdata.json：{sid: {"s": [中位數, 筆數], "k": [起始日, 價格, 間隔天數, 價格, ...]}}
+"""在 GitHub Actions 上執行：抓 tools/boxes.json 裡原盒、以及在 SNKRDUNK 搜到的其他日版寶可夢原盒的最近成交與每日均價。
+輸出 boxdata.json：{"boxes": {sid: {"s": [中位數, 筆數], "k": [...]}}, "found": [{sid, jp 名稱, t 完整標題}]}
 用法：python3 fetch_boxes.py tools/boxes.json <輸出 json>"""
-import json, statistics, sys, time, urllib.request
+import json, re, statistics, sys, time, urllib.parse, urllib.request
 
 boxes, out = json.load(open(sys.argv[1])), sys.argv[2]
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "application/json"}
@@ -13,8 +13,37 @@ def get(url):
         return json.loads(r.read())
 
 
+# 自動找其他原盒：搜尋「BOX」相關關鍵字，只收日版寶可夢卡的原盒（排除英文／中文／韓文版、整箱、空盒、沒有收縮膜）
+known = {b["sid"] for b in boxes}
+found = []
+seen = set()
+BAD = ("英語版", "中国語版", "韓国語版", "カートン", "空箱", "シュリンクなし", "ケース", "スリーブ", "デッキシールド", "プレイマット", "ファイル")
+for kw in ["拡張パック BOX", "強化拡張パック BOX", "ハイクラスパック BOX", "スペシャルセット", "BOX シュリンク付き", "ポケモンカードゲーム BOX"]:
+    for pg in range(1, 31):
+        try:
+            with urllib.request.urlopen(urllib.request.Request("https://snkrdunk.com/search?keywords=%s&page=%d" % (urllib.parse.quote(kw), pg), headers=UA), timeout=30) as r:
+                h = r.read().decode("utf-8", "replace")
+        except Exception as e:
+            print("search fail", kw, pg, e); break
+        ids = set(int(x) for x in re.findall(r"/apparels/(\d+)", h)) - seen
+        if not ids:
+            break
+        seen |= ids
+        time.sleep(0.3)
+for sid in sorted(seen - known):
+    try:
+        t = get("https://snkrdunk.com/v1/apparels/%d" % sid).get("localizedName") or ""
+    except Exception:
+        continue
+    if "BOX" not in t.upper() or "ポケモン" not in t or any(x in t for x in BAD):
+        continue
+    m = re.search(r"[「『](.+?)[」』]", t)
+    found.append({"sid": sid, "jp": (m.group(1) if m else re.sub(r"ポケモンカードゲーム|BOX.*", "", t)).strip(), "t": t})
+    time.sleep(0.2)
+print("found boxes", len(found))
+
 res, fail = {}, 0
-for b in boxes:
+for b in boxes + found:
     sid = b["sid"]
     try:
         pid = get("https://snkrdunk.com/v1/apparels/%d" % sid)["productCatalogId"]
@@ -41,5 +70,6 @@ for b in boxes:
         print("fail", sid, e)
         fail += 1
     time.sleep(0.4)
-json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "boxes": res}, open(out, "w"), separators=(",", ":"))
+json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "boxes": res,
+           "found": [f for f in found if str(f["sid"]) in res]}, open(out, "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(res), "fail", fail)
