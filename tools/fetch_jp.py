@@ -47,7 +47,7 @@ print("candidate ids", len(ids))
 def hist(pid, cond):
     q = "&condition_code=" + cond
     h = get("https://snkrdunk.com/v3/products/%s/trading-history?range=all%s" % (pid, q))
-    trades = [t["price"] for t in h.get("trades", []) if str(t.get("title", "1枚")).startswith("1枚") and t.get("price")][:8]
+    trades = [t["price"] for t in h.get("trades", []) if "1枚" in (str(t.get("title", "")) + str(t.get("label", ""))) and t.get("price")][:8]
     pts = {}
     for line in (h.get("chart") or {}).get("lines", [])[:1]:
         for p in line.get("points", []):
