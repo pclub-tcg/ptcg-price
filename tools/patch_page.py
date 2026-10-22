@@ -43,6 +43,33 @@ if _os.path.exists(_tw):
                     it["n"] = new
         h = h[:_m.start(2)] + _json.dumps(pdata, ensure_ascii=False, separators=(",", ":")) + h[_m.end(2):]
 
+# 1d. TCG Japan 目錄的原盒名稱有些是英文／日文，照台灣官方名稱（呼卡）改；所有用到這個名稱當 key 的區塊一起改
+_rn = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "catalog_rename.json")
+if _os.path.exists(_rn):
+    REN = _json.load(open(_rn, encoding="utf-8"))
+    def _blk(i):
+        m = _re.search(r'(<script id="%s" type="application/json">)(.*?)(</script>)' % i, h, _re.S)
+        return m, (_json.loads(m.group(2)) if m else None)
+    def _put(m, d):
+        global h
+        h = h[:m.start(2)] + _json.dumps(d, ensure_ascii=False, separators=(",", ":")) + h[m.end(2):]
+    m, d = _blk("catalog-data")
+    if d:
+        for r in d["rows"]:
+            r[0] = REN.get(r[0], r[0])
+        _put(m, d)
+    for bid in ("snkr-data", "mercari-data"):
+        m, d = _blk(bid)
+        if d:
+            d["cards"] = {REN.get(k, k): v for k, v in d["cards"].items()}
+            _put(m, d)
+    m, d = _blk("price-data")
+    if d:
+        for it in d["items"]:
+            if it.get("cn") in REN:
+                it["cn"] = REN[it["cn"]]
+        _put(m, d)
+
 # 2. 分頁名稱
 rep('aria-controls="panel-tcg">卡片目錄（TCG Japan）</button>', 'aria-controls="panel-tcg">卡片目錄</button>')
 
