@@ -108,7 +108,7 @@ def one(sid):
         return OLD.get(sid)
     try:
         o = OLD.get(sid)
-        if o and o.get("pid"):
+        if o and o.get("pid") and o.get("set"):  # 有完整資料才沿用，不然重抓商品資訊
             c = {k: v for k, v in o.items() if k not in ("a", "p")}
         else:
             a = get("https://snkrdunk.com/v1/apparels/%s" % sid)
@@ -117,7 +117,8 @@ def one(sid):
             if not m or m.group(4).upper() not in SETS_U or any(x in loc for x in ("英語版", "中国語版", "韓国語版")):
                 SKIP[sid] = TODAY; STAT["not jp card"] += 1
                 return None
-            c = {"sid": int(sid), "b": m.group(1).strip(), "v": (m.group(3) or "").strip(),  # v：鏡面等版本 "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
+            # v：鏡面等版本
+            c = {"sid": int(sid), "b": m.group(1).strip(), "v": (m.group(3) or "").strip(), "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
                  "en": (a.get("name") or "").split(" [")[0], "img": ((a.get("primaryMedia") or {}).get("imageUrl")) or "",
                  "pid": a["productCatalogId"]}
         c["a"] = hist(c["pid"], "trading_card_single_nearly_unused", "A")

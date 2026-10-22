@@ -166,7 +166,7 @@ if bd_path and os.path.exists(bd_path):
 jp_path = os.environ.get("JP_DATA")
 EN2ZH = {}
 if jp_path and os.path.exists(jp_path):
-    jcards = json.load(open(jp_path, encoding="utf-8"))["cards"]
+    jcards = [c for c in json.load(open(jp_path, encoding="utf-8"))["cards"] if c.get("set") and c.get("num")]  # 資料不完整的卡先跳過
     have_kk = {p.get("kk") for p in prods if p.get("kk")}
     setnum = {}
     for r in cat["rows"]:  # 目錄裡已有的卡：用系列＋卡號對出中文名
