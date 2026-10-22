@@ -1,8 +1,13 @@
 name: probe
 on: workflow_dispatch
+permissions:
+  contents: write
 jobs:
   p:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 tools/probe.py
+      - run: mkdir -p /tmp/o && python3 tools/probe.py > /tmp/o/out.txt 2>&1 || true
+      - run: |
+          cd /tmp/o && git init -q -b probe && git add -A && git -c user.name=a -c user.email=a@a commit -qm p
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" probe
