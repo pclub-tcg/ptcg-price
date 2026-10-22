@@ -1,0 +1,24 @@
+name: 部署 LINE 機器人
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [worker/**, .github/workflows/worker.yml]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 沒設 CLOUDFLARE_API_TOKEN 就略過
+        if: env.CF == ''
+        run: echo "repo 的 Secrets 還沒有 CLOUDFLARE_API_TOKEN，先不部署"
+      - name: 部署到 Cloudflare Worker（ptcg-line-bot，密鑰沿用）
+        if: env.CF != ''
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: d7ec321df5316f68ceae4ebae90bc29d
+          workingDirectory: worker
+          command: deploy
