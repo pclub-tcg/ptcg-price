@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""把「卡價套利王」Artifact 的 HTML 轉成 GitHub Pages 網站 + LINE 機器人資料。
+"""把「P’CLUB」Artifact 的 HTML 轉成 GitHub Pages 網站 + LINE 機器人資料。
 
 用法：python3 export.py <artifact.html> <kline.json> <sprites 資料夾> <輸出 site 資料夾>
 

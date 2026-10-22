@@ -1,4 +1,4 @@
-// 卡價套利王 LINE 機器人（Cloudflare Worker）
+// P’CLUB LINE 機器人（Cloudflare Worker）
 // 環境變數（在 Cloudflare 設定頁填，不要寫進程式）：
 //   LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN  必填
 //   ANTHROPIC_API_KEY                               選填：以圖搜尋用（有填就用 Claude，比較準）
@@ -15,7 +15,7 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
     if (url.pathname === "/setup/richmenu") return setupRichMenu(env);
-    if (req.method === "GET") return new Response("卡價套利王 LINE bot OK");
+    if (req.method === "GET") return new Response("P’CLUB LINE bot OK");
     if (req.method !== "POST" || url.pathname !== "/webhook") return new Response("Not found", { status: 404 });
     const body = await req.text();
     if (!(await verify(body, req.headers.get("x-line-signature") || "", env.LINE_CHANNEL_SECRET)))
@@ -47,7 +47,7 @@ async function reply(env, token, messages) {
 const text = t => ({ type: "text", text: t.slice(0, 4900) });
 
 const QUICK = [
-  { type: "action", action: { type: "message", label: "💰 有賺頭", text: "有賺頭" } },
+  { type: "action", action: { type: "message", label: "💰 比台灣便宜", text: "比台灣便宜" } },
   { type: "action", action: { type: "message", label: "📈 漲最多", text: "漲最多" } },
   { type: "action", action: { type: "camera", label: "拍照查價" } },
   { type: "action", action: { type: "cameraRoll", label: "選照片查價" } },
@@ -77,7 +77,7 @@ async function handle(ev, env) {
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
-    const lists = [[/^(有賺頭|賺|推薦)$/, "gap", "價差最大的商品（台灣價 − 日本到手成本）", "目前沒有價差為正的商品。"],
+    const lists = [[/^(比台灣便宜|有賺頭|賺|推薦|便宜)$/, "gap", "日本買回比台灣便宜最多的商品（台灣價 − 日本到手成本）", "目前沒有價差為正的商品。"],
       [/^(漲最多|漲幅|熱門|市場趨勢)$/, "up", "SNKRDUNK 近 30 天漲最多", "目前沒有足夠的成交資料。"],
       [/^(原盒行情|原盒|box)$/i, "box", "原盒行情（SNKRDUNK 成交價高到低）", "目前沒有原盒資料。"],
       [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
@@ -108,12 +108,12 @@ async function handle(ev, env) {
   }
 }
 
-const HELP = `卡價套利王｜日本成交價 × 台灣社團價
+const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 
 🔍 查價：直接傳卡號、卡名或系列
 　例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX
 📷 拍照查價：傳卡片照片，自動辨識
-💰 有賺頭：台灣價差最大的商品
+💰 比台灣便宜：日本買回比台灣便宜最多的商品
 📈 漲最多：SNKRDUNK 近 30 天漲幅排行
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
@@ -284,7 +284,7 @@ function bubble(p, D, env) {
   const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
     ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
     { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
-      T(p.us ? "🔥 卡價套利王・美國行情" : "🔥 卡價套利王・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
+      T(p.us ? "🔥 P’CLUB・美國行情" : "🔥 P’CLUB・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
       { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },
       { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, C.ink, "#FFC48A")) },
       ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.ink, wrap: true, maxLines: 2 })] : []),
@@ -357,14 +357,14 @@ async function setupRichMenu(env) {
     A(96, 1010, 524, 570, { type: "uri", uri: site }),
     A(652, 1010, 460, 570, msg("說明")),
     A(1208, 28, 618, 524, { type: "uri", uri: "https://line.me/R/nv/camera/" }),
-    A(1854, 28, 618, 524, msg("有賺頭")),
+    A(1854, 28, 618, 524, msg("比台灣便宜")),
     A(1208, 580, 618, 524, msg("漲最多")),
     A(1854, 580, 618, 524, msg("原盒行情")),
     A(1208, 1132, 618, 524, msg("鑑定卡行情")),
     A(1854, 1132, 618, 524, msg("匯率試算")),
   ];
   const old = await (await fetch("https://api.line.me/v2/bot/richmenu/list", { headers: H })).json();
-  const r = await fetch("https://api.line.me/v2/bot/richmenu", { method: "POST", headers: H, body: JSON.stringify({ size: { width: 2500, height: 1686 }, selected: true, name: "卡價套利王 主選單", chatBarText: "選單｜查卡價", areas }) });
+  const r = await fetch("https://api.line.me/v2/bot/richmenu", { method: "POST", headers: H, body: JSON.stringify({ size: { width: 2500, height: 1686 }, selected: true, name: "P’CLUB 主選單", chatBarText: "選單｜查卡價", areas }) });
   if (!r.ok) return new Response("建立失敗：" + await r.text(), { status: 500 });
   const { richMenuId } = await r.json();
   const img = await fetch(new URL("richmenu.jpg?t=" + Date.now(), site).href); // 加時間避免拿到快取的舊圖

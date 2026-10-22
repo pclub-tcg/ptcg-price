@@ -128,7 +128,7 @@ def ic_fx(cx, cy, c):
 
 TILES = [
     ("拍照查價", "拍卡號自動辨識", ic_cam, (255, 244, 228), CHAR),
-    ("有賺頭", "台灣價差排行", ic_coin, EMBER, WHITE),
+    ("比台灣便宜", "日本買回更划算", ic_coin, EMBER, WHITE),
     ("漲最多", "30 天漲幅排行", ic_up, TEAL, WHITE),
     ("原盒行情", "成交價高到低", ic_box, CHAR2, GOLD),
     ("鑑定卡行情", "PSA10 漲跌", ic_slab, CHAR2, GOLD),
