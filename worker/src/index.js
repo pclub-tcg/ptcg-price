@@ -282,7 +282,7 @@ function bubble(p, D, env) {
   const c = calc(p, D), site = env.SITE_URL, R = D.rate;
   const tags = [p.us || p.en ? "美版" : "日版", p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
   const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
-    ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
+    ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full" }] : []),
     { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
       T(p.us ? "🔥 P’CLUB・美國行情" : "🔥 P’CLUB・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
       { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },

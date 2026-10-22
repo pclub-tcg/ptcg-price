@@ -117,6 +117,14 @@ h = h.replace("LINE 官方帳號 @916ctmro", '<a href="%s" target="_blank" rel="
 # 卡片目錄清單改用小縮圖 ht/（大圖 hi/ 只在點開商品時用）
 rep('const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid);',
     'const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid)&&hiOf(hsid).replace("hi/","ht/");')
+# 去背圖：有 cut/ 就用（背景透明＋細白邊），清單用小縮圖 ct/；圖片不再墊白底
+rep('let HISET=new Set();const hiOf=sid=>sid&&HISET.has(+sid)?"hi/"+sid+".jpg":null;',
+    'let HISET=new Set(),CUTSET=new Set();const hiOf=sid=>sid&&CUTSET.has(+sid)?"cut/"+sid+".png":(sid&&HISET.has(+sid)?"hi/"+sid+".jpg":null);'
+    'if(/github\\.io$/.test(location.hostname))fetch("cut.json").then(r=>r.ok?r.json():[]).then(a=>{if(a.length){CUTSET=new Set(a);try{render(false)}catch(e){}}}).catch(()=>{});')
+h = h.replace('replace("hi/","ht/")', 'replace("cut/","ct/")')
+h = h.replace('img.cimg{object-fit:contain;background:#fff}', 'img.cimg{object-fit:contain;background:transparent}')
+h = h.replace('style="object-fit:contain;background:#fff"', 'style="object-fit:contain"')
+h = h.replace('alt="" style="background:#fff">', 'alt="">')  # 商品詳情的大圖也不墊白底
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄

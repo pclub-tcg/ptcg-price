@@ -396,6 +396,23 @@ if HI and os.path.isdir(HI):
             p["img"] = "hi/" + os.path.basename(f)
             nhi += 1
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os.path.isdir(os.path.join(out, "hi")) else [], open(os.path.join(out, "hi.json"), "w"))
+# 7b. 去背圖（商品輪廓外一圈細白邊，背景透明），網站和 LINE 都優先用這個；清單另外做小縮圖 ct/
+CUT = os.path.join(os.path.dirname(HI.rstrip("/")), "cut") if HI else None
+ncut = 0
+if CUT and os.path.isdir(CUT):
+    os.makedirs(os.path.join(out, "cut"), exist_ok=True); os.makedirs(os.path.join(out, "ct"), exist_ok=True)
+    for p in prods:
+        f = os.path.join(CUT, "%s.png" % p.get("sid"))
+        if p.get("sid") and os.path.exists(f):
+            b = os.path.basename(f)
+            if not os.path.exists(os.path.join(out, "cut", b)):
+                shutil.copy(f, os.path.join(out, "cut", b))
+                t = Image.open(f).convert("RGBA"); t.thumbnail((144, 202))
+                t.quantize(colors=255, method=Image.Quantize.FASTOCTREE).save(os.path.join(out, "ct", b), optimize=True)
+            p["img"] = "cut/" + b
+            ncut += 1
+json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "cut"))) if os.path.isdir(os.path.join(out, "cut")) else [], open(os.path.join(out, "cut.json"), "w"))
+print("cutout images", ncut)
 print("hi-res images", nhi)
 
 # 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
