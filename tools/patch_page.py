@@ -23,6 +23,26 @@ rep('<path d="M18 8l-6 9h4.5l-2 7 7-10h-4.5z" fill="currentColor"/></svg>' + NAM
     '<path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg>'
     '<span style="font-family:\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;letter-spacing:.02em">' + NAME + '</span></div>')
 
+# 1c. 比價結果裡的原盒名稱統一用台灣官方擴充包名稱（tools/setnames_tw.json），舊名稱留在搜尋關鍵字
+import json as _json, os as _os, re as _re
+_tw = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "setnames_tw.json")
+if _os.path.exists(_tw):
+    TW = _json.load(open(_tw, encoding="utf-8"))
+    _m = _re.search(r'(<script id="price-data" type="application/json">)(.*?)(</script>)', h, _re.S)
+    if _m:
+        pdata = _json.loads(_m.group(2))
+        for it in pdata.get("items", []):
+            if it.get("cat") != "box":
+                continue
+            base = _re.split(r"\s*BOX|\s*ボックス|（", it.get("jp", ""))[0].strip()
+            if base in TW:
+                code = _re.match(r"^([A-Za-z]{1,3}\d+[a-zA-Z]?\s+)", it["n"])
+                new = (code.group(1) if code else "") + TW[base] + " BOX"
+                if new != it["n"]:
+                    it["kw"] = (it.get("kw", "") + " " + it["n"]).strip()
+                    it["n"] = new
+        h = h[:_m.start(2)] + _json.dumps(pdata, ensure_ascii=False, separators=(",", ":")) + h[_m.end(2):]
+
 # 2. 分頁名稱
 rep('aria-controls="panel-tcg">卡片目錄（TCG Japan）</button>', 'aria-controls="panel-tcg">卡片目錄</button>')
 
