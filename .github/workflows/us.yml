@@ -1,0 +1,30 @@
+name: 更新美版行情
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 23 * * *"   # 每天台灣時間 07:07
+  push:
+    branches: [main]
+    paths: [tools/fetch_us.py, .github/workflows/us.yml]
+permissions:
+  contents: write
+jobs:
+  us:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: 取出舊資料（累積每日價格用）
+        run: |
+          mkdir -p /tmp/old /tmp/out
+          if git fetch -q origin usdata; then git --work-tree=/tmp/old checkout FETCH_HEAD -- . ; fi
+          ls /tmp/old
+      - name: 抓 TCGplayer 美版價格
+        run: python3 tools/fetch_us.py "$( [ -f /tmp/old/us.json ] && echo /tmp/old/us.json )" /tmp/out/us.json | tee /tmp/out/log.txt
+      - name: 推到 usdata 分支
+        run: |
+          cd /tmp/out
+          git init -q -b usdata
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "美版行情"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" usdata
