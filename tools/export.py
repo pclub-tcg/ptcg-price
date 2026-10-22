@@ -224,6 +224,32 @@ if us_path and os.path.exists(us_path):
         nu += 1
     print("us items", nu, "usd", USD)
 
+# 4e. 美版 PSA10（GitHub Actions 每天抓的 SNKRDUNK 英文版卡成交 en.json，publish.sh 用 EN_DATA 傳進來；價格是日圓）
+en_path = os.environ.get("EN_DATA")
+if en_path and os.path.exists(en_path):
+    ed = json.load(open(en_path, encoding="utf-8"))
+    usz = {}  # (TCGplayer 系列名, 卡號) → 美版商品的中文名
+    for q in prods:
+        if q.get("us") and q.get("zh") and q.get("num"):
+            usz.setdefault((q["set"], q["num"]), q["zh"])
+    ne = 0
+    for c in ed["cards"]:
+        d = c.get("p") or {}
+        if not d.get("s"):
+            continue
+        sname = ed["sets"].get(c["set"], c["set"])
+        zh = usz.get((sname, c["num"])) or en2zh(c["en"]) or ja2zh(c["b"]) or c["en"]
+        kk = "%d~p" % c["sid"]
+        prods.append({"k": "e:%d" % c["sid"], "n": "%s %s PSA10" % (zh, c["num"]), "j": "%s %s [%s EN %s]" % (c["en"], c["r"], c["set"], c["num"]),
+                      "kw": " ".join(x for x in [c["en"], c["b"], c["set"], sname, c["r"], "美版 英文 us en psa10 鑑定"] if x),
+                      "num": c["num"], "set": c["set"] + " EN", "rar": c["r"], "p": 1, "b": 0, "en": 1, "img": None, "m": None,
+                      "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "", "mq": "", "cn": None, "sold": 0,
+                      "cat": "%s【%s】{%s} [%s EN]_PSA10" % (zh, c["r"] or "-", c["num"], c["set"])})
+        if d.get("k"):
+            EXTRA_K[kk] = d["k"]
+        ne += 1
+    print("en psa10", ne)
+
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
 import datetime
@@ -368,8 +394,8 @@ json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os
 print("hi-res images", nhi)
 
 # 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
-json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {})}
-           for q in prods if q["k"][:2] in ("x:", "j:") and q.get("s")],
+json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {}), **({"en": 1, "jn": q["j"]} if q.get("en") else {})}
+           for q in prods if q["k"][:2] in ("x:", "j:", "e:") and q.get("s")],
           open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 # 美版另外給網站用
 json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["j"], "zh": q.get("zh", ""), "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
@@ -389,12 +415,12 @@ BOT_JP = float(os.environ.get("BOT_JP", 3000))  # 日版高稀有度卡進機器
 def to_bot(p):
     if p.get("us"):
         return p.get("um", 0) >= (BOT_US_S if p.get("b") else BOT_US_C)
-    return p["k"][:2] != "j:" or (p.get("s") or [0])[0] >= BOT_JP
+    return p["k"][:2] not in ("j:", "e:") or (p.get("s") or [0])[0] >= BOT_JP
 import unicodedata
 bprods = [p for p in prods if to_bot(p)]
 for p in bprods:  # 搜尋用字串先算好（Worker 不用每次冷啟動都做 NFKC，省 CPU）
     p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
-                                   + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + ("" if p.get("us") else " 日版 jp")).lower()
+                                   + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + (" 美版 us en" if p.get("us") or p.get("en") else " 日版 jp")).lower()
     for k in ("kw", "cn", "kd"):  # 已併進 h，或機器人沒用到
         p.pop(k, None)
 # 美版另存 bot-us.json：查英文或「美版」時機器人才載入

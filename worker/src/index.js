@@ -280,7 +280,7 @@ const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", 
 
 function bubble(p, D, env) {
   const c = calc(p, D), site = env.SITE_URL, R = D.rate;
-  const tags = [p.us ? "美版" : "日版", p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
+  const tags = [p.us || p.en ? "美版" : "日版", p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
   const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
     ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full", backgroundColor: "#FFFFFF" }] : []),
     { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [

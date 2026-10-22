@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """在 GitHub Actions 上執行：下載 SNKRDUNK 商品大圖，轉成 JPEG（LINE 卡片只吃 JPEG/PNG）。
-已經下載過的圖片不會重抓。用法：python3 fetch_images.py tools/sids.json <輸出資料夾> [jp.json]（jp.json 的卡也一起抓）"""
+已經下載過的圖片不會重抓。用法：python3 fetch_images.py tools/sids.json <輸出資料夾> [jp.json] [en.json]（這些檔裡的卡也一起抓）"""
 import io, json, os, sys, time, urllib.request
 from PIL import Image
 
 sids, out = json.load(open(sys.argv[1])), sys.argv[2]
-if len(sys.argv) > 3 and os.path.exists(sys.argv[3]):
-    sids = sorted(set(sids) | {c["sid"] for c in json.load(open(sys.argv[3]))["cards"]})
+for extra in sys.argv[3:]:  # jp.json、en.json 的卡也一起抓
+    if os.path.exists(extra):
+        sids = sorted(set(sids) | {c["sid"] for c in json.load(open(extra))["cards"]})
 os.makedirs(out, exist_ok=True)
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "application/json, image/*"}
 
