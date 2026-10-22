@@ -9,8 +9,13 @@ _S = json.load(open(os.path.join(_D, "setnames.json"), encoding="utf-8")) if os.
 SET_JA, SET_EN = _S.get("ja", {}), {k.lower(): v for k, v in _S.get("en", {}).items()}  # 擴充包名稱（52poke 寶可夢百科）
 
 
+# 台灣官方擴充包名稱（呼卡 huca.tw/gacha.php），優先於 52poke
+_T = os.path.join(_D, "setnames_tw.json")
+SET_TW = json.load(open(_T, encoding="utf-8")) if os.path.exists(_T) else {}
+
+
 def set_ja(name):
-    return SET_JA.get(name)
+    return SET_TW.get(name) or SET_JA.get(name)
 
 
 def set_en(name):
