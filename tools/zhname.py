@@ -19,8 +19,8 @@ def set_ja(name):
 
 
 def set_en(name):
-    n = re.sub(r"^[A-Z]{1,4}\d*[a-z]?:\s*", "", name or "").strip().lower()
-    return SET_EN.get(n)
+    n = re.sub(r"^(?:[A-Z]{1,4}\d*[a-z]?:\s*|[A-Za-z&]{2,6}\s+-\s+)", "", name or "").strip().lower()
+    return SET_EN.get(n) or SET_EN.get((name or "").strip().lower())
 
 
 JA = {**_N["ja"], **_X.get("ja", {})}
@@ -106,7 +106,7 @@ WORDS = [("scarlet & violet", "朱&紫"), ("sword & shield", "劍&盾"), ("sun &
          ("powers", "力量"), ("power", "力量"), ("partners", "夥伴"), ("league", "聯盟"), ("battle", "對戰"), ("mega", "超級"), ("mini", "迷你"),
          ("tins", "鐵盒"), ("sticker", "貼紙"), ("evolutions", "進化"), ("chest", "寶箱"), ("single", "單"), ("collector", "收藏家"), ("trainer", "訓練家"),
          ("gallery", "畫廊"), ("holiday", "節日"), ("calendar", "日曆"), ("advent", "倒數"), ("lunch box", "便當盒"), ("treasures of ruin", "災禍寶物"),
-         ("paradox", "悖謬"), ("ancient", "古代"), ("future", "未來"), ("celebration", "慶典"), ("championship", "錦標賽"), ("world", "世界")]
+         ("paradox", "悖謬"), ("costco", "Costco 限定"), ("prerelease", "發售前活動"), ("tournament", "大賽"), ("deluxe", "豪華"), ("illustration", "插畫"), ("mythical", "幻之"), ("friends", "夥伴"), ("heroes", "英雄"), ("decks", "牌組"), ("card", "卡"), ("enhanced", "強化"), ("special", "特別"), ("international", "國際"), ("challenge", "挑戰"), ("school", "學校"), ("back to school", "開學季"), ("party", "派對"), ("checklane", "結帳區"), ("blisters", "吊卡"), ("half", "半"), ("triple", "三"), ("ancient", "古代"), ("future", "未來"), ("celebration", "慶典"), ("championship", "錦標賽"), ("world", "世界")]
 
 
 def sealed2zh(name, setname=""):
@@ -114,10 +114,11 @@ def sealed2zh(name, setname=""):
     n = re.sub(r"\s*\[.*?\]|\s*\(.*?\)", "", name)
     n = re.sub(r"pok[eé]mon tcg:?", "", n, flags=re.I)
     zs = set_en(setname)
-    base = re.sub(r"^[A-Z]{1,4}\d*[a-z]?:\s*", "", setname or "").strip()
+    base = re.sub(r"^(?:[A-Z]{1,4}\d*[a-z]?:\s*|[A-Za-z&]{2,6}\s+-\s+)", "", setname or "").strip()
     if zs and base and base.lower() in n.lower():
         n = re.sub(re.escape(base), " ", n, flags=re.I)
-    else:  # 名稱裡如果有其他系列名也換掉
+    else:
+        zs = None  # 商品名稱裡沒有系列名，就不加在前面  # 名稱裡如果有其他系列名也換掉
         for en, z in sorted(SET_EN.items(), key=lambda x: -len(x[0])):
             if len(en) > 5 and en in n.lower():
                 n = re.sub(re.escape(en), " " + z + " ", n, flags=re.I); break
