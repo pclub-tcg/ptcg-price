@@ -228,17 +228,18 @@ if us_path and os.path.exists(us_path):
 en_path = os.environ.get("EN_DATA")
 if en_path and os.path.exists(en_path):
     ed = json.load(open(en_path, encoding="utf-8"))
-    usz = {}  # (TCGplayer 系列名, 卡號) → 美版商品的中文名
+    usz, usn = {}, {}  # (TCGplayer 系列名, 卡號) 或 (英文名, 卡號) → 美版商品的中文名
     for q in prods:
         if q.get("us") and q.get("zh") and q.get("num"):
             usz.setdefault((q["set"], q["num"]), q["zh"])
+            usn.setdefault((re.split(r"\s+-\s*|\s+\(", q["j"])[0].lower(), q["num"]), q["zh"])
     ne = 0
     for c in ed["cards"]:
         d = c.get("p") or {}
         if not d.get("s"):
             continue
         sname = ed["sets"].get(c["set"], c["set"])
-        zh = usz.get((sname, c["num"])) or en2zh(c["en"]) or ja2zh(c["b"]) or c["en"]
+        zh = usz.get((sname, c["num"])) or usn.get((c["en"].lower(), c["num"])) or en2zh(c["en"]) or ja2zh(c["b"]) or c["en"]
         kk = "%d~p" % c["sid"]
         prods.append({"k": "e:%d" % c["sid"], "n": "%s %s PSA10" % (zh, c["num"]), "j": "%s %s [%s EN %s]" % (c["en"], c["r"], c["set"], c["num"]),
                       "kw": " ".join(x for x in [c["en"], c["b"], c["set"], sname, c["r"], "美版 英文 us en psa10 鑑定"] if x),

@@ -78,7 +78,7 @@ def one(sid):
         if "英語版" not in loc:
             STAT["not en"] += 1; return None
         m = TITLE.match(loc)
-        if not m or m.group(3).upper() not in SETS:
+        if not m:
             STAT["no match"] += 1; return None
         c = {"sid": int(sid), "b": m.group(1).strip(), "r": m.group(2) or "", "set": m.group(3).upper(), "num": m.group(4),
              "en": re.split(r"\s+[A-Z]{1,4}\s*\[|\s*\[", a.get("name") or "")[0].strip()}
