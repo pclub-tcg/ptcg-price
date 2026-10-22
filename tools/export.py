@@ -12,7 +12,7 @@
 """
 import base64, io, json, os, re, shutil, sys, statistics
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from zhname import ja2zh, en2zh  # 日文／英文卡名翻成繁中
+from zhname import ja2zh, en2zh, set_ja, set_en  # 日文／英文卡名翻成繁中
 from PIL import Image
 
 src, kline, sprites, out = sys.argv[1:5]
@@ -148,7 +148,7 @@ if bd_path and os.path.exists(bd_path):
             continue
         if not d:
             continue
-        name = (b["zh"] or b["jp"]) + " BOX"
+        name = (b["zh"] or set_ja(b["jp"]) or b["jp"]) + " BOX"
         prods.append({"k": "x:%d" % b["sid"], "n": name, "j": b["jp"] + " ボックス", "kw": " ".join([b["zh"], b["jp"], b["set"], "box 原盒"]),
                       "num": "", "set": b["set"], "rar": "BOX", "p": 0, "b": 1, "img": None, "m": None,
                       "s": d.get("s"), "sid": b["sid"], "kk": "%d~b" % b["sid"], "tw": None, "tt": "", "note": "",

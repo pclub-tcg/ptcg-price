@@ -5,6 +5,19 @@ import json, os, re, unicodedata
 _D = os.path.dirname(os.path.abspath(__file__))
 _N = json.load(open(os.path.join(_D, "pokenames.json"), encoding="utf-8"))
 _X = json.load(open(os.path.join(_D, "names_extra.json"), encoding="utf-8")) if os.path.exists(os.path.join(_D, "names_extra.json")) else {"ja": {}, "en": {}}
+_S = json.load(open(os.path.join(_D, "setnames.json"), encoding="utf-8")) if os.path.exists(os.path.join(_D, "setnames.json")) else {"ja": {}, "en": {}}
+SET_JA, SET_EN = _S.get("ja", {}), {k.lower(): v for k, v in _S.get("en", {}).items()}  # 擴充包名稱（52poke 寶可夢百科）
+
+
+def set_ja(name):
+    return SET_JA.get(name)
+
+
+def set_en(name):
+    n = re.sub(r"^[A-Z]{1,4}\d*[a-z]?:\s*", "", name or "").strip().lower()
+    return SET_EN.get(n)
+
+
 JA = {**_N["ja"], **_X.get("ja", {})}
 EN = {**_N["en"], **{k.lower(): v for k, v in _X.get("en", {}).items()}}
 JA_PRE = [("メガ", "超級"), ("かがやく", "光輝"), ("ロケット団の", "火箭隊的"), ("アローラ", "阿羅拉"), ("ガラル", "伽勒爾"),
@@ -93,5 +106,6 @@ def en2zh(name, sealed=False):
             sub = re.sub(r"\s*\[.*?\]|\s*\(.*?\)", "", name)
             sub = re.sub(re.escape(a) + "|\\bcase\\b|pokemon tcg:?|pokemon", "", sub, flags=re.I)
             sub = re.sub(r"\s+", " ", sub).strip(" -:")
+            sub = set_en(sub) or sub  # 系列名翻成中文
             return ("美版 " + (sub + " " if sub else "") + b + ("整箱" if case and b != "整箱" else "")).strip()
     return None
