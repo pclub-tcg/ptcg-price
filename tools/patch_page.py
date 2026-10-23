@@ -250,5 +250,46 @@ function goSearch(){animList();""")
 rep('function setTab(t){tab=t;', 'function setTab(t){tab=t;try{animList()}catch(e){}')
 rep('  if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);', '  if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);\n  try{markImgs()}catch(e){}')
 
+# 9. 首頁上方動態背景（參考 tradecard.jp）：噴火龍色系流動光暈、漲幅前三名卡片扇形展開、即時行情跑馬燈
+rep('</style>\n\n<header class="bar">', r"""
+@keyframes aurora{0%{background-position:0% 0%,100% 0%,50% 100%,0 0}50%{background-position:60% 40%,30% 60%,80% 20%,0 0}100%{background-position:0% 0%,100% 0%,50% 100%,0 0}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes tick{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+.hero{background:
+  radial-gradient(40% 55% at 15% 20%,rgba(255,214,120,.85),transparent 70%),
+  radial-gradient(45% 60% at 85% 15%,rgba(226,60,27,.75),transparent 70%),
+  radial-gradient(60% 50% at 50% 90%,rgba(255,170,80,.8),transparent 70%),
+  linear-gradient(180deg,#ff7a1f 0%,#ffb067 70%,var(--bg) 100%);
+  background-size:180% 180%,180% 180%,180% 180%,100% 100%;animation:aurora 16s ease-in-out infinite}
+.fan{position:relative;height:250px;max-width:360px;margin:0 auto 6px;cursor:pointer}
+.fan .fc{position:absolute;left:50%;top:12px;width:150px;aspect-ratio:5/7;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(90,20,8,.35);border:3px solid #2a1c17}
+.fan .fc img{width:100%;height:100%;object-fit:cover;display:block}
+.fan .f0{z-index:3;transform:translateX(-50%);animation:floaty 5s ease-in-out infinite}
+.fan .f1{z-index:2;width:124px;top:34px;transform:translateX(-118%) rotate(-11deg);filter:brightness(.85)}
+.fan .f2{z-index:2;width:124px;top:34px;transform:translateX(18%) rotate(11deg);filter:brightness(.85)}
+.fan .ov{position:absolute;inset:auto 0 0 0;padding:26px 9px 8px;background:linear-gradient(transparent,rgba(20,10,6,.88));color:#fff;text-align:left}
+.fan .ov b{display:block;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fan .ov span{font-family:var(--f-num);font-size:17px;font-weight:600}.fan .ov i{font-style:normal;color:#ff8a8f;font-size:12px;font-weight:700;margin-left:5px}
+.fan .bd{position:absolute;top:7px;left:7px;background:var(--up);color:#fff;font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px}
+.fan .f1 .ov span,.fan .f2 .ov span{font-size:13px}
+.ticker{max-width:660px;margin:16px auto 0;height:132px;overflow:hidden;border-radius:14px;-webkit-mask-image:linear-gradient(transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(transparent,#000 14%,#000 86%,transparent)}
+.ticker .tk{display:flex;flex-direction:column;gap:8px;animation:tick var(--tkd,30s) linear infinite}
+.ticker:hover .tk{animation-play-state:paused}
+.ticker .ti2{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;background:rgba(255,255,255,.88);color:#2a1c17;border-radius:12px;padding:8px 12px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(90,20,8,.12)}
+.ticker .ti2 em{font-style:normal;font-size:11px;font-weight:700;color:#fff;border-radius:6px;padding:1px 7px;background:var(--up)}.ticker .ti2 em.d{background:#2f5fb8}
+.ticker .ti2 b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticker .ti2 span{font-family:var(--f-num);font-size:13.5px;font-weight:600;color:var(--brand-deep)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ticker .ti2{background:rgba(42,29,23,.9);color:#f7eadf}}
+</style>
+
+<header class="bar">""")
+rep('<span class="eyebrow">', '<div class="fan" id="fan" hidden aria-label="近 30 天漲最多的商品"></div>\n  <span class="eyebrow">')
+rep('<div class="hot" id="hot"><b>熱門搜尋：</b></div>', '<div class="hot" id="hot"><b>熱門搜尋：</b></div>\n  <div class="ticker" id="ticker" hidden aria-label="行情跑馬燈"><div class="tk" id="tk"></div></div>')
+rep('window.TRD=1;', r"""window.TRD=1;
+  const f3=j.up.slice(0,3);if(f3.length===3){const fc=(x,i)=>`<div class="fc f${i}" data-k="${esc(x.k)}"><img src="${esc(x.img)}" alt="${esc(x.n)}">${i===0?'<span class="bd">漲 UP</span>':""}<div class="ov"><b>${esc(x.n)}</b><span>¥${fmt(x.y)}</span><i>+${x.c}%</i></div></div>`;
+    $("fan").innerHTML=fc(f3[1],1)+fc(f3[2],2)+fc(f3[0],0);$("fan").hidden=false;$("fan").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}
+  const tl=[...j.up.map(x=>[x,0]),...(j.down||[]).map(x=>[x,1])];if(tl.length>3){const row=([x,d])=>`<div class="ti2" data-k="${esc(x.k)}"><em class="${d?"d":""}">${d?"跌":"漲"} ${x.c>0?"+":""}${x.c}%</em><b>${esc(x.n)}</b><span>¥${fmt(x.y)}</span></div>`;
+    const html=tl.map(row).join("");$("tk").innerHTML=html+html;$("tk").style.setProperty("--tkd",tl.length*2.6+"s");$("ticker").hidden=false;$("ticker").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}""")
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
