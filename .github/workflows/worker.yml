@@ -1,12 +1,19 @@
 name: 部署 LINE 機器人
 on:
   workflow_dispatch:
+  page_build:            # 網站（site 分支）更新後，把新資料匯入 D1
+  schedule:
+    - cron: "17 4 * * *" # 保險：每天台灣時間 12:17 再同步一次
   push:
     branches: [main]
-    paths: [worker/**, .github/workflows/worker.yml]
+    paths: [worker/**, tools/d1_sync.sh, .github/workflows/worker.yml]
+concurrency:
+  group: line-bot
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       CF: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
@@ -14,11 +21,9 @@ jobs:
       - name: 沒設 CLOUDFLARE_API_TOKEN 就略過
         if: env.CF == ''
         run: echo "repo 的 Secrets 還沒有 CLOUDFLARE_API_TOKEN，先不部署"
-      - name: 部署到 Cloudflare Worker（ptcg-line-bot，密鑰沿用）
+      - name: 同步 D1 資料庫並部署 Worker（ptcg-line-bot，密鑰沿用）
         if: env.CF != ''
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: d7ec321df5316f68ceae4ebae90bc29d
-          workingDirectory: worker
-          command: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d7ec321df5316f68ceae4ebae90bc29d
+        run: bash tools/d1_sync.sh

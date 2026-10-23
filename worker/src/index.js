@@ -67,7 +67,7 @@ const RANK = {
 async function handle(ev, env) {
   if (ev.type === "follow") return reply(env, ev.replyToken, [text(HELP)]);
   if (ev.type !== "message" || !ev.replyToken) return;
-  const D = await data(env);
+  const D = await base(env);
   if (ev.message.type === "text") {
     const q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
@@ -82,11 +82,12 @@ async function handle(ev, env) {
       [/^(原盒行情|原盒|box)$/i, "box", "原盒行情（SNKRDUNK 成交價高到低）", "目前沒有原盒資料。"],
       [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
     for (const [re, k, title, none] of lists) if (re.test(q)) {
-      const list = RANK[k](D).slice(0, 10);
+      const list = RANK[k](D.db ? { ...D, products: await dbRank(k, env) } : D).slice(0, 10);
       return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
     }
     const onlyUS = /美版|美國|英文|tcgplayer/i.test(q), q2 = q.replace(/美版|美國|英文|tcgplayer/gi, " ").trim();
-    const hits = onlyUS ? search(q2 || "box", { ...D, products: await dataUS(env) })
+    const hits = D.db ? await dbSearch(onlyUS ? (q2 || "box") : q, onlyUS ? 1 : wantUS(q) ? 2 : 0, env, D)
+      : onlyUS ? search(q2 || "box", { ...D, products: await dataUS(env) })
       : search(q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
     return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果")]);
@@ -101,7 +102,7 @@ async function handle(ev, env) {
     try { r = await identify(buf, img.headers.get("content-type") || "image/jpeg", env); }
     catch (e) { console.error(e); return reply(env, ev.replyToken, [text("辨識失敗，請再試一次，或改用文字查詢。")]); }
     const label = [r.name_zh || r.name_ja, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
-    const hits = matchImage(r, D);
+    const hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     return reply(env, ev.replyToken, [head, carousel(hits, D, env, label)]);
@@ -124,6 +125,55 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 ℹ️ 本服務為個人製作的比價工具，與寶可夢公司、任天堂、SNKRDUNK、Mercari 無關；價格與圖片取自各平台公開資訊，僅供參考。如有權利疑慮請來訊，會立即處理。`;
 
 // ---------- 資料 ----------
+// 有綁 D1（env.DB）而且資料庫有資料時，全部商品都從 D1 用 SQL 撈候選，再用原本的規則排序；
+// 沒有 D1 或出錯時，退回讀網站上的 bot.json（門檻以上的商品）。
+let META = null, META_AT = 0;
+async function base(env) {
+  if (env.DB) {
+    try {
+      if (!META || Date.now() - META_AT > CACHE_MS) {
+        const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'bot'").first();
+        if (r) { META = JSON.parse(r.v); META_AT = Date.now(); }
+      }
+      if (META) return { ...META, products: [], db: true };
+    } catch (e) { console.error("D1 meta", e && e.message || e); }
+  }
+  return data(env);
+}
+const rowsTo = res => { const list = (res.results || []).map(r => JSON.parse(r.j)); prep(list); return list; };
+const esc = t => t.replace(/[\\%_]/g, m => "\\" + m);
+const USW = us => us === 1 ? " AND us = 1" : us === 0 ? " AND us = 0" : "";
+async function dbSearch(q, us, env, D) {
+  const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
+  if (!toks.length) return [];
+  const opt = t => /^[a-z]{1,3}-?\d{0,2}[a-z]?$/.test(t); // 系列代號、psa10、box 等：不一定寫在名稱裡，只拿來排序
+  let need = toks.filter(t => !opt(t)); if (!need.length) need = toks;
+  const conds = [], args = [], ord = [], oargs = [];
+  for (const t of need) {
+    if (/^\d{1,3}$/.test(t)) { conds.push("(n0 = ? OR h LIKE ? ESCAPE '\\')"); args.push(String(+t), "%" + esc(t) + "%"); }
+    else { conds.push("(numn = ? OR h LIKE ? ESCAPE '\\')"); args.push(t, "%" + esc(t) + "%"); }
+  }
+  for (const t of toks) { ord.push("(numn = ?) * 10 + (h LIKE ? ESCAPE '\\') * 3"); oargs.push(t, "%" + esc(t) + "%"); }
+  const sql = `SELECT j FROM products WHERE ${conds.join(" AND ")}${USW(us)} ORDER BY ${ord.join(" + ")} DESC, (tw IS NOT NULL) DESC, top DESC LIMIT 400`;
+  const res = await env.DB.prepare(sql).bind(...args, ...oargs).all();
+  return search(q, { ...D, products: rowsTo(res) });
+}
+const RANK_SQL = {
+  gap: "us = 0 AND tw > 0",
+  up: "us = 0 AND c30 IS NOT NULL AND kn >= 8 AND k1 >= 3000 ORDER BY c30 DESC LIMIT 30",
+  box: "us = 0 AND b = 1 AND s > 0 ORDER BY s DESC LIMIT 30",
+  psa: "us = 0 AND p = 1 AND k1 > 0 ORDER BY COALESCE(c30, -99) DESC LIMIT 30",
+};
+async function dbRank(k, env) { return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE " + RANK_SQL[k]).all()); }
+async function dbImage(r, env) {
+  if (r.box) return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 1").all());
+  const num = norm(r.number).replace(/\s/g, ""), zh = String(r.name_zh || "").trim();
+  const conds = [], args = [];
+  if (num) { conds.push("numn = ?"); args.push(num); }
+  if (zh) { conds.push("h LIKE ? ESCAPE '\\'"); args.push("%" + esc(norm(zh)) + "%"); }
+  if (!conds.length) return [];
+  return rowsTo(await env.DB.prepare(`SELECT j FROM products WHERE us = 0 AND b = 0 AND (${conds.join(" OR ")}) LIMIT 500`).bind(...args).all());
+}
 async function data(env) {
   if (DATA && Date.now() - DATA_AT < CACHE_MS) return DATA;
   const r = await fetch(new URL("data/bot.json", env.SITE_URL).href, { cf: { cacheTtl: 300 } });

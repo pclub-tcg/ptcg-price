@@ -478,5 +478,45 @@ json.dump({"products": [p for p in bprods if p.get("us")]}, open(os.path.join(ou
 bprods = [p for p in bprods if not p.get("us")]
 bot = {"updated": price.get("updated"), "rate": rate, "usd": USD, "coupon": 600, "ship": 293, "sship": 600, "products": bprods}
 json.dump(bot, open(os.path.join(out, "data", "bot.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+# LINE 用 Cloudflare D1 資料庫：全部商品（日版＋美版）都寫進 data/d1.sql，GitHub Actions 再匯入 D1
+# 出錯也不影響網站發佈
+try:
+    def _sq(v):
+        return "NULL" if v is None else (str(v) if isinstance(v, (int, float)) else "'" + str(v).replace("'", "''") + "'")
+    def _first(v):
+        return v[0] if isinstance(v, (list, tuple)) and v and isinstance(v[0], (int, float)) else None
+    sql = ["DROP TABLE IF EXISTS products_new;",
+           "CREATE TABLE products_new (k TEXT PRIMARY KEY, j TEXT NOT NULL, h TEXT NOT NULL, numn TEXT, n0 TEXT, us INTEGER, b INTEGER, p INTEGER, tw REAL, s REAL, top REAL, c30 REAL, kn INTEGER, k1 REAL);"]
+    nd1 = 0
+    for p in prods:
+        d = dict(p)
+        if not d.get("h"):
+            d["h"] = unicodedata.normalize("NFKC", " ".join(str(d.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
+                                          + (" box 原盒" if d.get("b") else "") + (" psa10 鑑定" if d.get("p") else "") + (" 美版 us en" if d.get("us") or d.get("en") else " 日版 jp")).lower()
+        for k in ("kw", "cn", "kd"):
+            d.pop(k, None)
+        if str(d.get("img") or "").startswith("img/") and not os.path.exists(os.path.join(out, d["img"])):
+            d.pop("img", None)
+        if str(d.get("ch") or "").startswith("img/") and not os.path.exists(os.path.join(out, d["ch"])):
+            d.pop("ch", None)
+        h = d.pop("h")
+        num = unicodedata.normalize("NFKC", str(d.get("num") or "")).lower().replace(" ", "")
+        s0, m0 = _first(d.get("s")), _first(d.get("m"))
+        tops = [x for x in (s0, m0, d.get("um")) if isinstance(x, (int, float))]
+        row = [d["k"], json.dumps(d, ensure_ascii=False, separators=(",", ":")), h, num or None, (num.split("/")[0].lstrip("0") or None) if num else None,
+               1 if d.get("us") else 0, 1 if d.get("b") else 0, 1 if d.get("p") else 0, d.get("tw"), s0, max(tops) if tops else None,
+               d.get("c30"), d.get("kn"), d.get("k1")]
+        sql.append("INSERT OR REPLACE INTO products_new VALUES (" + ",".join(_sq(v) for v in row) + ");")
+        nd1 += 1
+    sql += ["DROP TABLE IF EXISTS products;", "ALTER TABLE products_new RENAME TO products;",
+            "CREATE INDEX IF NOT EXISTS i_numn ON products(numn);", "CREATE INDEX IF NOT EXISTS i_n0 ON products(n0);",
+            "CREATE INDEX IF NOT EXISTS i_rank ON products(us, b, p);",
+            "CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);",
+            "INSERT OR REPLACE INTO meta VALUES ('bot', " + _sq(json.dumps({x: bot[x] for x in ("updated", "rate", "usd", "coupon", "ship", "sship")}, ensure_ascii=False)) + ");"]
+    with open(os.path.join(out, "data", "d1.sql"), "w", encoding="utf-8") as f:
+        f.write("\n".join(sql) + "\n")
+    print("d1 products", nd1, "d1.sql bytes", os.path.getsize(os.path.join(out, "data", "d1.sql")))
+except Exception as e:
+    print("d1.sql 產生失敗（不影響網站）", repr(e))
 print("products", len(prods), "bot products", len(bprods), "bot.json bytes", os.path.getsize(os.path.join(out, "data", "bot.json")),
       "thumbs", len(os.listdir(os.path.join(out, "img"))))

@@ -9,3 +9,9 @@ SITE_URL = "https://spickertop-afk.github.io/ptcg-price/"
 
 [ai]
 binding = "AI"
+
+# LINE 用的商品資料庫（全部商品）。database_id 由 GitHub Actions（tools/d1_sync.sh）部署時自動填入
+[[d1_databases]]
+binding = "DB"
+database_name = "ptcg-bot"
+database_id = "__D1_ID__"
