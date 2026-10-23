@@ -120,7 +120,7 @@ h = h.replace("LINE 官方帳號 @916ctmro", '<a href="%s" target="_blank" rel="
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄
 rep('/* ---------- 商品詳情 + K 線 ---------- */', r'''/* 美版（TCGplayer）：us.json 由 publish 每天產生 */
-if(/github\.io$/.test(location.hostname))fetch("us.json").then(r=>r.ok?r.json():null).then(j=>{if(!j)return;const fx=j.usd||32;for(const x of j.items){const box=x.t==="s";ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,price:Math.round(x.m*fx),sold:false,psa:false,box,base:x.n,rar:x.r||"",num:x.num||"",set:x.set,mq:null,hay:(x.n+" "+(x.zh||"")+" "+x.set+" "+(x.num||"")+" "+(x.r||"")+" "+(x.kw||"")+" 美版 us"+(box?" box 原盒 未拆":"")).toLowerCase()})}try{render(false)}catch(e){}}).catch(()=>{});
+if(/github\.io$/.test(location.hostname))fetch("us.json").then(r=>r.ok?r.json():null).then(j=>{if(!j)return;const fx=j.usd||32;USDTW=fx;for(const x of j.items){const box=x.t==="s";ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,price:Math.round(x.m*fx),sold:false,psa:false,box,base:x.n,rar:x.r||"",num:x.num||"",set:x.set,mq:null,hay:(x.n+" "+(x.zh||"")+" "+x.set+" "+(x.num||"")+" "+(x.r||"")+" "+(x.kw||"")+" 美版 us"+(box?" box 原盒 未拆":"")).toLowerCase()})}try{render(false)}catch(e){}}).catch(()=>{});
 /* ---------- 商品詳情 + K 線 ---------- */''')
 
 # 4. LINE 的「看 K 線」連結：日版高稀有度卡（j:sid、j:sidp）與額外原盒（x:sid）在 extra.json 載入後才打開
@@ -200,12 +200,12 @@ rep('(()=>{try{const q=new URLSearchParams(location.search).get("p");if(!q)retur
 rep('if(o)openDetail({o})})}}catch(e){}})();', r"""if(o)openDetail({o})})}}catch(e){}}
 openKey(new URLSearchParams(location.search).get("p"));
 /* 首頁漲跌 TOP（trend.json 由 publish 每天產生） */
-if(/github\.io$/.test(location.hostname))fetch("trend.json").then(r=>r.ok?r.json():null).then(j=>{if(!j||!(j.up||[]).length)return;
+if(/github\.io$/.test(location.hostname))fetch("trend.json").then(r=>r.ok?r.json():null).then(window.TREND=j=>{window.TJ=j;if(!j||!(j.up||[]).length)return;
   const tc=(x,i)=>`<div class="tcard" data-k="${esc(x.k)}" tabindex="0" role="button" aria-label="${esc(x.n)} 詳情與 K 線"><span class="rk">${i+1}</span><div class="ti"><img src="${esc(x.img)}" alt="${esc(x.n)}" loading="lazy"></div><div class="tb"><div class="tn">${esc(x.n)}</div><div class="ts">${esc([x.set,x.num,x.b?"原盒":x.rar].filter(Boolean).join("・"))}</div><div class="tp"><b>¥${fmt(x.y)}</b><span class="${x.c>0?"up-t":"down-t"}">${x.c>0?"+":""}${x.c}%</span></div><div class="tnt">≈ NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</div></div></div>`;
   const n=matchMedia("(max-width:560px)").matches?4:5;
   $("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");$("trend").hidden=false;
   const go=e=>{const c=e.target.closest(".tcard[data-k]");if(!c)return;if(e.type==="keydown"&&e.key!=="Enter")return;openKey(c.dataset.k)};
-  $("trend").addEventListener("click",go);$("trend").addEventListener("keydown",go);
+  $("trend").onclick=go;$("trend").onkeydown=go;
 }).catch(()=>{});""")
 
 rep('b.onclick=()=>{$("q").value=h;render()};', 'b.onclick=()=>{$("q").value=h;goSearch()};')
@@ -290,6 +290,60 @@ rep('window.TRD=1;', r"""window.TRD=1;
     $("fan").innerHTML=fc(f3[1],1)+fc(f3[2],2)+fc(f3[0],0);$("fan").hidden=false;$("fan").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}
   const tl=[...j.up.map(x=>[x,0]),...(j.down||[]).map(x=>[x,1])];if(tl.length>3){const row=([x,d])=>`<div class="ti2" data-k="${esc(x.k)}"><em class="${d?"d":""}">${d?"跌":"漲"} ${x.c>0?"+":""}${x.c}%</em><b>${esc(x.n)}</b><span>NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</span></div>`;
     const html=tl.map(row).join("");$("tk").innerHTML=html+html;$("tk").style.setProperty("--tkd",tl.length*2.6+"s");$("ticker").hidden=false;$("ticker").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}""")
+
+# 10. 幣值切換：全站預設台幣，頁首按鈕可切成日圓、美元（記在瀏覽器）。資料本身仍是日圓／台幣，只在顯示時換算
+rep('function renderFB(P,q){', r"""let CUR=(()=>{try{return localStorage.getItem("cur")||"TWD"}catch(e){return "TWD"}})(),USDTW=32;
+function RATE(){const v=+(document.getElementById("rate")||{}).value;return v>0?v:0.2079}
+function cv(t){if(t==null||!isFinite(t))return "—";if(CUR==="JPY")return "¥"+fmt(Math.round(t/RATE()));if(CUR==="USD"){const u=t/USDTW;return "US$"+(Math.abs(u)>=100?fmt(Math.round(u)):u.toFixed(2))}return "NT$"+fmt(Math.round(t))}
+function Y(y){return CUR==="JPY"?"¥"+fmt(Math.round(y)):cv(y*RATE())}
+function N(t){return cv(t)}
+function ALT(y){return CUR==="JPY"?"≈ NT$"+fmt(Math.round(y*RATE())):"日圓 ¥"+fmt(Math.round(y))}
+function setCur(c){CUR=c;try{localStorage.setItem("cur",c)}catch(e){}document.querySelectorAll(".cur button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===c));try{render(false)}catch(e){}try{if(window.TJ&&window.TREND)window.TREND(window.TJ)}catch(e){}}
+function renderFB(P,q){""")
+rep('<span style="display:flex;align-items:center;gap:10px"><a href=', '<span style="display:flex;align-items:center;gap:10px"><span class="cur" role="group" aria-label="顯示幣值"><button type="button" data-c="TWD">NT$</button><button type="button" data-c="JPY">¥</button><button type="button" data-c="USD">US$</button></span><a href=')
+rep('</style>\n\n<header class="bar">', """
+.cur{display:inline-flex;background:rgba(255,255,255,.1);border-radius:999px;padding:3px;gap:2px}
+.cur button{border:0;background:transparent;color:var(--navy-fg);font:inherit;font-family:var(--f-num);font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;cursor:pointer}
+.cur button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+@media (max-width:560px){header.bar small#stamp{display:none}.cur button{padding:3px 7px}}
+</style>
+
+<header class="bar">""")
+# 次要價格：台幣模式顯示原始日圓，日圓模式顯示約合台幣
+rep('<span class="pbig">¥${fmt(c.m)}<small>≈ NT$${fmt(c.nt)}</small></span>', '<span class="pbig">${Y(c.m)}<small>${ALT(c.m)}</small></span>')
+rep('<div class="tp"><b>¥${fmt(x.y)}</b>', '<div class="tp"><b>${Y(x.y)}</b>')
+rep('<div class="tnt">≈ NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</div>', '<div class="tnt">${ALT(x.y)}</div>')
+rep('<span>NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</span></div>`;', '<span>${Y(x.y)}</span></div>`;')
+rep('`¥${fmt(Math.min(...arr))}～${fmt(Math.max(...arr))}`', '`${Y(Math.min(...arr))}～${Y(Math.max(...arr))}`')
+h = h.replace('${c.gap>=0?"+":""}${fmt(c.gap)}', '${c.gap>=0?"+":"−"}${N(Math.abs(c.gap))}')
+rep('<dt>換算台幣</dt>', '<dt>換算金額</dt>')
+# 其餘「¥/NT$ + fmt(...)」一律改成依幣值顯示（快速試算維持台幣輸入，不改）
+import re as _re2
+def _conv(src):
+    out, i = [], 0
+    pats = [('¥${fmt(', 'Y', True), ('NT$${fmt(', 'N', True), ('"¥"+fmt(', 'Y', False), ('"NT$"+fmt(', 'N', False)]
+    while True:
+        best = None
+        for pat, fn, tpl in pats:
+            k = src.find(pat, i)
+            if k != -1 and (best is None or k < best[0]):
+                best = (k, pat, fn, tpl)
+        if not best:
+            out.append(src[i:]); break
+        k, pat, fn, tpl = best
+        j = k + len(pat); d = 1
+        while d:
+            d += {"(": 1, ")": -1}.get(src[j], 0); j += 1
+        expr = src[k + len(pat):j - 1]
+        if tpl:  # 範本字串：¥${fmt(x)} → ${Y(x)}，要吃掉後面的 }
+            assert src[j] == "}"; out.append(src[i:k] + "${%s(%s)}" % (fn, expr)); i = j + 1
+        else:
+            out.append(src[i:k] + "%s(%s)" % (fn, expr)); i = j
+    return "".join(out)
+h = h.replace('" / ¥"+fmt(Math.min(...vs))', '" / "+Y(Math.min(...vs))')
+_q0 = h.index('$("qout").innerHTML='); _q1 = h.index("\n", _q0)
+h = _conv(h[:_q0]) + h[_q0:_q1] + _conv(h[_q1:])
+rep('document.addEventListener("load",e=>{', 'document.querySelectorAll(".cur button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.c===CUR);b.onclick=()=>setCur(b.dataset.c)});\ndocument.addEventListener("load",e=>{')
 
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
