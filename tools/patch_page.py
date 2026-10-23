@@ -294,8 +294,8 @@ rep('window.TRD=1;', r"""window.TRD=1;
 # 10. 幣值切換：全站預設台幣，頁首按鈕可切成日圓、美元（記在瀏覽器）。資料本身仍是日圓／台幣，只在顯示時換算
 rep('function renderFB(P,q){', r"""let CUR=(()=>{try{return localStorage.getItem("cur")||"TWD"}catch(e){return "TWD"}})(),USDTW=32;
 function RATE(){const v=+(document.getElementById("rate")||{}).value;return v>0?v:0.2079}
-function cv(t){if(t==null||!isFinite(t))return "—";if(CUR==="JPY")return "¥"+fmt(Math.round(t/RATE()));if(CUR==="USD"){const u=t/USDTW;return "US$"+(Math.abs(u)>=100?fmt(Math.round(u)):u.toFixed(2))}return "NT$"+fmt(Math.round(t))}
-function Y(y){return CUR==="JPY"?"¥"+fmt(Math.round(y)):cv(y*RATE())}
+function cv(t){if(t==null||!isFinite(t))return "—";if(CUR==="JPY")return "¥"+ fmt(Math.round(t/RATE()));if(CUR==="USD"){const u=t/USDTW;return "US$"+ (Math.abs(u)>=100?fmt(Math.round(u)):u.toFixed(2))}return "NT$"+ fmt(Math.round(t))}
+function Y(y){return CUR==="JPY"?"¥"+ fmt(Math.round(y)):cv(y*RATE())}
 function N(t){return cv(t)}
 function ALT(y){return CUR==="JPY"?"≈ NT$"+fmt(Math.round(y*RATE())):"日圓 ¥"+fmt(Math.round(y))}
 function setCur(c){CUR=c;try{localStorage.setItem("cur",c)}catch(e){}document.querySelectorAll(".cur button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===c));try{render(false)}catch(e){}try{if(window.TJ&&window.TREND)window.TREND(window.TJ)}catch(e){}}
