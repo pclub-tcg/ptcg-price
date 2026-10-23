@@ -217,5 +217,38 @@ $("f").addEventListener("submit",e=>{e.preventDefault();$("q").blur();goSearch()
 rep('$("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");$("trend").hidden=false;',
     '$("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");window.TRD=1;$("trend").hidden=!!$("q").value.trim();')
 
+# 8. 流暢特效：卡片依序淡入上滑、圖片載入後淡入、詳情視窗滑入、按鈕按壓回饋（系統設定減少動態時全部關閉）
+rep('</style>\n\n<header class="bar">', r"""
+@keyframes pin{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes sheetin{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes showimg{to{opacity:1}}
+html{scroll-behavior:smooth}
+.anim>.crow,.anim>.card,.tgrid>.tcard{animation:pin .42s cubic-bezier(.2,.75,.25,1) both}
+.anim>:nth-child(2),.tgrid>:nth-child(2){animation-delay:.04s}.anim>:nth-child(3),.tgrid>:nth-child(3){animation-delay:.08s}.anim>:nth-child(4),.tgrid>:nth-child(4){animation-delay:.12s}
+.anim>:nth-child(5),.tgrid>:nth-child(5){animation-delay:.16s}.anim>:nth-child(6){animation-delay:.2s}.anim>:nth-child(7){animation-delay:.24s}.anim>:nth-child(8){animation-delay:.28s}
+.anim>:nth-child(n+9){animation-delay:.3s}
+.crow>img.cimg,.tcard .ti img,.thumb img{opacity:0;transition:opacity .35s ease;animation:showimg 0s 2.5s forwards}
+.crow>img.cimg.ld,.tcard .ti img.ld,.thumb img.ld{opacity:1;animation:none}
+.crow,.tcard,.card{transition:transform .22s cubic-bezier(.2,.75,.25,1),box-shadow .22s,background .2s}
+.crow:active,.tcard:active,.card:active{transform:scale(.975)}
+.sheet-bg:not([hidden]){animation:fadein .22s ease both}
+.sheet-bg:not([hidden]) .sheet{animation:sheetin .34s cubic-bezier(.2,.75,.25,1) both}
+.chip,.cat,.tabs button,.seg button,.hot button,.more,.search button{transition:background .2s,color .2s,transform .12s,box-shadow .2s}
+.chip:active,.cat:active,.tabs button:active,.seg button:active,.hot button:active,.more:active,.search button:active{transform:scale(.95)}
+.search{transition:box-shadow .2s,transform .2s}.search:focus-within{transform:translateY(-1px);box-shadow:0 8px 0 var(--navy),0 10px 26px rgba(226,86,27,.25)}
+#panel-fb:not([hidden]),#panel-tcg:not([hidden]){animation:fadein .25s ease both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.crow>img.cimg,.tcard .ti img,.thumb img{opacity:1}}
+</style>
+
+<header class="bar">""")
+rep('function goSearch(){', r"""function animList(){for(const id of ["clist","grid"]){const el=$(id);if(!el)continue;el.classList.remove("anim");void el.offsetWidth;el.classList.add("anim");clearTimeout(el._at);el._at=setTimeout(()=>el.classList.remove("anim"),1200)}}
+function markImgs(){requestAnimationFrame(()=>document.querySelectorAll("img:not(.ld)").forEach(i=>{if(i.complete)i.classList.add("ld")}))}
+document.addEventListener("load",e=>{if(e.target.tagName==="IMG")e.target.classList.add("ld")},true);
+document.addEventListener("error",e=>{if(e.target.tagName==="IMG")e.target.classList.add("ld")},true);
+function goSearch(){animList();""")
+rep('function setTab(t){tab=t;', 'function setTab(t){tab=t;try{animList()}catch(e){}')
+rep('  if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);', '  if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);\n  try{markImgs()}catch(e){}')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
