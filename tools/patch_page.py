@@ -288,7 +288,7 @@ rep('<div class="hot" id="hot"><b>熱門搜尋：</b></div>', '<div class="hot" 
 rep('window.TRD=1;', r"""window.TRD=1;
   const f3=j.up.slice(0,3);if(f3.length===3){const fc=(x,i)=>`<div class="fc f${i}" data-k="${esc(x.k)}"><img src="${esc(x.img)}" alt="${esc(x.n)}">${i===0?'<span class="bd">漲 UP</span>':""}<div class="ov"><b>${esc(x.n)}</b><span>¥${fmt(x.y)}</span><i>+${x.c}%</i></div></div>`;
     $("fan").innerHTML=fc(f3[1],1)+fc(f3[2],2)+fc(f3[0],0);$("fan").hidden=false;$("fan").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}
-  const tl=[...j.up.map(x=>[x,0]),...(j.down||[]).map(x=>[x,1])];if(tl.length>3){const row=([x,d])=>`<div class="ti2" data-k="${esc(x.k)}"><em class="${d?"d":""}">${d?"跌":"漲"} ${x.c>0?"+":""}${x.c}%</em><b>${esc(x.n)}</b><span>¥${fmt(x.y)}</span></div>`;
+  const tl=[...j.up.map(x=>[x,0]),...(j.down||[]).map(x=>[x,1])];if(tl.length>3){const row=([x,d])=>`<div class="ti2" data-k="${esc(x.k)}"><em class="${d?"d":""}">${d?"跌":"漲"} ${x.c>0?"+":""}${x.c}%</em><b>${esc(x.n)}</b><span>NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</span></div>`;
     const html=tl.map(row).join("");$("tk").innerHTML=html+html;$("tk").style.setProperty("--tkd",tl.length*2.6+"s");$("ticker").hidden=false;$("ticker").onclick=e=>{const c=e.target.closest("[data-k]");if(c)openKey(c.dataset.k)}}""")
 
 open(dst, "w", encoding="utf-8").write(h)
