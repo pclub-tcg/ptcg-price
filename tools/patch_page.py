@@ -179,7 +179,7 @@ rep('</style>\n\n<header class="bar">', r"""
 .crow .cprice .lbl{font-size:11px;line-height:1.45}
 .crow .meta{font-size:11.5px}
 .pbig{font-family:var(--f-num);font-size:20px;font-weight:600;line-height:1.2}
-.pbig small{font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+.pbig small{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400}
 .thumb{background:#fff;aspect-ratio:5/6}
 @media (max-width:560px){.tgrid,.clist{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.crow{grid-template-columns:none}.crow .cprice{grid-column:auto;flex-direction:column}.tcard .tp b,.pbig{font-size:17px}.crow .meta a{display:none}}
 </style>
