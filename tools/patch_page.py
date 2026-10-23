@@ -208,5 +208,14 @@ if(/github\.io$/.test(location.hostname))fetch("trend.json").then(r=>r.ok?r.json
   $("trend").addEventListener("click",go);$("trend").addEventListener("keydown",go);
 }).catch(()=>{});""")
 
+rep('b.onclick=()=>{$("q").value=h;render()};', 'b.onclick=()=>{$("q").value=h;goSearch()};')
+# 7. 搜尋時：隱藏首頁趨勢區，直接跳到完整商品清單（卡片目錄），不限「只看有貨」，標題顯示找到幾件
+rep('$("ctitle").textContent=q?`「${$("q").value.trim()}」在卡片目錄`:"卡片目錄";', '$("ctitle").textContent=q?`「${$("q").value.trim()}」找到 ${fmt(list.length)} 件商品`:"卡片目錄";')
+rep('if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);', 'const tr=$("trend");if(tr)tr.hidden=!!q||!window.TRD;\n  if(tab==="fb") renderFB(P,q); else renderTCG(P,q,reset);')
+rep('$("f").addEventListener("submit",e=>{e.preventDefault();render()});', r"""function goSearch(){if(!$("q").value.trim())return render();if(cf.stock){cf.stock=false;const b=document.querySelector('.chip[data-f="stock"]');if(b)b.setAttribute("aria-pressed","false")}if(tab!=="tcg")setTab("tcg");else render();const el=$("panel-tcg");if(el)window.scrollTo({top:el.getBoundingClientRect().top+scrollY-70,behavior:"smooth"})}
+$("f").addEventListener("submit",e=>{e.preventDefault();$("q").blur();goSearch()});""")
+rep('$("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");$("trend").hidden=false;',
+    '$("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");window.TRD=1;$("trend").hidden=!!$("q").value.trim();')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
