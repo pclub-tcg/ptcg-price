@@ -115,8 +115,7 @@ LINE_URL = "https://line.me/R/ti/p/@916ctmro"
 rep('<small id="stamp"></small>', '<span style="display:flex;align-items:center;gap:10px"><a href="%s" target="_blank" rel="noopener" style="background:#06c755;color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:5px 14px;text-decoration:none;white-space:nowrap">加入 LINE 好友</a><small id="stamp"></small></span>' % LINE_URL)
 h = h.replace("LINE 官方帳號 @916ctmro", '<a href="%s" target="_blank" rel="noopener">LINE 官方帳號 @916ctmro</a>' % LINE_URL)
 # 卡片目錄清單改用小縮圖 ht/（大圖 hi/ 只在點開商品時用）
-rep('const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid);',
-    'const hsid=(CN[o.n]&&CN[o.n].sid)||(SNK.cards[o.n]&&SNK.cards[o.n].id),hu=hiOf(hsid)&&hiOf(hsid).replace("hi/","ht/");')
+# 卡片目錄清單直接用清楚的大圖 hi/（360x504，loading=lazy）
 # 以圖搜尋只對日版
 rep('const scored=ROWS.map(o=>{', 'const scored=ROWS.filter(o=>!o.us).map(o=>{')
 # 載入 us.json 加進目錄
@@ -140,6 +139,74 @@ rep('list.sort((a,b)=>{const s=x=>x.na?-1e9:(x.v==="good"?1e6:0)+x.pct;return s(
     'list.sort((a,b)=>{const s=x=>x.na?-1e9:(x.v==="good"?1e6:0)+x.pct;return (q?b._fz-a._fz:0)||s(calc(b,P))-s(calc(a,P))});')
 rep('if(q&&!q.split(/\\s+/).every(t=>o.hay.includes(t)))return false;', 'o._fz=fz(o.hay,q);if(o._fz<FZ)return false;')
 rep('list.sort((a,b)=>{if(s==="hi")', 'list.sort((a,b)=>{if(q&&b._fz!==a._fz)return b._fz-a._fz;if(s==="hi")')
+
+# 6. 新版型（參考 tradecard.jp，配色維持噴火龍橘）：首頁「近 30 天漲跌 TOP」大圖卡片＋卡片目錄改成大圖商品卡格狀排列
+rep('</style>\n\n<header class="bar">', r"""
+/* 漲跌 TOP */
+.trend{padding-block:18px 4px}
+.trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 0 10px}
+.trend-head h2{margin:0;font-family:var(--f-display);font-weight:900;font-size:21px}
+.trend-head span{font-size:12px;color:var(--muted)}
+.tlabel{display:flex;align-items:center;gap:10px;margin:14px 0 10px;font-weight:700}
+.tlabel b{color:#fff;border-radius:8px;padding:3px 12px;font-size:13.5px;letter-spacing:.04em}
+.tlabel b.u{background:var(--up)} .tlabel b.d{background:#2f5fb8}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.tcard,.crow{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;cursor:pointer;position:relative;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;color:inherit;text-decoration:none}
+.tcard:hover,.crow:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(42,28,23,.08),0 14px 30px rgba(42,28,23,.14)}
+.tcard .ti{aspect-ratio:5/7;background:#fff;display:grid;place-items:center;overflow:hidden;border-bottom:1px solid var(--line)}
+.tcard .ti img{width:100%;height:100%;object-fit:contain}
+.tcard .rk{position:absolute;top:10px;left:10px;width:30px;height:30px;border-radius:10px;background:#fff;color:var(--brand-deep);font-weight:900;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.18);font-family:var(--f-num)}
+.tcard .tb{padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tcard .tn{font-weight:900;font-size:15px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tcard .ts{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcard .tp{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tcard .tp b{font-family:var(--f-num);font-size:20px;font-weight:600}
+.tcard .tp .up-t,.tcard .tp .down-t{font-family:var(--f-num);font-weight:700;font-size:14px}
+.tcard .tp .down-t{color:#2f5fb8}
+.tcard .tnt{font-size:12px;color:var(--muted)}
+/* 卡片目錄：大圖商品卡 */
+.clist{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.crow{display:flex;padding:0;gap:0;grid-template-columns:none}
+.crow>img.cimg{width:100%;height:auto;aspect-ratio:5/7;border-radius:0;object-fit:contain;background:#fff;border-bottom:1px solid var(--line)}
+.crow>span.cimg{align-self:center;margin:62px 0 58px;transform:scale(2.3)}
+.crow>span.cimg.none{transform:none;width:100%;height:auto;aspect-ratio:5/7;margin:0;border-radius:0;font-size:13px;background:var(--surface-2);color:var(--muted)}
+.crow .rar{position:absolute;top:10px;left:10px;width:auto;height:auto;flex-direction:row;gap:5px;padding:3px 10px;border-radius:999px;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:1}
+.crow .rar b{font-size:12px}.crow .rar small{margin:0;font-size:10px}
+.crow .cmain{padding:10px 12px 0}
+.crow .cmain .nm{font-weight:900}
+.crow .cprice{padding:6px 12px 12px;text-align:left;max-width:none;align-items:flex-start;flex-direction:column;gap:3px;margin-top:auto}
+.crow .cprice .gp{align-self:flex-start;font-size:12px}
+.crow .cprice .lbl{font-size:11px;line-height:1.45}
+.crow .meta{font-size:11.5px}
+.pbig{font-family:var(--f-num);font-size:20px;font-weight:600;line-height:1.2}
+.pbig small{font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+.thumb{background:#fff;aspect-ratio:5/6}
+@media (max-width:560px){.tgrid,.clist{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.crow{grid-template-columns:none}.crow .cprice{grid-column:auto;flex-direction:column}.tcard .tp b,.pbig{font-size:17px}.crow .meta a{display:none}}
+</style>
+
+<header class="bar">""")
+rep('<section class="wrap">\n  <div class="tabs"', r"""<section class="wrap trend" id="trend" hidden>
+  <div class="trend-head"><h2>近 30 天價格趨勢</h2><span>SNKRDUNK 每日成交均價・點卡片看 K 線</span></div>
+  <div class="tlabel"><b class="u">漲 UP</b>漲最多 TOP</div><div class="tgrid" id="tup"></div>
+  <div class="tlabel"><b class="d">跌 DOWN</b>跌最多 TOP</div><div class="tgrid" id="tdown"></div>
+</section>
+
+<section class="wrap">
+  <div class="tabs" """[:-1])
+# 目錄卡片加上大字價格
+rep('<div class="cprice">${gp}', '<div class="cprice">${c&&c.m?`<span class="pbig">¥${fmt(c.m)}<small>≈ NT$${fmt(c.nt)}</small></span>`:""}${gp}')
+# 「看 K 線」連結處理改成函式，首頁趨勢卡片也能用
+rep('(()=>{try{const q=new URLSearchParams(location.search).get("p");if(!q)return;', 'function openKey(q){try{if(!q)return;')
+rep('if(o)openDetail({o})})}}catch(e){}})();', r"""if(o)openDetail({o})})}}catch(e){}}
+openKey(new URLSearchParams(location.search).get("p"));
+/* 首頁漲跌 TOP（trend.json 由 publish 每天產生） */
+if(/github\.io$/.test(location.hostname))fetch("trend.json").then(r=>r.ok?r.json():null).then(j=>{if(!j||!(j.up||[]).length)return;
+  const tc=(x,i)=>`<div class="tcard" data-k="${esc(x.k)}" tabindex="0" role="button" aria-label="${esc(x.n)} 詳情與 K 線"><span class="rk">${i+1}</span><div class="ti"><img src="${esc(x.img)}" alt="${esc(x.n)}" loading="lazy"></div><div class="tb"><div class="tn">${esc(x.n)}</div><div class="ts">${esc([x.set,x.num,x.b?"原盒":x.rar].filter(Boolean).join("・"))}</div><div class="tp"><b>¥${fmt(x.y)}</b><span class="${x.c>0?"up-t":"down-t"}">${x.c>0?"+":""}${x.c}%</span></div><div class="tnt">≈ NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</div></div></div>`;
+  const n=matchMedia("(max-width:560px)").matches?4:5;
+  $("tup").innerHTML=j.up.slice(0,n).map(tc).join("");$("tdown").innerHTML=(j.down||[]).slice(0,n).map(tc).join("");$("trend").hidden=false;
+  const go=e=>{const c=e.target.closest(".tcard[data-k]");if(!c)return;if(e.type==="keydown"&&e.key!=="Enter")return;openKey(c.dataset.k)};
+  $("trend").addEventListener("click",go);$("trend").addEventListener("keydown",go);
+}).catch(()=>{});""")
 
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")

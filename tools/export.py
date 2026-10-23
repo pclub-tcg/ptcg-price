@@ -396,10 +396,6 @@ if HI and os.path.isdir(HI):
             dst = os.path.join(out, "hi", os.path.basename(f))
             if not os.path.exists(dst):  # 網站用的大圖縮到 360x504 再存（GitHub Pages 有 1GB 上限）
                 t = Image.open(f).convert("RGB"); t.thumbnail((360, 504)); t.save(dst, quality=78, optimize=True)
-                # 清單用的小縮圖（手機載入快很多），大圖只在點開商品時用
-                os.makedirs(os.path.join(out, "ht"), exist_ok=True)
-                t = Image.open(f).convert("RGB"); t.thumbnail((144, 202))
-                t.save(os.path.join(out, "ht", os.path.basename(f)), quality=72, optimize=True)
             p["img"] = "hi/" + os.path.basename(f)
             nhi += 1
 json.dump(sorted(int(f[:-4]) for f in os.listdir(os.path.join(out, "hi"))) if os.path.isdir(os.path.join(out, "hi")) else [], open(os.path.join(out, "hi.json"), "w"))
@@ -478,6 +474,21 @@ json.dump({"products": [p for p in bprods if p.get("us")]}, open(os.path.join(ou
 bprods = [p for p in bprods if not p.get("us")]
 bot = {"updated": price.get("updated"), "rate": rate, "usd": USD, "coupon": 600, "ship": 293, "sship": 600, "products": bprods}
 json.dump(bot, open(os.path.join(out, "data", "bot.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+# 首頁「近 30 天漲幅／跌幅 TOP」：SNKRDUNK 成交夠多的日版商品，圖片優先用清楚的大圖 hi/
+try:
+    def _ti(p):
+        f = "hi/%s.jpg" % p.get("sid")
+        return f if p.get("sid") and os.path.exists(os.path.join(out, f)) else (p.get("img") if str(p.get("img") or "").startswith(("hi/", "cut/")) else None)
+    tc = [p for p in prods if p["k"][:2] in ("i:", "r:", "j:", "x:") and p.get("c30") is not None and (p.get("kn") or 0) >= 8 and (p.get("k1") or 0) >= 3000 and _ti(p)]
+    def _tr(p):
+        return {"k": p["k"], "n": p["n"], "set": p.get("set", ""), "rar": "PSA10" if p.get("p") else p.get("rar", ""), "num": p.get("num", ""),
+                "img": _ti(p), "y": (p.get("s") or [p.get("k1")])[0], "c": p["c30"], "b": 1 if p.get("b") else 0}
+    json.dump({"rate": rate, "up": [_tr(p) for p in sorted(tc, key=lambda p: -p["c30"])[:10] if p["c30"] > 0],
+               "down": [_tr(p) for p in sorted(tc, key=lambda p: p["c30"])[:10] if p["c30"] < 0]},
+              open(os.path.join(out, "trend.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print("trend", len(tc))
+except Exception as e:
+    print("trend.json 產生失敗（不影響網站）", repr(e))
 # LINE 用 Cloudflare D1 資料庫：全部商品（日版＋美版）都寫進 data/d1.sql，GitHub Actions 再匯入 D1
 # 出錯也不影響網站發佈
 try:
