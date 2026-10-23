@@ -264,9 +264,9 @@ rep('</style>\n\n<header class="bar">', r"""
 .fan{position:relative;height:250px;max-width:360px;margin:0 auto 6px;cursor:pointer}
 .fan .fc{position:absolute;left:50%;top:12px;width:150px;aspect-ratio:5/7;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(90,20,8,.35);border:3px solid #2a1c17}
 .fan .fc img{width:100%;height:100%;object-fit:cover;display:block}
-.fan .f0{z-index:3;transform:translateX(-50%);animation:floaty 5s ease-in-out infinite}
-.fan .f1{z-index:2;width:124px;top:34px;transform:translateX(-118%) rotate(-11deg);filter:brightness(.85)}
-.fan .f2{z-index:2;width:124px;top:34px;transform:translateX(18%) rotate(11deg);filter:brightness(.85)}
+.fan .f0{z-index:3;margin-left:-75px;animation:floaty 5s ease-in-out infinite}
+.fan .f1{z-index:2;width:124px;top:38px;margin-left:-158px;transform:rotate(-11deg);filter:brightness(.85)}
+.fan .f2{z-index:2;width:124px;top:38px;margin-left:34px;transform:rotate(11deg);filter:brightness(.85)}
 .fan .ov{position:absolute;inset:auto 0 0 0;padding:26px 9px 8px;background:linear-gradient(transparent,rgba(20,10,6,.88));color:#fff;text-align:left}
 .fan .ov b{display:block;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fan .ov span{font-family:var(--f-num);font-size:17px;font-weight:600}.fan .ov i{font-style:normal;color:#ff8a8f;font-size:12px;font-weight:700;margin-left:5px}
