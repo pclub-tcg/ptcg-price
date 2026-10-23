@@ -130,5 +130,16 @@ rep('if(/github\\.io$/.test(location.hostname))fetch("extra.json").then(r=>r.ok?
 rep('else if(t==="r:"){const o=ROWS.find(x=>x.n===n);if(o)openDetail({o})}',
     'else if(t==="r:"){const o=ROWS.find(x=>x.n===n);if(o)openDetail({o})}else if(t==="j:"||t==="x:"){const sid=parseInt(n),psa=/p$/.test(n);EXP.then(()=>{const o=ROWS.find(x=>SNK.cards[x.n]&&SNK.cards[x.n].id===sid&&(t==="x:"||x.psa===psa));if(o)openDetail({o})})}')
 
+# 5. 關鍵字模糊搜尋：每個詞完整出現＝符合；沒有的話用「每兩個字一組」比對，符合一半以上就列出，依符合程度排序
+#    卡號、含數字的詞（psa10、sv8）和 4 個字以內的英文（sar、box）維持精準比對
+rep('function renderFB(P,q){', r"""function fz(hay,q){if(!q)return 1;let w=0,g=0;for(const t of q.split(/\s+/)){if(!t)continue;w++;if(hay.includes(t)){g++;continue}if(/\d/.test(t)||/^[a-z.\-&']{1,4}$/.test(t))return 0;const a=[...t],bs=a.length<2?a:a.slice(1).map((c,i)=>a[i]+c);let k=0;for(const b of bs)if(hay.includes(b))k++;const r=(k/bs.length+a.filter(c=>hay.includes(c)).length/a.length)/2;if(r<FZ)return 0;g+=r}return w?g/w:1}
+const FZ=.5;
+function renderFB(P,q){""")
+rep('const okQ=!q||q.split(/\\s+/).every(t=>hay.includes(t));', 'it._fz=fz(hay,q);const okQ=it._fz>=FZ;')
+rep('list.sort((a,b)=>{const s=x=>x.na?-1e9:(x.v==="good"?1e6:0)+x.pct;return s(calc(b,P))-s(calc(a,P))});',
+    'list.sort((a,b)=>{const s=x=>x.na?-1e9:(x.v==="good"?1e6:0)+x.pct;return (q?b._fz-a._fz:0)||s(calc(b,P))-s(calc(a,P))});')
+rep('if(q&&!q.split(/\\s+/).every(t=>o.hay.includes(t)))return false;', 'o._fz=fz(o.hay,q);if(o._fz<FZ)return false;')
+rep('list.sort((a,b)=>{if(s==="hi")', 'list.sort((a,b)=>{if(q&&b._fz!==a._fz)return b._fz-a._fz;if(s==="hi")')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")

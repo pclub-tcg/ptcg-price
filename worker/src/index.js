@@ -147,11 +147,12 @@ async function dbSearch(q, us, env, D) {
   const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
   if (!toks.length) return [];
   const opt = t => /^[a-z]{1,3}-?\d{0,2}[a-z]?$/.test(t); // 系列代號、psa10、box 等：不一定寫在名稱裡，只拿來排序
-  let need = toks.filter(t => !opt(t)); if (!need.length) need = toks;
+  let need = toks.filter(t => !opt(t)).slice(0, 6); if (!need.length) need = toks.slice(0, 6);
   const conds = [], args = [], ord = [], oargs = [];
   for (const t of need) {
     if (/^\d{1,3}$/.test(t)) { conds.push("(n0 = ? OR h LIKE ? ESCAPE '\\')"); args.push(String(+t), "%" + esc(t) + "%"); }
-    else { conds.push("(numn = ? OR h LIKE ? ESCAPE '\\')"); args.push(t, "%" + esc(t) + "%"); }
+    else if (strictTok(t)) { conds.push("(numn = ? OR h LIKE ? ESCAPE '\\')"); args.push(t, "%" + esc(t) + "%"); }
+    else { const bs = [t, ...bigrams(t).slice(0, 8)]; conds.push("(numn = ? OR " + bs.map(() => "h LIKE ? ESCAPE '\\'").join(" OR ") + ")"); args.push(t, ...bs.map(b => "%" + esc(b) + "%")); }
   }
   for (const t of toks) { ord.push("(numn = ?) * 10 + (h LIKE ? ESCAPE '\\') * 3"); oargs.push(t, "%" + esc(t) + "%"); }
   const sql = `SELECT j FROM products WHERE ${conds.join(" AND ")}${USW(us)} ORDER BY ${ord.join(" + ")} DESC, (tw IS NOT NULL) DESC, top DESC LIMIT 400`;
@@ -207,20 +208,25 @@ function calc(p, D) {
   return { ...c, gap: p.tw ? p.tw - c.cost : null };
 }
 
+// 部分符合：詞拆成每兩個字一組＋單字，回傳商品名稱裡找得到的比例；含數字的詞、4 個字以內的英文不做部分比對
+const bigrams = t => { const a = [...t]; return a.length < 2 ? a : a.slice(1).map((c, i) => a[i] + c); };
+const strictTok = t => /\d/.test(t) || /^[a-z.\-&']{1,4}$/.test(t);
+function fuzzy(h, t) { if (strictTok(t)) return 0; const a = [...t], bs = bigrams(t); let k = 0; for (const b of bs) if (h.includes(b)) k++; return (k / bs.length + a.filter(c => h.includes(c)).length / a.length) / 2; } // 兩字組比例與單字比例的平均
 function search(q, D) {
   const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
   const wantPsa = toks.some(t => t.includes("psa"));
   const scored = [];
   for (const p of D.products) {
-    let s = 0, miss = 0, numHit = false;
+    let s = 0, miss = 0, numHit = false, part = false;
     for (const t of toks) {
       if (p.num && norm(p.num) === t) { s += 10; numHit = true; }
       else if (p.num && /^\d{1,3}$/.test(t) && norm(p.num).split("/")[0].replace(/^0+/, "") === t.replace(/^0+/, "")) s += 4;
       else if (p.h.includes(t)) s += 3;
       else if (/^[a-z]{1,3}-?\d{0,2}[a-z]?$/.test(t)) miss += 0.5; // 系列代號沒寫在商品名稱裡時不算錯
-      else miss++;
+      else { const r = fuzzy(p.h, t); if (r >= 0.5) { s += 3 * r; part = true; } else miss++; }
     }
     if ((miss && !(numHit && miss < 1)) || !s) continue;
+    if (!part) s += 5; // 每個詞都完整符合的排前面
     if (wantPsa ? p.p : !p.p) s += 1;
     if (p.tw) s += 1;
     if (p.m || p.s) s += 1;
