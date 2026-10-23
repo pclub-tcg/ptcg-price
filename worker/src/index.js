@@ -6,6 +6,7 @@
 //   SITE_URL   你的 GitHub Pages 網址，例如 https://帳號.github.io/ptcg-price/
 //   CLAUDE_MODEL 選填，預設 claude-sonnet-5-5
 //   IMAGE_LIMIT_PER_IP 選填，網站以圖搜尋每個 IP 每天幾次，預設 30
+//   ADMIN_KEY 選填：重建圖文選單 /setup/richmenu?key=… 用的密碼；沒設就關閉這個網址
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -14,7 +15,11 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
-    if (url.pathname === "/setup/richmenu") return setupRichMenu(env);
+    if (url.pathname === "/setup/richmenu") { // 管理用：要帶 ?key=ADMIN_KEY（Cloudflare 密鑰）才會執行；沒設 ADMIN_KEY 就整個關閉
+      const k = url.searchParams.get("key") || "";
+      if (!env.ADMIN_KEY || k.length !== env.ADMIN_KEY.length || !(await safeEq(k, env.ADMIN_KEY))) return new Response("Forbidden", { status: 403 });
+      return setupRichMenu(env);
+    }
     if (req.method === "GET") return new Response("P’CLUB LINE bot OK");
     if (req.method !== "POST" || url.pathname !== "/webhook") return new Response("Not found", { status: 404 });
     const body = await req.text();
@@ -25,6 +30,11 @@ export default {
     return new Response("ok");
   },
 };
+
+async function safeEq(a, b) { // 固定時間比較，避免從回應時間猜密碼
+  const e = new TextEncoder(), x = new Uint8Array(await crypto.subtle.digest("SHA-256", e.encode(a))), y = new Uint8Array(await crypto.subtle.digest("SHA-256", e.encode(b)));
+  let d = 0; for (let i = 0; i < x.length; i++) d |= x[i] ^ y[i]; return d === 0;
+}
 
 // ---------- LINE ----------
 async function verify(body, sig, secret) {
