@@ -497,7 +497,7 @@ try:
     def _first(v):
         return v[0] if isinstance(v, (list, tuple)) and v and isinstance(v[0], (int, float)) else None
     sql = ["DROP TABLE IF EXISTS products_new;",
-           "CREATE TABLE products_new (k TEXT PRIMARY KEY, j TEXT NOT NULL, h TEXT NOT NULL, numn TEXT, n0 TEXT, us INTEGER, b INTEGER, p INTEGER, tw REAL, s REAL, top REAL, c30 REAL, kn INTEGER, k1 REAL);"]
+           "CREATE TABLE products_new (k TEXT NOT NULL, j TEXT NOT NULL, h TEXT NOT NULL, numn TEXT, n0 TEXT, us INTEGER, b INTEGER, p INTEGER, tw REAL, s REAL, top REAL, c30 REAL, kn INTEGER, k1 REAL);"]
     nd1 = 0
     for p in prods:
         d = dict(p)
@@ -517,11 +517,10 @@ try:
         row = [d["k"], json.dumps(d, ensure_ascii=False, separators=(",", ":")), h, num or None, (num.split("/")[0].lstrip("0") or None) if num else None,
                1 if d.get("us") else 0, 1 if d.get("b") else 0, 1 if d.get("p") else 0, d.get("tw"), s0, max(tops) if tops else None,
                d.get("c30"), d.get("kn"), d.get("k1")]
-        sql.append("INSERT OR REPLACE INTO products_new VALUES (" + ",".join(_sq(v) for v in row) + ");")
+        sql.append("INSERT INTO products_new VALUES (" + ",".join(_sq(v) for v in row) + ");")
         nd1 += 1
     sql += ["DROP TABLE IF EXISTS products;", "ALTER TABLE products_new RENAME TO products;",
-            "CREATE INDEX IF NOT EXISTS i_numn ON products(numn);", "CREATE INDEX IF NOT EXISTS i_n0 ON products(n0);",
-            "CREATE INDEX IF NOT EXISTS i_rank ON products(us, b, p);",
+            # 不建索引：D1 免費版每天只能寫 10 萬列，每個索引都會讓寫入量多一倍（搜尋用 LIKE 本來就整表掃描）
             "CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);",
             "INSERT OR REPLACE INTO meta VALUES ('bot', " + _sq(json.dumps({x: bot[x] for x in ("updated", "rate", "usd", "coupon", "ship", "sship")}, ensure_ascii=False)) + ");"]
     with open(os.path.join(out, "data", "d1.sql"), "w", encoding="utf-8") as f:

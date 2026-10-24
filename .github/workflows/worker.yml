@@ -1,9 +1,7 @@
 name: 部署 LINE 機器人
 on:
   workflow_dispatch:
-  page_build:            # 網站（site 分支）更新後，把新資料匯入 D1
-  schedule:
-    - cron: "17 4 * * *" # 保險：每天台灣時間 12:17 再同步一次
+  page_build:            # 網站（site 分支）更新後，把新資料匯入 D1（D1 免費版每天寫入 10 萬列，一次匯入約 1.7 萬列）
   push:
     branches: [main]
     paths: [worker/**, tools/d1_sync.sh, .github/workflows/worker.yml]
