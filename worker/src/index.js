@@ -405,7 +405,7 @@ const tile = (k, v, d, vc) => ({ type: "box", layout: "vertical", flex: 1, backg
 const charOf = n => {
   const toks = String(n || "").split(/\s+/);
   let t = toks.find(x => x && !/^(\d|psa|bgs|cgc|box|ar$|sar$|sr$|ur$|hr$)/i.test(x)) || "";
-  t = t.replace(/^(復刻|超級|M(?=[^a-z]))/i, "").split(/的|&|＆|ex$|EX$|VMAX|VSTAR|V$|GX$|BREAK$/)[0];
+  t = t.replace(/[（(【\[].*$/, "").replace(/^(復刻|超級|M(?=[^a-z]))/i, "").split(/的|&|＆|ex$|EX$|VMAX|VSTAR|V$|GX$|BREAK$/)[0];
   return t.length >= 2 ? t : "";
 };
 // 相關卡片：同角色、有成交、價格高的 3 張（排除自己）
@@ -478,11 +478,12 @@ function bubble(p, D, env) {
       ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
         const g = x.p ? "PSA10" : x.b ? "原盒" : "裸卡", gp = { type: "box", layout: "horizontal", contents: [{ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "6px", paddingEnd: "6px",
           backgroundColor: x._same ? K.or : x.p ? "#5A3F2E" : "#E9D3BD", contents: [T(x._same ? "這張的" + g : g, { size: "xxs", weight: "bold", color: x._same ? "#2A1C17" : x.p ? K.cream : "#2A1C17" })] }] };
-        return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "5px", alignItems: "center",
+        return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "6px", alignItems: "center",
           ...(x._same ? { borderWidth: "2px", borderColor: K.or, backgroundColor: "#3A2418" } : {}),
           action: { type: "message", label: "查價", text: (x.p || x.b ? x.n : baseName(x.n) + " 裸卡").slice(0, 280) }, contents: [
-          { type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover", flex: 2 },
-          { type: "box", layout: "vertical", flex: 3, contents: [T(x._same ? (x.num || "同一張卡") : x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: x._same ? K.or : K.cream }), gp, T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
+          { type: "box", layout: "vertical", width: "34px", height: "48px", flex: 0, cornerRadius: "3px", contents: [{ type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover" }] },
+          { type: "box", layout: "vertical", flex: 1, contents: [T(x._same ? (x.num || "同一張卡") : x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: x._same ? K.or : K.cream }), gp, T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
+      ...Array.from({ length: Math.max(0, 3 - p._rel.list.length) }, () => ({ type: "box", layout: "vertical", flex: 1, contents: [] })), // 不足 3 張也維持同樣寬度
     ] });
   }
   // 工具列
@@ -574,7 +575,7 @@ async function oneCard(hits, q, wantRaw, D, env) {
   for (const x of hits) if (baseName(x.n) !== baseName(main.n)) add(x, false);
   for (const x of (main._rel && main._rel.list) || []) add(x, false);
   const list = pool.filter(x => x.img).slice(0, 3);
-  main._rel = list.length ? { ch: (main._rel && main._rel.ch) || "", list } : null;
+  main._rel = list.length ? { ch: (main._rel && main._rel.ch) || charOf(main.n), list } : null;
   return { type: "flex", altText: ("「" + q + "」的查價結果：" + main.n).slice(0, 380), contents: bubble(main, D, env) };
 }
 function carousel(list, D, env, alt, q) {
