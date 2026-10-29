@@ -415,8 +415,9 @@ async function addRelated(list, D, env) {
       if (D.db) cand = rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND h LIKE ? ESCAPE '\\' AND k != ? AND (s > 0 OR top > 0) ORDER BY COALESCE(s, 0) DESC, top DESC LIMIT 12").bind("%" + esc(norm(ch)) + "%", p.k).all());
       else cand = D.products.filter(x => !x.us && x.k !== p.k && x.h.includes(norm(ch)) && (x.s || x.m)).slice(0, 12);
     } catch (e) { return; }
-    const seen = new Set(), out = [];
-    for (const x of cand) { const key = x.n.replace(/\s*PSA10/i, ""); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
+    const base = n => String(n).replace(/\s*PSA\s*10/i, "").trim(), self = base(p.n);
+    const seen = new Set([self + (p.p ? "p" : ""), self + (p.p ? "" : "p")]), out = [];
+    for (const x of cand) { const key = base(x.n); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
     if (out.length) p._rel = { ch, list: out };
   }));
 }
@@ -509,7 +510,7 @@ function carousel(list, D, env, alt, q) {
   while (bs.length > 1 && size(bs) > 44500) { bs.pop(); cut = true; }
   if (cut) {
     const u = new URL(env.SITE_URL); if (q) u.searchParams.set("q", q); u.searchParams.set("openExternalBrowser", "1");
-    bs.push({ type: "bubble", size: "kilo", body: { type: "box", layout: "vertical", backgroundColor: K.bg, paddingAll: "18px", justifyContent: "center", spacing: "md", action: { type: "uri", label: "更多", uri: u.href }, contents: [
+    bs.push({ type: "bubble", size: "giga", body: { type: "box", layout: "vertical", backgroundColor: K.bg, paddingAll: "18px", justifyContent: "center", spacing: "md", action: { type: "uri", label: "更多", uri: u.href }, contents: [
       T("還有 " + (L.length - bs.length) + " 筆結果", { size: "md", weight: "bold", color: K.cream, align: "center" }), T("打更完整的卡名或卡號，或到網站看全部 ›", { size: "xs", color: K.mute, wrap: true, align: "center" })] } });
   }
   return { type: "flex", altText: (alt || "查價結果").slice(0, 380), contents: { type: "carousel", contents: bs } };
