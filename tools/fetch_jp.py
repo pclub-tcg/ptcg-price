@@ -149,6 +149,7 @@ def one(sid):
 
 with ThreadPoolExecutor(4) as ex:
     cards = [c for c in ex.map(one, sorted(ids | set(OLD))) if c]
+cards = [c for c in cards if not (c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"))]  # 沿用的舊資料也拿掉普通卡
 json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "cards": cards, "skip": {str(k): v for k, v in SKIP.items()}, "skip_ver": SKIP_VER},
           open(sys.argv[1], "w"), ensure_ascii=False, separators=(",", ":"))
 print("cards", len(cards), "with A", sum(1 for c in cards if c["a"].get("s")), "with PSA10", sum(1 for c in cards if c["p"].get("s")), dict(STAT))
