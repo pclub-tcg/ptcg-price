@@ -345,5 +345,12 @@ _q0 = h.index('$("qout").innerHTML='); _q1 = h.index("\n", _q0)
 h = _conv(h[:_q0]) + h[_q0:_q1] + _conv(h[_q1:])
 rep('document.addEventListener("load",e=>{', 'document.querySelectorAll(".cur button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.c===CUR);b.onclick=()=>setCur(b.dataset.c)});\ndocument.addEventListener("load",e=>{')
 
+# 11. 我的庫存＋出售清單一鍵出圖（tools/inv.css、tools/inv.js）：商品詳情多一顆「加入我的庫存」，右下角開庫存
+_D = _os.path.dirname(_os.path.abspath(__file__))
+rep('</style>\n\n<header class="bar">', open(_os.path.join(_D, "inv.css"), encoding="utf-8").read() + '</style>\n\n<header class="bar">')
+rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div>\n   <div class="sh-links">${links.map')
+rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}')
+h += "\n<script>\n" + open(_os.path.join(_D, "inv.js"), encoding="utf-8").read() + "\n</script>\n"
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
