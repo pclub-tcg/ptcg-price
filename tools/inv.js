@@ -3,6 +3,10 @@
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let INVL=LS.get("inv",[]);if(!Array.isArray(INVL))INVL=[];
 const save=()=>{LS.set("inv",INVL);fab()};
+/* 成功提示：畫面上方滑入，停 2 秒後淡出；右下角庫存按鈕跳一下 */
+let TT=null;function toast(msg){let t=document.getElementById("inv-toast");if(!t){t=document.createElement("div");t.id="inv-toast";t.className="inv-toast";t.setAttribute("role","status");t.setAttribute("aria-live","polite");document.body.appendChild(t)}
+  t.innerHTML=`<span class="ic">✓</span><span>${esc(msg.replace(/^✓\s*/,""))}</span>`;t.classList.remove("on");void t.offsetWidth;t.classList.add("on");clearTimeout(TT);TT=setTimeout(()=>t.classList.remove("on"),2200);
+  const b=document.getElementById("inv-fab");if(b){b.classList.remove("bump");void b.offsetWidth;b.classList.add("bump")}}
 const r10=v=>Math.round(v/10)*10;
 const ntf=v=>"NT$"+fmt(Math.round(v));
 const today=()=>{const d=new Date();return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")};
@@ -43,7 +47,7 @@ window.INV={addFrom(src,btn){
     const ex=INVL.find(r=>r.k===i.k);
     if(ex){const tq=ex.qty+q;ex.cost=Math.round((ex.cost*ex.qty+c*q)/tq);ex.qty=tq}
     else INVL.push({k:i.k,kk:i.kk||null,n:i.n,meta:i.meta,img:i.img,spr:i.spr,qty:q,cost:c,at:today(),snap:i.nt,ssrc:i.src});
-    save();const m=f.querySelector(".inv-msg");m.innerHTML=(ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存")+`<span class="inv-acts" style="margin-top:8px"><button type="button" class="inv-btn main" data-a="sell">我要賣・做出售圖</button><button type="button" class="inv-btn sub" data-a="inv">產生庫存圖</button></span>`;
+    save();toast(ex?`已合併到庫存，現在共 ${ex.qty} 張`:"✓ 已加入我的庫存");const m=f.querySelector(".inv-msg");m.innerHTML=(ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存")+`<span class="inv-acts" style="margin-top:8px"><button type="button" class="inv-btn main" data-a="sell">我要賣・做出售圖</button><button type="button" class="inv-btn sub" data-a="inv">產生庫存圖</button></span>`;
     const ix=INVL.findIndex(r=>r.k===i.k);m.querySelector('[data-a="sell"]').onclick=()=>{open();VIEW="sell";SEL={};SEL[ix]={p:i.nt!=null?r10(i.nt):0,q:1};drawSell()};m.querySelector('[data-a="inv"]').onclick=()=>{open();makeInv()}}},open};
 
 /* 右下角按鈕 */
@@ -173,7 +177,7 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
   $("inv-h").firstChild.textContent=INV?"庫存圖片":"出售清單圖片";
   B().innerHTML=`<div class="inv-out"><img src="${OUTURL}" alt="${INV?"庫存":"出售清單"}圖片"></div>
     <p class="inv-note">${canShare?"按「存到相簿」後，在分享選單選「儲存影像」（iPhone）或「儲存到相簿／相片」（Android）。":"手機上也可以長按圖片，選「加入照片」或「下載圖片」。"}</p>
-    <div class="inv-tools"><button type="button" class="inv-btn sub" id="inv-edit2">返回修改</button>${INV?`<button type="button" class="inv-btn sub" id="inv-tosell">改做出售清單</button>`:""}${canShare?`<button type="button" class="inv-btn main" id="inv-save">存到相簿</button>`:""}<a class="inv-btn ${canShare?"sub":"main"}" href="${OUTURL}" download="${esc(file.name)}" style="text-decoration:none;display:inline-flex;align-items:center">${canShare?"存成檔案":"下載圖片"}</a></div>`;
+    <div class="inv-outbtns"><button type="button" class="inv-btn sub" id="inv-edit2">返回修改</button>${INV?`<button type="button" class="inv-btn sub" id="inv-tosell">改做出售清單</button>`:""}${canShare?`<button type="button" class="inv-btn main" id="inv-save">存到相簿</button>`:""}<a class="inv-btn ${canShare?"sub":"main"}" href="${OUTURL}" download="${esc(file.name)}">${canShare?"存成檔案":"下載圖片"}</a></div>`;
   $("inv-edit2").onclick=()=>{if(INV){VIEW="list";drawList()}else{VIEW="sell";drawSell()}};
   if(INV)$("inv-tosell").onclick=()=>{VIEW="sell";SEL={};drawSell()};
   if(canShare)$("inv-save").onclick=()=>navigator.share({files:[file]}).catch(()=>{});

@@ -69,3 +69,13 @@
 .inv-acts .inv-btn.main{border-color:var(--brand)}
 .inv-msg .inv-acts{display:grid!important}
 .inv-form .inv-msg{flex-basis:100%}
+
+.inv-outbtns{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;align-items:stretch}
+.inv-outbtns .inv-btn{margin:0;min-height:48px;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;text-decoration:none;box-sizing:border-box;border:1px solid transparent;border-radius:12px;padding:8px 6px;line-height:1.25}
+.inv-outbtns .inv-btn.sub{border-color:var(--line)}
+.inv-toast{position:fixed;left:50%;top:calc(72px + env(safe-area-inset-top,0px));z-index:60;display:flex;align-items:center;gap:10px;background:#fff;color:var(--ink);border:2px solid var(--brand);font-weight:900;font-size:15px;padding:12px 20px 12px 14px;border-radius:999px;box-shadow:0 14px 34px rgba(20,12,8,.3);transform:translate(-50%,-240%);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.3,1.2),opacity .3s;pointer-events:none;white-space:nowrap}
+.inv-toast.on{transform:translate(-50%,0);opacity:1}
+.inv-toast .ic{width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-size:15px}
+.inv-fab.bump{animation:invbump .6s ease}
+@keyframes invbump{0%{transform:scale(1)}30%{transform:scale(1.18)}60%{transform:scale(.95)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.inv-toast{transition:opacity .2s}.inv-fab.bump{animation:none}}
