@@ -418,6 +418,7 @@ async function addRelated(list, D, env) {
     } catch (e) { return; }
     const self = baseName(p.n);
     const seen = new Set([self + (p.p ? "p" : ""), self + (p.p ? "" : "p")]), out = [];
+    cand.sort((a, b) => (a.p ? 1 : 0) - (b.p ? 1 : 0)); // 相關卡片優先放裸卡
     for (const x of cand) { const key = baseName(x.n); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
     if (out.length) p._rel = { ch, list: out };
   }));
@@ -474,12 +475,12 @@ function bubble(p, D, env) {
     body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "sm", paddingStart: "14px", paddingEnd: "14px", contents: [
       ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
         const g = x.p ? "PSA10" : x.b ? "原盒" : "裸卡", gp = { type: "box", layout: "horizontal", contents: [{ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "6px", paddingEnd: "6px",
-          backgroundColor: x.p ? K.or : "#E9D3BD", contents: [T(x._same ? "這張・" + g : g, { size: "xxs", weight: "bold", color: "#2A1C17" })] }] };
+          backgroundColor: x._same ? K.or : x.p ? "#5A3F2E" : "#E9D3BD", contents: [T(x._same ? "這張的" + g : g, { size: "xxs", weight: "bold", color: x._same ? "#2A1C17" : x.p ? K.cream : "#2A1C17" })] }] };
         return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "5px", alignItems: "center",
-          ...(x._same ? { borderWidth: "1.5px", borderColor: K.or } : {}),
+          ...(x._same ? { borderWidth: "2px", borderColor: K.or, backgroundColor: "#3A2418" } : {}),
           action: { type: "message", label: "查價", text: (x.p || x.b ? x.n : baseName(x.n) + " 裸卡").slice(0, 280) }, contents: [
           { type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover", flex: 2 },
-          { type: "box", layout: "vertical", flex: 3, contents: [T(x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: K.cream }), gp, T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
+          { type: "box", layout: "vertical", flex: 3, contents: [T(x._same ? (x.num || "同一張卡") : x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: x._same ? K.or : K.cream }), gp, T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
     ] });
   }
   // 工具列
