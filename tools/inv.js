@@ -120,7 +120,7 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
   try{await Promise.all(["900 60px","700 30px","500 22px"].map(w=>document.fonts.load(w+' "Noto Sans TC"',"出售清單開價行情估值庫存")).concat([document.fonts.load('600 30px "IBM Plex Mono"',"NT$0123456789")]))}catch(e){}
   const imgs=await Promise.all(list.map(x=>cardImg(x.r)));
   const W=1080,P=48,G=22,n=list.length,cols=n>=3?3:n,tw=Math.min(400,(W-P*2-G*(cols-1))/cols),gx=(W-(tw*cols+G*(cols-1)))/2,pad=14,iw=tw-pad*2,ih=Math.round(iw*88/63);
-  const TH=pad+ih+14+70+26+12+62+12+(INV&&SC?56:52)+pad,rows=Math.ceil(n/cols),HH=250,FH=260,H=HH+rows*(TH+G)+FH;
+  const TH=pad+ih+14+70+26+12+62+12+(INV&&SC?56:52)+pad,rows=Math.ceil(n/cols),HH=250,FH=(!INV&&LS.get("invContact",""))?300:260,H=HH+rows*(TH+G)+FH;
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");g.textBaseline="top";
   /* 背景：炭棕＋左下火光＋斜紋 */
   g.fillStyle="#17100c";g.fillRect(0,0,W,H);
@@ -161,7 +161,11 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
   g.fillStyle="#fff3e4";g.font="700 24px "+F;g.fillText(totq+" 張"+(INV&&SC?"・成本 "+ntf(totc):""),P,fy+64);
   if(INV&&SC){const pl=tot-totc;g.fillStyle=pl>=0?"#7fd88a":"#ff8080";g.font="700 24px "+F;g.fillText("損益 "+(pl>=0?"+":"−")+ntf(Math.abs(pl))+(totc?"（"+(pl>=0?"+":"")+(pl/totc*100).toFixed(1)+"%）":""),P,fy+98)}
   g.textAlign="right";let fs=64;g.font="700 64px "+M;while(fs>36&&g.measureText(ntf(tot)).width>W-P*2-360){fs-=4;g.font="700 "+fs+"px "+M}g.fillStyle="#ff8a2b";g.fillText(ntf(tot),W-P,fy+30);g.textAlign="left";
-  const ct=INV?"":LS.get("invContact","");if(ct){g.font="700 26px "+F;const cw2=g.measureText(ct).width+44;g.strokeStyle="#ff8a2b";g.lineWidth=2;rr(g,P,fy+140,cw2,50,25);g.stroke();g.fillStyle="#fff3e4";g.fillText(ct,P+22,fy+152)}
+  const ct=INV?"":LS.get("invContact","");if(ct){const by=fy+136,bh=64;g.font="700 20px "+F;const lw2=g.measureText("聯絡我").width;g.font="700 28px "+F;const cw2=Math.min(W-P*2,g.measureText(ct).width+lw2+84);
+    g.fillStyle="rgba(255,138,43,.12)";rr(g,P,by,cw2,bh,bh/2);g.fill();g.strokeStyle="rgba(255,138,43,.7)";g.lineWidth=2;g.stroke();
+    g.fillStyle="#ff8a2b";rr(g,P+8,by+8,lw2+32,bh-16,(bh-16)/2);g.fill();
+    g.textBaseline="middle";g.fillStyle="#1d130e";g.font="700 20px "+F;g.fillText("聯絡我",P+24,by+bh/2+1);
+    g.fillStyle="#fff3e4";g.font="700 28px "+F;g.fillText(ct,P+lw2+56,by+bh/2+1);g.textBaseline="top"}
   g.fillStyle="#8a7463";g.font="500 18px "+LF;g.fillText("行情由 P’CLUB 卡價比價整理，僅供參考・spickertop-afk.github.io/ptcg-price",P,H-44);
   const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(),"image/png")}catch(e){rej(e)}});
   if(OUTURL)URL.revokeObjectURL(OUTURL);OUTURL=URL.createObjectURL(blob);VIEW="out";
