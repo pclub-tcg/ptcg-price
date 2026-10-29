@@ -8,6 +8,8 @@
 //   IMAGE_LIMIT_PER_IP 選填，網站以圖搜尋每個 IP 每天幾次，預設 30
 //   ADMIN_KEY 選填：重建圖文選單 /setup/richmenu?key=… 用的密碼；沒設就關閉這個網址
 
+import { auctionApi, settle, lineToken } from "./auction.js";
+
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
 
@@ -15,6 +17,7 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
+    if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
     if (url.pathname === "/setup/richmenu") { // 管理用：要帶 ?key=ADMIN_KEY（Cloudflare 密鑰）才會執行；沒設 ADMIN_KEY 就整個關閉
       const k = url.searchParams.get("key") || "";
       if (!env.ADMIN_KEY || k.length !== env.ADMIN_KEY.length || !(await safeEq(k, env.ADMIN_KEY))) return new Response("Forbidden", { status: 403 });
@@ -29,6 +32,7 @@ export default {
     ctx.waitUntil(Promise.all(events.map(ev => handle(ev, env).catch(e => console.error("event error", e && e.stack || e)))));
     return new Response("ok");
   },
+  async scheduled(ev, env, ctx) { ctx.waitUntil(settle(env).catch(e => console.error("settle", e && e.stack || e))); }, // 每 10 分鐘結標並通知
 };
 
 async function safeEq(a, b) { // 固定時間比較，避免從回應時間猜密碼
@@ -64,6 +68,7 @@ const QUICK = [
   { type: "action", action: { type: "message", label: "📦 原盒", text: "原盒行情" } },
   { type: "action", action: { type: "message", label: "🏅 鑑定卡", text: "鑑定卡行情" } },
   { type: "action", action: { type: "message", label: "🗃️ 我的庫存", text: "我的庫存" } },
+  { type: "action", action: { type: "message", label: "🔨 競標", text: "競標" } },
   { type: "action", action: { type: "message", label: "使用說明", text: "說明" } },
 ];
 function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
@@ -83,6 +88,7 @@ async function handle(ev, env) {
     const q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
+    if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     if (/^(庫存|我的庫存|出售清單|出圖|庫存出圖)$/.test(q)) { const u = new URL(env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "inv";
       return reply(env, ev.replyToken, [{ type: "template", altText: "我的庫存：" + u.href, template: { type: "buttons", title: "我的庫存", text: "記錄成本、看估值與損益，一鍵產生庫存圖或出售清單圖。資料存在你手機的瀏覽器。", actions: [{ type: "uri", label: "打開我的庫存", uri: u.href }] }, quickReply: { items: QUICK } }]); }
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
@@ -140,6 +146,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
 🗃️ 我的庫存：記錄持有的卡、算損益，產生庫存圖／出售清單圖
+🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
 點卡片上的「看 K 線」可以看日 K、週 K 走勢。

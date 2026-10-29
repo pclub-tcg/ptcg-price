@@ -20,6 +20,7 @@ TPL="$(mktemp --suffix=.html)"; python3 "$HERE/patch_page.py" "$1" "$TPL"
 EN_DATA="$ENDIR/en.json" JP_DATA="$JPDIR/jp.json" US_DATA="$USDIR/us.json" BOX_DATA="$BOXDIR/boxdata.json" HI_DIR="$IMGDIR/hi" python3 "$HERE/export.py" "$TPL" "$2" "$3" "$OUT"
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 python3 "$HERE/guide.py" "$OUT"
+cp "$HERE/auction.html" "$OUT/auction.html"
 touch "$OUT/.nojekyll"
 cd "$OUT"
 git init -q -b site
