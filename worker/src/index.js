@@ -467,8 +467,10 @@ function bubble(p, D, env) {
   if (p.note) body.push(wrapX(T(p.note, { size: "xxs", color: K.peach, wrap: true, maxLines: 2 }), "sm"));
   // 相關卡片
   if (p._rel) {
-    body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "md", paddingStart: "14px", paddingEnd: "14px", contents: [
-      { type: "box", layout: "vertical", width: "22px", flex: 0, backgroundColor: K.sf, cornerRadius: "10px", justifyContent: "center", paddingAll: "2px", contents: [T("相\n關\n卡\n片", { size: "xxs", color: K.or, weight: "bold", wrap: true, align: "center" })] },
+    body.push({ type: "box", layout: "horizontal", margin: "md", paddingStart: "16px", paddingEnd: "16px", alignItems: "center", contents: [
+      T("● ", { size: "xxs", color: K.or, flex: 0 }), T("相關卡片・" + p._rel.ch, { size: "xs", weight: "bold", color: K.cream, flex: 1 }),
+      T("看更多 ›", { size: "xs", weight: "bold", color: K.or, flex: 0, action: { type: "message", label: "看更多", text: p._rel.ch } })] });
+    body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "sm", paddingStart: "14px", paddingEnd: "14px", contents: [
       ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
         return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "5px", alignItems: "center",
           action: { type: "message", label: "查價", text: x.n.slice(0, 280) }, contents: [
