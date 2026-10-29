@@ -18,6 +18,14 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
+    if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
+      const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
+      const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
+      await addRelated(hits, D, env);
+      const msg = carousel(hits, D, env, q, q);
+      const r = await fetch("https://api.line.me/v2/bot/message/validate/reply", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ messages: [msg] }) });
+      return new Response(JSON.stringify({ status: r.status, line: await r.text(), cards: msg.contents.contents.length, bytes: JSON.stringify(msg).length, rel: hits.slice(0, 3).map(h => h._rel && h._rel.list.map(x => x.n)) }), { headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
+    }
     if (url.pathname === "/setup/richmenu") { // 管理用：要帶 ?key=ADMIN_KEY（Cloudflare 密鑰）才會執行；沒設 ADMIN_KEY 就整個關閉
       const k = url.searchParams.get("key") || "";
       if (!env.ADMIN_KEY || k.length !== env.ADMIN_KEY.length || !(await safeEq(k, env.ADMIN_KEY))) return new Response("Forbidden", { status: 403 });
