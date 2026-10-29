@@ -46,4 +46,4 @@
 .inv-sell{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
 .inv-sell input{width:110px}
 .inv-out img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
-@media (max-width:560px){.inv-sum{grid-template-columns:repeat(2,minmax(0,1fr))}.inv-bg{padding-left:0;padding-right:0;padding-bottom:0}.inv{border-radius:18px 18px 0 0}.inv-fab span{display:none}}
+@media (max-width:560px){.inv-sum{grid-template-columns:repeat(2,minmax(0,1fr))}.inv-bg{padding-left:0;padding-right:0;padding-bottom:0}.inv{border-radius:18px 18px 0 0}}

@@ -38,7 +38,7 @@ window.INV={addFrom(src,btn){
     const ex=INVL.find(r=>r.k===i.k);
     if(ex){const tq=ex.qty+q;ex.cost=Math.round((ex.cost*ex.qty+c*q)/tq);ex.qty=tq}
     else INVL.push({k:i.k,n:i.n,meta:i.meta,img:i.img,spr:i.spr,qty:q,cost:c,at:today(),snap:i.nt,ssrc:i.src});
-    save();f.querySelector(".inv-msg").textContent=ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存"}},open};
+    save();const m=f.querySelector(".inv-msg");m.innerHTML=(ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存")+` <button type="button" class="inv-btn main" style="margin-left:6px">產生庫存圖片</button>`;m.querySelector("button").onclick=()=>{open();makeInv()}}},open};
 
 /* 右下角按鈕 */
 const fb=document.createElement("button");fb.type="button";fb.className="inv-fab";fb.id="inv-fab";fb.setAttribute("aria-label","我的庫存");
@@ -67,12 +67,12 @@ function drawList(){
   B().innerHTML=`<dl class="inv-sum"><div><dt>品項／張數</dt><dd>${INVL.length}／${nq}</dd></div><div><dt>持有成本</dt><dd>${N(tc)}</dd></div><div><dt>目前估值</dt><dd>${N(tv)}</dd></div>
     <div><dt>未實現損益</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pl>=0?"+":"−"}${N(Math.abs(pl))}</dd></div><div><dt>報酬率</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pp!=null?(pp>=0?"+":"")+pp.toFixed(1)+"%":"—"}</dd></div><div><dt>有行情的品項</dt><dd>${INVL.filter(r=>live(r).nt!=null).length}／${INVL.length}</dd></div></dl>
     <p class="inv-note">估值＝SNKRDUNK（沒有就用 Mercari）近期成交中位 × 張數，換算台幣；美版用 TCGplayer 市場價。資料只存在這台裝置的瀏覽器，換手機或清除瀏覽資料前請先「匯出備份」。</p>
-    <div class="inv-tools"><button type="button" class="inv-btn main" id="inv-go"${INVL.length?"":" disabled"}>出售清單出圖</button><button type="button" class="inv-btn sub" id="inv-exp"${INVL.length?"":" disabled"}>匯出備份</button><button type="button" class="inv-btn sub" id="inv-imp">匯入備份</button><input type="file" id="inv-file" accept="application/json,.json" hidden></div>
+    <div class="inv-tools"><button type="button" class="inv-btn main" id="inv-pic"${INVL.length?"":" disabled"}>庫存出圖</button><button type="button" class="inv-btn main" id="inv-go"${INVL.length?"":" disabled"}>出售清單出圖</button><label class="inv-note" style="margin:0;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" id="inv-showc"${LS.get("invShowCost",1)?" checked":""}>圖上顯示成本／損益</label><span class="inv-msg" id="inv-err" style="color:var(--bad)"></span><button type="button" class="inv-btn sub" id="inv-exp"${INVL.length?"":" disabled"}>匯出備份</button><button type="button" class="inv-btn sub" id="inv-imp">匯入備份</button><input type="file" id="inv-file" accept="application/json,.json" hidden></div>
     <div class="inv-list">${rows.join("")||`<div class="inv-empty">還沒有庫存。打開任何商品，按「＋ 加入我的庫存」就會出現在這裡。</div>`}</div>`;
   B().querySelectorAll(".inv-edit input").forEach(inp=>inp.onchange=()=>{const r=INVL[+inp.closest(".inv-row").dataset.i];if(!r)return;
     if(inp.dataset.f==="qty")r.qty=Math.max(1,Math.round(+inp.value||1));else r.cost=Math.max(0,+inp.value||0);save();drawList()});
   B().querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(b.dataset.sure){INVL.splice(+b.dataset.del,1);save();drawList()}else{b.dataset.sure=1;b.textContent="再按一次確認刪除"}});
-  $("inv-go").onclick=()=>{VIEW="sell";SEL={};drawSell()};
+  $("inv-go").onclick=()=>{VIEW="sell";SEL={};drawSell()};$("inv-showc").onchange=e=>LS.set("invShowCost",e.target.checked?1:0);$("inv-pic").onclick=makeInv;
   $("inv-exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({v:1,inv:INVL},null,1)],{type:"application/json"}));a.download="pclub-庫存-"+today().replace(/\//g,"")+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
   $("inv-imp").onclick=()=>$("inv-file").click();
   $("inv-file").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{const j=JSON.parse(t),a=Array.isArray(j)?j:j.inv;if(!Array.isArray(a))throw 0;
@@ -103,12 +103,13 @@ function drawSell(){
     $("inv-err").textContent="產生中…";render(list).catch(e=>{$("inv-err").textContent="產生失敗，請再試一次"})};
 }
 
+function makeInv(){if(!INVL.length)return;const list=INVL.map(r=>({r,q:r.qty,p:live(r).nt||0}));const e=$("inv-err");if(e)e.textContent="產生中…";render(list,"inv").catch(()=>{const e=$("inv-err");if(e)e.textContent="產生失敗，請再試一次"})}
 /* 出圖 */
 function loadImg(src){return new Promise(res=>{if(!src)return res(null);const i=new Image();if(/^https?:/.test(src)&&new URL(src,location.href).origin!==location.origin)i.crossOrigin="anonymous";i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
 async function cardImg(r){const i=await loadImg(r.img);if(i)return{i};if(r.spr!=null){const sh=await loadImg("sprites/s"+String(Math.floor(r.spr/20)).padStart(2,"0")+".jpg");if(sh){const cw=sh.naturalWidth/5,ch=sh.naturalHeight/4,c=r.spr%20;return{i:sh,sx:(c%5)*cw,sy:Math.floor(c/5)*ch,sw:cw,sh:ch}}}return null}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function wrap(g,t,x,y,w,lh,max){const ch=[...t];let line="",n=0;for(let k=0;k<ch.length;k++){const tt=line+ch[k];if(g.measureText(tt).width>w&&line){n++;if(n===max){while(g.measureText(line+"…").width>w&&line)line=line.slice(0,-1);g.fillText(line+"…",x,y);return y+lh}g.fillText(line,x,y);y+=lh;line=ch[k]}else line=tt}if(line){g.fillText(line,x,y);y+=lh}return y}
-async function render(list){
+async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowCost",1);
   const F='"Noto Sans TC",system-ui,sans-serif',M='"IBM Plex Mono",ui-monospace,monospace';
   try{await Promise.all(["900 60px","700 30px","500 22px"].map(w=>document.fonts.load(w+' "Noto Sans TC"',"出售清單開價行情")).concat([document.fonts.load('600 30px "IBM Plex Mono"',"NT$0123456789")]))}catch(e){}
   const imgs=await Promise.all(list.map(x=>cardImg(x.r)));
@@ -116,11 +117,11 @@ async function render(list){
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
   g.fillStyle="#1a120e";g.fillRect(0,0,W,H);
   const gr=g.createRadialGradient(W*.85,0,0,W*.85,0,520);gr.addColorStop(0,"rgba(255,138,43,.35)");gr.addColorStop(1,"rgba(255,138,43,0)");g.fillStyle=gr;g.fillRect(0,0,W,520);
-  g.textBaseline="top";g.fillStyle="#fff6ea";g.font="900 64px "+F;g.fillText(LS.get("invTitle","出售清單"),P,52);
+  g.textBaseline="top";g.fillStyle="#fff6ea";g.font="900 64px "+F;g.fillText(INV?"我的卡片庫存":LS.get("invTitle","出售清單"),P,52);
   g.fillStyle="#b9a493";g.font="500 24px "+F;g.fillText(today()+"・參考行情：SNKRDUNK／Mercari 近期成交中位",P,140);
   g.textAlign="right";g.fillStyle="#ff8a2b";g.font="900 34px "+F;g.fillText("P’CLUB",W-P,62);g.textAlign="left";
-  let tot=0,totq=0;
-  list.forEach((x,ix)=>{const col=one?0:ix%2,row=one?ix:Math.floor(ix/2),cx=P+col*(cw+G),cy=HH+row*(chh+G),r=x.r,L=live(r);tot+=x.p*x.q;totq+=x.q;
+  let tot=0,totq=0,totc=0;
+  list.forEach((x,ix)=>{const col=one?0:ix%2,row=one?ix:Math.floor(ix/2),cx=P+col*(cw+G),cy=HH+row*(chh+G),r=x.r,L=live(r);tot+=x.p*x.q;totq+=x.q;totc+=r.cost*x.q;
     g.fillStyle="#2a1d17";rr(g,cx,cy,cw,chh,22);g.fill();g.strokeStyle="#46301f";g.lineWidth=2;g.stroke();
     const iw=180,ih=252,ix0=cx+22,iy0=cy+24;g.save();rr(g,ix0,iy0,iw,ih,10);g.clip();g.fillStyle="#fff";g.fillRect(ix0,iy0,iw,ih);
     const im=imgs[ix];if(im){const sw=im.sw||im.i.naturalWidth,sh=im.sh||im.i.naturalHeight,sc=Math.min(iw/sw,ih/sh),dw=sw*sc,dh=sh*sc;g.drawImage(im.i,im.sx||0,im.sy||0,sw,sh,ix0+(iw-dw)/2,iy0+(ih-dh)/2,dw,dh)}
@@ -129,21 +130,23 @@ async function render(list){
     g.fillStyle="#fff6ea";g.font="900 30px "+F;y=wrap(g,r.n,tx,y,tw,38,2);
     g.fillStyle="#b9a493";g.font="500 21px "+F;y=wrap(g,[r.meta,x.q+" 張"].filter(Boolean).join("・"),tx,y+2,tw,28,2);
     if(L.nt!=null){g.fillStyle="#b9a493";g.font="500 19px "+F;g.fillText((L.src||"市場")+" 行情",tx,y+6);g.fillStyle="#ffc48a";let f2=28;g.font="600 28px "+M;while(f2>18&&g.measureText(ntf(L.nt)).width>tw){f2-=2;g.font="600 "+f2+"px "+M}g.fillText(ntf(L.nt),tx,y+30);y+=66}else y+=10;
+    if(INV){const v=L.nt!=null?L.nt*x.q:null;g.fillStyle="#ffffff";g.font="900 30px "+F;const lab="估值 ",lw=g.measureText(lab).width;g.fillText(lab,tx,y+2);g.fillStyle="#ff8a2b";let fs=34;g.font="600 34px "+M;const vt=v!=null?ntf(v):"—";while(fs>20&&lw+g.measureText(vt).width>tw){fs-=2;g.font="600 "+fs+"px "+M}g.fillText(vt,tx+lw,y+(34-fs)/2);
+      if(SC&&v!=null){const c=r.cost*x.q,pl=v-c;g.fillStyle=pl>=0?"#7fd88a":"#ff7a7a";g.font="700 21px "+F;g.fillText("損益 "+(pl>=0?"+":"−")+ntf(Math.abs(pl))+(c?"（"+(pl>=0?"+":"")+(pl/c*100).toFixed(1)+"%）":""),tx,y+46);g.fillStyle="#b9a493";g.font="500 19px "+F;g.fillText("成本 "+ntf(c),tx,y+74)}return}
     g.fillStyle="#ffffff";g.font="900 34px "+F;const lab="開價 ",lw=g.measureText(lab).width;g.fillText(lab,tx,y+2);g.fillStyle="#ff8a2b";let fs=36;g.font="600 36px "+M;while(fs>20&&lw+g.measureText(ntf(x.p)).width>tw){fs-=2;g.font="600 "+fs+"px "+M}g.fillText(ntf(x.p),tx+lw,y+(36-fs)/2);
     if(L.nt){const ra=x.p/L.nt;g.fillStyle="#e8d6c4";g.font="500 20px "+F;g.fillText(ra<1?"約行情 "+(Math.round(ra*100)/10).toFixed(1)+" 折（每張）":ra>1?"高於行情 "+Math.round((ra-1)*100)+"%（每張）":"與行情相同（每張）",tx,y+48)}
   });
   const fy=HH+rows*(chh+G)+8;g.fillStyle="#ff8a2b";rr(g,P,fy,W-P*2,118,22);g.fill();
   g.fillStyle="#2a1c17";g.font="700 26px "+F;g.fillText("合計 "+list.length+" 項・"+totq+" 張",P+30,fy+22);g.font="600 44px "+M;g.textAlign="right";g.fillText(ntf(tot),W-P-30,fy+34);g.textAlign="left";
-  g.font="500 22px "+F;g.fillText("開價合計",P+30,fy+66);
-  const ct=LS.get("invContact","");g.fillStyle="#fff6ea";g.font="700 28px "+F;if(ct)g.fillText(ct,P,fy+140);
+  g.font="500 22px "+F;g.fillText(INV?(SC?"估值合計・成本 "+ntf(totc)+"・損益 "+(tot-totc>=0?"+":"−")+ntf(Math.abs(tot-totc)):"估值合計（依近期成交行情）"):"開價合計",P+30,fy+66);
+  const ct=INV?"":LS.get("invContact","");g.fillStyle="#fff6ea";g.font="700 28px "+F;if(ct)g.fillText(ct,P,fy+140);
   g.fillStyle="#7a6656";g.font="500 18px "+F;g.fillText("行情由 P’CLUB 卡價比價整理，僅供參考 ・ spickertop-afk.github.io/ptcg-price",P,fy+(ct?184:146));
   const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(),"image/png")}catch(e){rej(e)}});
   if(OUTURL)URL.revokeObjectURL(OUTURL);OUTURL=URL.createObjectURL(blob);VIEW="out";
-  const file=new File([blob],"pclub-出售清單-"+today().replace(/\//g,"")+".png",{type:"image/png"}),canShare=navigator.canShare&&navigator.canShare({files:[file]});
-  $("inv-h").firstChild.textContent="出售清單圖片";
+  const file=new File([blob],"pclub-"+(INV?"庫存":"出售清單")+"-"+today().replace(/\//g,"")+".png",{type:"image/png"}),canShare=navigator.canShare&&navigator.canShare({files:[file]});
+  $("inv-h").firstChild.textContent=INV?"庫存圖片":"出售清單圖片";
   B().innerHTML=`<div class="inv-out"><img src="${OUTURL}" alt="出售清單圖片"></div><p class="inv-note">手機也可以長按圖片儲存。</p>
     <div class="inv-tools"><button type="button" class="inv-btn sub" id="inv-edit2">返回修改</button><a class="inv-btn main" href="${OUTURL}" download="${esc(file.name)}" style="text-decoration:none;display:inline-flex;align-items:center">下載圖片</a>${canShare?`<button type="button" class="inv-btn" id="inv-share">分享</button>`:""}</div>`;
-  $("inv-edit2").onclick=()=>{VIEW="sell";drawSell()};
-  if(canShare)$("inv-share").onclick=()=>navigator.share({files:[file],title:"出售清單"}).catch(()=>{});
+  $("inv-edit2").onclick=()=>{if(INV){VIEW="list";drawList()}else{VIEW="sell";drawSell()}};
+  if(canShare)$("inv-share").onclick=()=>navigator.share({files:[file],title:INV?"我的卡片庫存":"出售清單"}).catch(()=>{});
 }
 })();
