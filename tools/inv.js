@@ -43,7 +43,7 @@ window.INV={addFrom(src,btn){
     const ex=INVL.find(r=>r.k===i.k);
     if(ex){const tq=ex.qty+q;ex.cost=Math.round((ex.cost*ex.qty+c*q)/tq);ex.qty=tq}
     else INVL.push({k:i.k,kk:i.kk||null,n:i.n,meta:i.meta,img:i.img,spr:i.spr,qty:q,cost:c,at:today(),snap:i.nt,ssrc:i.src});
-    save();const m=f.querySelector(".inv-msg");m.innerHTML=(ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存")+`<span style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button type="button" class="inv-btn main" data-a="sell">我要賣，做出售圖</button><button type="button" class="inv-btn sub" data-a="inv">產生庫存圖</button></span>`;
+    save();const m=f.querySelector(".inv-msg");m.innerHTML=(ex?`已合併，現在共 ${ex.qty} 張`:"已加入我的庫存")+`<span class="inv-acts" style="margin-top:8px"><button type="button" class="inv-btn main" data-a="sell">我要賣・做出售圖</button><button type="button" class="inv-btn sub" data-a="inv">產生庫存圖</button></span>`;
     const ix=INVL.findIndex(r=>r.k===i.k);m.querySelector('[data-a="sell"]').onclick=()=>{open();VIEW="sell";SEL={};SEL[ix]={p:i.nt!=null?r10(i.nt):0,q:1};drawSell()};m.querySelector('[data-a="inv"]').onclick=()=>{open();makeInv()}}},open};
 
 /* 右下角按鈕 */
