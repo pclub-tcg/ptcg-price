@@ -30,7 +30,7 @@ im.paste(sh, (cx - card.width // 2 + 14 - P, cy - card.height // 2 + 18 - P), sh
 im.paste(card, (cx - card.width // 2, cy - card.height // 2), card)
 # 文字
 d.text((250, 255), "P’CLUB", font=ImageFont.truetype(FB, 112), fill=(42, 28, 23), anchor="lm")
-d.text((254, 360), "先查日本行情，再搬回台灣", font=ImageFont.truetype(FM, 46), fill=(255, 244, 228), anchor="lm")
+d.text((254, 360), "傳個卡號，秒查日本行情", font=ImageFont.truetype(FM, 46), fill=(255, 244, 228), anchor="lm")
 d.rounded_rectangle([250, 420, 760, 500], 40, fill=(42, 28, 23))
 d.text((505, 460), "傳卡號・卡名・照片就能查價", font=ImageFont.truetype(FM, 34), fill=(255, 182, 39), anchor="mm")
 im.save(sys.argv[1], quality=90)

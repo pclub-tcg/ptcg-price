@@ -357,5 +357,14 @@ rep('<a href="%s" target="_blank" rel="noopener" style="background:#06c755' % LI
 
 rep('text-decoration:none;white-space:nowrap">加入 LINE 好友</a>', 'text-decoration:none;white-space:nowrap"><span class="lw">加入 </span>LINE<span class="lw"> 好友</span></a><style>@media (max-width:480px){.lw{display:none}.nav-auc{padding:5px 10px!important}.bar .wrap>span{gap:6px!important}.bar .wrap>span>a{padding:5px 10px!important}}@media (max-width:360px){.bar .brand span{display:none}}</style>')
 
+# 13. 用詞：網站主打查行情，不再強調「賺價差」
+rep('<h1>先查<mark>日本行情</mark>，再決定要不要搬回台灣</h1>', '<h1>傳個卡號，<mark>秒查日本行情</mark></h1>')
+rep('和台灣臉書社團的價格比價。', '和台灣臉書社團的價格一起比較。')
+for _ in range(2):
+    rep('有賺頭</button>', '價差大</button>')
+rep('const VL={good:"有賺頭",warn:"利潤薄",bad:"不划算",rev:"反向機會",na:"無法比"}', 'const VL={good:"價差大",warn:"價差小",bad:"日本較貴",rev:"台灣較便宜",na:"無法比"}')
+rep('筆有賺頭｜依報酬率排序', '筆價差大｜依價差比例排序')
+h = h.replace("不能直接套利", "不能直接比價")
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")

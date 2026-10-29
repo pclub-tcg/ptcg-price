@@ -113,7 +113,7 @@ async function handle(ev, env) {
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
-    const lists = [[/^(比台灣便宜|有賺頭|賺|推薦|便宜)$/, "gap", "日本買回比台灣便宜最多的商品（台灣價 − 日本到手成本）", "目前沒有價差為正的商品。"],
+    const lists = [[/^(價差大|價差|台日價差|比台灣便宜|有賺頭|賺|推薦|便宜)$/, "gap", "台日價差最大的商品（台灣價 − 日本到手成本）", "目前沒有台灣價高於日本的商品。"],
       [/^(漲最多|漲幅|熱門|市場趨勢)$/, "up", "SNKRDUNK 近 30 天漲最多", "目前沒有足夠的成交資料。"],
       [/^(原盒行情|原盒|box)$/i, "box", "原盒行情（SNKRDUNK 成交價高到低）", "目前沒有原盒資料。"],
       [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
