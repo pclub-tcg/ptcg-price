@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""在 GitHub Actions 上執行：抓朱紫、MEGA、劍盾、太陽月亮系列與特典卡「所有稀有度」日版卡的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
+"""在 GitHub Actions 上執行：抓朱紫、MEGA、劍盾、太陽月亮、XY、BW 系列與特典卡「所有稀有度」日版卡的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
 只收有成交的卡。卡很多，所以分 3 天輪流更新：sid % 3 == 今天 % 3 的卡、新卡、成交中位 ¥3,000 以上的卡每天更新，其他沿用前一天的資料。
 輸出 jp.json：{"updated": ..., "cards": [{sid, b 卡名, r 稀有度, set, num, pk 擴充包, img, a: {s:[中位,筆數], k:[...]}, p: {...}}]}
 用法：python3 fetch_jp.py <輸出 jp.json> [前一天的 jp.json]"""
@@ -16,15 +16,22 @@ SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "
         "SM1S", "SM1M", "SM1+", "SM2K", "SM2L", "SM2+", "SM3H", "SM3N", "SM3+", "SM4S", "SM4A", "SM4+", "SM5S", "SM5M", "SM5+",
         "SM6", "SM6a", "SM6b", "SM7", "SM7a", "SM7b", "SM8", "SM8a", "SM8b", "SM9", "SM9a", "SM9b", "SM10", "SM10a", "SM10b",
         "SM11", "SM11a", "SM11b", "SM12", "SM12a",
+        # XY
+        "XY1", "XY2", "XY3", "XY4", "XY5", "XY6", "XY7", "XY8", "XY9", "XY10", "XY11", "XYA", "XYB", "XYC", "XYD", "XYE", "XYF",
+        "CP1", "CP2", "CP3", "CP4", "CP5", "CP6",
+        # BW
+        "BW1", "BW2", "BW3", "BW4", "BW5", "BW6", "BW7", "BW8", "BW9", "EBB", "SC",
+        # 之後的新系列（還沒出的會自動略過）
+        "M7", "M8", "M9", "M7a", "M8a",
         # 特典卡
-        "S-P", "SV-P", "SM-P", "M-P"]
+        "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P"]
 RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
 SETS_U = {x.upper() for x in SETS}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
 # 「ピカチュウex SAR [SV8 132/106](…)」「ピカチュウ C :マスターボールミラー [SV2a 025/165](…)」「ピカチュウ [S-P 143]」
 TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}))?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
 STAT = collections.Counter()
-SKIP_VER = 2  # 標題格式改過：舊的「不是日版卡」名單作廢重查
+SKIP_VER = 3  # 標題格式或系列清單改過：舊的「不是日版卡」名單作廢重查
 
 
 def get(url, js=True, tries=5):
