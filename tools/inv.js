@@ -179,4 +179,9 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
   if(canShare)$("inv-save").onclick=()=>navigator.share({files:[file]}).catch(()=>{});
 }
 if(location.hash==="#inv")setTimeout(open,0);
+/* LINE 卡片帶來的網址：?p=商品&a=inv 自動按「加入我的庫存」；?q=關鍵字 自動搜尋 */
+(function(){const P=new URLSearchParams(location.search);
+  if(P.get("a")==="inv"){let n=0;const t=setInterval(()=>{const b=document.getElementById("inv-add");if(b&&b.offsetParent){clearInterval(t);b.click();b.scrollIntoView({block:"center"})}else if(++n>60)clearInterval(t)},300)}
+  const q=P.get("q");if(q&&!P.get("p")){setTimeout(()=>{const i=document.getElementById("q"),f=document.getElementById("f");if(i&&f){i.value=q;f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}))}},600)}
+})();
 })();

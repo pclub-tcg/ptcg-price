@@ -59,7 +59,11 @@ async function reply(env, token, messages) {
     headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN },
     body: JSON.stringify({ replyToken: token, messages: withQuick(messages.slice(0, 5)) }),
   });
-  if (!r.ok) console.error("reply failed", r.status, await r.text());
+  if (!r.ok) {
+    const err = await r.text(); console.error("reply failed", r.status, err);
+    // 卡片格式被 LINE 拒絕時，至少回一段文字（方便看出哪裡壞了），不讓使用者沒有回應
+    if (r.status === 400 && !messages.__fb) { const fb = [{ type: "text", text: "卡片顯示失敗，請稍後再試。（" + err.slice(0, 300) + "）" }]; fb.__fb = 1; return reply(env, token, fb); }
+  }
 }
 const text = t => ({ type: "text", text: t.slice(0, 4900) });
 
@@ -106,6 +110,7 @@ async function handle(ev, env) {
       [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
     for (const [re, k, title, none] of lists) if (re.test(q)) {
       const list = RANK[k](D.db ? { ...D, products: await dbRank(k, env) } : D).slice(0, 10);
+      if (list.length) await addRelated(list, D, env);
       return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
     }
     const onlyUS = /美版|美國|英文|tcgplayer/i.test(q), q2 = q.replace(/美版|美國|英文|tcgplayer/gi, " ").trim();
@@ -113,7 +118,8 @@ async function handle(ev, env) {
       : onlyUS ? search(q2 || "box", { ...D, products: await dataUS(env) })
       : search(q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
-    return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果")]);
+    await addRelated(hits, D, env);
+    return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果", q)]);
   }
   if (ev.message.type === "image") {
     if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, ev.replyToken, [text("以圖搜尋還沒開啟。請先用文字查詢，例如「SV8 132/106」或「噴火龍 PSA10」。")]);
@@ -128,6 +134,7 @@ async function handle(ev, env) {
     const hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
+    await addRelated(hits, D, env);
     return reply(env, ev.replyToken, [head, carousel(hits, D, env, label)]);
   }
 }
@@ -376,74 +383,127 @@ const pill = (t, bg, color = "#FFFFFF", size = "xxs") => ({ type: "box", layout:
 const stat = (k, v) => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.gold, weight: "bold", flex: 0 }), T(v, { size: "sm", color: "#FFFFFF", weight: "bold", align: "end" })] });
 const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", contents: [T(k, { size: "xs", color: C.cream, flex: 6, wrap: true }), T(v, { size: "sm", color, weight: "bold", align: "end", flex: 5 })] });
 
+// ---------- 查價卡片（深色版型：卡圖＋主價格、四格數字、走勢圖＋高均低、相關卡片、工具列） ----------
+const K = { bg: "#1F1510", sf: "#2B1E17", ch: "#2A1C17", ln: "#3D2B20", or: "#FF8A2B", gold: "#FFB627", cream: "#FFF3E4", peach: "#FFD0A3", soft: "#E9D3BD", mute: "#A8917F", dim: "#7A6656", up: "#FF6B5A", down: "#3EC98A" };
+const num = v => Math.round(v).toLocaleString("en-US");
+const wrapX = (inner, margin = "md") => ({ type: "box", layout: "vertical", paddingStart: "14px", paddingEnd: "14px", margin, contents: [inner] });
+const opill = (t, on) => ({ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "1px", paddingBottom: "1px",
+  ...(on ? { backgroundColor: K.or } : { borderWidth: "1px", borderColor: "#5A3F2E" }), contents: [T(t, { size: "xxs", weight: "bold", color: on ? "#2A1C17" : K.soft })] });
+const tile = (k, v, d, vc) => ({ type: "box", layout: "vertical", flex: 1, backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "7px", spacing: "none", contents: [
+  T(k, { size: "xxs", color: K.mute, weight: "bold" }), T(v, { size: "sm", weight: "bold", color: vc || K.cream, margin: "xs" }), T(d || "　", { size: "xxs", color: K.dim })] });
+const charOf = n => {
+  const toks = String(n || "").split(/\s+/);
+  let t = toks.find(x => x && !/^(\d|psa|bgs|cgc|box|ar$|sar$|sr$|ur$|hr$)/i.test(x)) || "";
+  t = t.replace(/^(復刻|超級|M(?=[^a-z]))/i, "").split(/的|&|＆|ex$|EX$|VMAX|VSTAR|V$|GX$|BREAK$/)[0];
+  return t.length >= 2 ? t : "";
+};
+// 相關卡片：同角色、有成交、價格高的 3 張（排除自己）
+async function addRelated(list, D, env) {
+  await Promise.all(list.slice(0, 10).map(async p => {
+    if (p.us) return;
+    const ch = charOf(p.n); if (!ch) return;
+    let cand = [];
+    try {
+      if (D.db) cand = rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND h LIKE ? ESCAPE '\\' AND k != ? AND (s > 0 OR top > 0) ORDER BY COALESCE(s, 0) DESC, top DESC LIMIT 12").bind("%" + esc(norm(ch)) + "%", p.k).all());
+      else cand = D.products.filter(x => !x.us && x.k !== p.k && x.h.includes(norm(ch)) && (x.s || x.m)).slice(0, 12);
+    } catch (e) { return; }
+    const seen = new Set(), out = [];
+    for (const x of cand) { const key = x.n.replace(/\s*PSA10/i, ""); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
+    if (out.length) p._rel = { ch, list: out };
+  }));
+}
 function bubble(p, D, env) {
-  const c = calc(p, D), site = env.SITE_URL, R = D.rate;
-  const tags = [p.us || p.en ? "美版" : "日版", p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡", p.rar && p.rar !== "-" && p.rar !== "BOX" ? p.rar : null, p.set || null].filter(Boolean);
-  const top = { type: "box", layout: "horizontal", backgroundColor: C.y, paddingAll: "14px", spacing: "md", contents: [
-    ...(p.img ? [{ type: "image", url: new URL(p.img, site).href, flex: 2, aspectRatio: "5:7", aspectMode: "fit", size: "full" }] : []),
-    { type: "box", layout: "vertical", flex: 3, spacing: "sm", contents: [
-      T(p.us ? "🔥 P’CLUB・美國行情" : "🔥 P’CLUB・日本行情", { size: "xxs", color: C.ink, weight: "bold" }),
-      { type: "box", layout: "vertical", backgroundColor: C.or, cornerRadius: "8px", paddingAll: "8px", contents: [T(p.n, { size: "md", color: "#FFFFFF", weight: "bold", wrap: true, maxLines: 3 })] },
-      { type: "box", layout: "horizontal", spacing: "xs", contents: tags.map(t => pill(t, C.ink, "#FFC48A")) },
-      ...(p.j && p.j !== p.n ? [T(p.j, { size: "xxs", color: C.ink, wrap: true, maxLines: 2 })] : []),
-      ...(p.note ? [T(p.note, { size: "xxs", color: "#5A1408", wrap: true, maxLines: 2 })] : []),
-    ] },
+  const c = calc(p, D), site = env.SITE_URL, R = D.rate, FX = p.fx || R;
+  const grade = p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡";
+  let title = String(p.n).replace(/\s*PSA\s*10/i, "").replace(p.num ? new RegExp("\\s*" + p.num.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")) : /$^/, "").trim() || p.n;
+  const chips = [opill(grade, true), opill(p.us || p.en ? "美版" : "日版"), ...(p.rar && p.rar !== "-" && p.rar !== "BOX" ? [opill(p.rar)] : []), ...(p.set || p.num ? [opill([p.set, p.num].filter(Boolean).join(" "))] : [])];
+  // 主價格
+  let lab, main, subp;
+  if (p.us) { lab = "TCGplayer 市場價"; main = p.um ? p.um * (D.usd || 32) : null; subp = p.um ? "US$" + p.um.toFixed(2) : ""; }
+  else if (p.s) { lab = `SNKRDUNK 成交中位・近 ${p.s[1]} 筆`; main = p.s[0] * R; subp = yen(p.s[0]); }
+  else if (p.k1) { lab = "SNKRDUNK 每日均價"; main = p.k1 * FX; subp = yen(p.k1); }
+  else if (p.m) { lab = `Mercari 成交中位・${p.m[1]} 筆`; main = p.m[0] * R; subp = yen(p.m[0]); }
+  else { lab = "日本行情"; main = null; subp = "還沒有成交紀錄"; }
+  const img = p.img ? [{ type: "box", layout: "vertical", width: "84px", flex: 0, cornerRadius: "6px", borderWidth: "1.5px", borderColor: "#9A6A44", contents: [{ type: "image", url: new URL(p.img, site).href, aspectRatio: "5:7", aspectMode: "cover", size: "full" }] }] : [];
+  const head = { type: "box", layout: "horizontal", spacing: "lg", paddingAll: "14px", paddingBottom: "10px", background: { type: "linearGradient", angle: "160deg", startColor: "#3A2418", endColor: K.bg }, contents: [...img,
+    { type: "box", layout: "vertical", flex: 1, spacing: "xs", contents: [
+      T(p.us ? "P’CLUB・美國行情" : "P’CLUB・日本行情", { size: "xxs", weight: "bold", color: K.or }),
+      T(title, { size: "lg", weight: "bold", color: K.cream, wrap: true, maxLines: 2 }),
+      { type: "box", layout: "horizontal", spacing: "xs", contents: chips.slice(0, 4) },
+      { type: "box", layout: "vertical", flex: 1, contents: [] },
+      T(lab, { size: "xxs", color: K.mute, weight: "bold", margin: "sm" }),
+      { type: "box", layout: "baseline", spacing: "sm", contents: [T(main != null ? nt(main) : "—", { size: "xxl", weight: "bold", color: K.or, flex: 0 }), T(subp, { size: "xxs", color: K.dim, flex: 0 })] },
+    ] }] };
+  // 四格
+  const chg = p.c30;
+  const tw = p.tw ? [nt(p.tw).replace("NT$", ""), c && c.gap != null ? "價差 " + (c.gap >= 0 ? "+" : "−") + num(Math.abs(c.gap)) : (p.tt || "社團開價"), c && c.gap > 0 ? K.up : null] : ["—", "尚無開價"];
+  const tiles = { type: "box", layout: "horizontal", spacing: "sm", paddingStart: "14px", paddingEnd: "14px", paddingTop: "4px", contents: [
+    tile("30 天漲跌", chg == null ? "—" : (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", chg == null ? "資料不足" : "比上月", chg == null ? K.dim : chg >= 0 ? K.up : K.down),
+    tile("最新成交", p.k1 && p.kd ? num(p.k1 * FX) : "—", p.k1 && p.kd ? p.kd.slice(5).replace("-", "/") : "尚無", p.k1 ? null : K.dim),
+    p.us ? tile("最低價", p.ul ? num(p.ul * (D.usd || 32)) : "—", "TCGplayer") : tile("到手成本", c ? num(c.cost) : "—", c ? "含運費" : "尚無", c ? K.peach : K.dim),
+    tile("台灣社團", tw[0], tw[1], p.tw ? null : K.dim),
   ] };
-  const body = [top];
-  const FX = p.fx || R; // 每日均價換台幣的倍率（日版：日圓匯率；美版：美分→台幣）
-  if (p.us) {
-    const chg = p.c30 == null ? null : p.c30;
-    body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
-      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "美版未拆・TCGplayer" : "美版・TCGplayer 市場價", C.gold, C.ink, "xs"),
-        T("市場價 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(p.um * (D.usd || 32)), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
-      { type: "box", layout: "horizontal", contents: [T(`US$${p.um.toFixed(2)}${p.ul ? `・最低 US$${p.ul.toFixed(2)}` : ""}`, { size: "xxs", color: C.mute }),
-        ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
-      ...(p.k1 && p.kd ? [{ type: "box", layout: "horizontal", alignItems: "center", contents: [T("最新成交・" + p.kd.slice(5).replace("-", "/"), { size: "xs", color: C.cream }),
-        T(nt(p.k1 * FX), { size: "md", color: C.cream, weight: "bold", align: "end" })] }] : []),
-      ...(p.ch && p.kn > 2 ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
-      ...(p.kh && p.kn > 2 ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * FX)), stat("均", nt(p.ka * FX)), stat("低", nt(p.kl * FX))] }] : []),
-      T(`${p.set}${p.num ? "・" + p.num : ""}${p.rar ? "・" + p.rar : ""}・美元匯率 ${D.usd || 32}`, { size: "xxs", color: C.mute, wrap: true }),
-    ] });
-  } else if (p.k1 || p.s) {
-    const chg = p.c30 == null ? null : p.c30;
-    const head = p.s ? p.s[0] : p.k1; // 以 SNKRDUNK 最近成交的中位數為準（跟到手成本用同一個價格）
-    body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
-      { type: "box", layout: "horizontal", alignItems: "center", contents: [pill(p.b ? "SNKRDUNK 原盒成交" : "SNKRDUNK 近期成交", C.gold, C.ink, "xs"),
-        T("成交中位 ", { size: "xxs", color: C.cream, align: "end", flex: 1 }), T(nt(head * R), { size: "lg", color: C.gold, weight: "bold", flex: 0 })] },
-      { type: "box", layout: "horizontal", contents: [T(`${yen(head)}${p.s ? `・最近 ${p.s[1]} 筆` : ""}`, { size: "xxs", color: C.mute }),
-        ...(chg != null ? [T("30 天 " + (chg >= 0 ? "▲" : "▼") + Math.abs(chg) + "%", { size: "xs", weight: "bold", align: "end", color: chg >= 0 ? C.up : C.down })] : [])] },
-      ...(p.k1 && p.kd ? [{ type: "box", layout: "horizontal", alignItems: "center", contents: [T("最新成交・" + p.kd.slice(5).replace("-", "/"), { size: "xs", color: C.cream }),
-        T(nt(p.k1 * FX), { size: "md", color: C.cream, weight: "bold", align: "end" })] }] : []),
-      ...(p.ch ? [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover" }] : []),
-      ...(p.kh ? [{ type: "box", layout: "horizontal", spacing: "md", contents: [stat("高", nt(p.kh * FX)), stat("均", nt(p.ka * FX)), stat("低", nt(p.kl * FX))] },
-        T(`近 90 天每日均價・${p.kn} 天有成交`, { size: "xxs", color: C.mute, align: "end" })] : []),
+  if (tw[2]) tiles.contents[3].contents[2].color = tw[2];
+  const body = [head, tiles];
+  // 走勢圖
+  if (p.ch && (p.kn || 0) > 2) {
+    const side = p.kh ? [{ type: "box", layout: "vertical", width: "70px", flex: 0, justifyContent: "center", spacing: "sm", contents: [["高", p.kh], ["均", p.ka], ["低", p.kl]].flatMap(([k, v], i) => [
+      ...(i ? [{ type: "separator", color: K.ln }] : []),
+      { type: "box", layout: "baseline", contents: [T(k, { size: "xxs", color: K.gold, weight: "bold", flex: 0 }), T(num(v * FX), { size: "xs", color: K.cream, weight: "bold", align: "end" })] }]) }] : [];
+    body.push(wrapX({ type: "box", layout: "vertical", backgroundColor: K.ch, cornerRadius: "12px", paddingAll: "8px", spacing: "xs", contents: [
+      { type: "box", layout: "horizontal", alignItems: "center", contents: [opill(p.us ? "TCGplayer・近 90 天" : "每日均價・近 90 天", true), T(`${p.kn} 天有成交`, { size: "xxs", color: K.dim, align: "end" })] },
+      { type: "box", layout: "horizontal", spacing: "sm", alignItems: "center", contents: [{ type: "image", url: new URL(p.ch, site).href, size: "full", aspectRatio: "2:1", aspectMode: "cover", flex: 1 }, ...side] }] }));
+  }
+  if (p.m && !p.us && (p.s || p.k1)) body.push({ type: "box", layout: "horizontal", paddingStart: "16px", paddingEnd: "16px", margin: "md", contents: [T(`Mercari 成交中位・${p.m[1]} 筆`, { size: "xxs", color: K.mute }), T(nt(p.m[0] * R), { size: "xs", color: K.soft, weight: "bold", align: "end" })] });
+  if (p.note) body.push(wrapX(T(p.note, { size: "xxs", color: K.peach, wrap: true, maxLines: 2 }), "sm"));
+  // 相關卡片
+  if (p._rel) {
+    body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "md", paddingStart: "14px", paddingEnd: "14px", contents: [
+      { type: "box", layout: "vertical", width: "22px", flex: 0, backgroundColor: K.sf, cornerRadius: "10px", justifyContent: "center", paddingAll: "2px", contents: [T("相\n關\n卡\n片", { size: "xxs", color: K.or, weight: "bold", wrap: true, align: "center" })] },
+      ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
+        return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "5px", alignItems: "center",
+          action: { type: "message", label: "查價", text: x.n.slice(0, 280) }, contents: [
+          { type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover", flex: 2 },
+          { type: "box", layout: "vertical", flex: 3, contents: [T(x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: K.cream }), T(x.p ? "PSA10" : x.b ? "原盒" : "裸卡", { size: "xxs", color: K.dim }), T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
     ] });
   }
-  const rows = [];
-  if (p.m) rows.push(line(`Mercari 中位・${p.m[1]}筆（${yen(p.m[0])}）`, nt(p.m[0] * R)));
-  if (c && !p.us) rows.push(line(`到手成本・${c.src}`, nt(c.cost), C.gold));
-  if (p.tw) rows.push(line("台灣社團" + (p.tt || ""), nt(p.tw)));
-  if (c && c.gap != null) rows.push(line("價差", (c.gap >= 0 ? "+" : "−") + nt(Math.abs(c.gap)).replace("NT$", "NT$"), c.gap > 0 ? C.up : C.down));
-  if (!p.us && !p.k1 && !p.s) body.push({ type: "box", layout: "vertical", backgroundColor: C.br, paddingAll: "14px", spacing: "sm", contents: [
-    pill("SNKRDUNK 成交走勢", C.gold, C.ink, "xs"), T("SNKRDUNK 還沒有這個商品的成交紀錄，下面是 Mercari 的價格。", { size: "xs", color: C.cream, wrap: true })] });
-  if (!rows.length) rows.push(T("還沒有日本成交價", { size: "sm", color: C.cream }));
-  if (rows.length) body.push({ type: "box", layout: "vertical", backgroundColor: C.br2, paddingAll: "14px", spacing: "xs", contents: rows });
-  body.push({ type: "box", layout: "vertical", flex: 1, contents: [] }); // 撐滿高度，避免輪播時下面出現白色空白
-  body.push({ type: "box", layout: "horizontal", backgroundColor: C.br, paddingStart: "14px", paddingEnd: "14px", paddingTop: "6px", paddingBottom: "8px", contents: [
-    T("LINE @916ctmro", { size: "xxs", color: C.mute }), T(`匯率 ${R}`, { size: "xxs", color: C.mute, align: "end" })] });
-  const actions = [p.us ? { type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: "🇺🇸 TCGplayer 商品頁", uri: p.uurl || "https://www.tcgplayer.com" } }
-    : { type: "button", style: "primary", color: C.ink, height: "sm", action: { type: "uri", label: p.kk ? "📊 看 K 線與詳情" : "看詳情", uri: new URL("?p=" + encodeURIComponent(p.k), site).href } }];
+  // 工具列
+  const detail = new URL("?p=" + encodeURIComponent(p.k), site).href;
+  const hist = p.us ? (p.uurl || "https://www.tcgplayer.com") : p.sid ? `https://snkrdunk.com/apparels/${p.sid}/sales-histories` : p.mq ? "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out" : detail;
+  const inv = new URL("?p=" + encodeURIComponent(p.k) + "&a=inv", site); inv.searchParams.set("openExternalBrowser", "1");
+  const sell = new URL("auction.html", site); sell.searchParams.set("openExternalBrowser", "1"); sell.hash = "sell=" + encodeURIComponent(p.n) + (main ? "&ref=" + Math.round(main / 10) * 10 : "");
+  const tool = (icon, label, action) => ({ type: "box", layout: "vertical", flex: 2, alignItems: "center", justifyContent: "center", spacing: "xs", paddingTop: "8px", paddingBottom: "8px", action, contents: [
+    { type: "image", url: new URL("icons/" + icon + ".png", site).href, size: "18px", aspectRatio: "1:1" }, T(label, { size: "xxs", color: K.soft, weight: "bold" })] });
+  const tools = [
+    { type: "box", layout: "vertical", flex: 3, backgroundColor: K.or, justifyContent: "center", action: { type: "uri", label: "K 線", uri: detail }, contents: [T(p.kk ? "看 K 線 ›" : "看詳情 ›", { size: "sm", weight: "bold", color: "#2A1C17", align: "center" })] },
+    tool("list", "成交紀錄", { type: "uri", label: "成交紀錄", uri: hist }), { type: "separator", color: K.ln },
+    tool("box", "加入庫存", { type: "uri", label: "加入庫存", uri: inv.href }), { type: "separator", color: K.ln },
+    tool("tag", "我要賣", { type: "uri", label: "我要賣", uri: sell.href }),
+    ...(p.set ? [{ type: "separator", color: K.ln }, tool("cards", "同系列", { type: "message", label: "同系列", text: p.set })] : []),
+  ];
+  body.push(wrapX({ type: "box", layout: "horizontal", backgroundColor: K.sf, cornerRadius: "12px", contents: tools }));
+  // 頁尾
   const links = [];
-  if (p.sid) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } });
-  if (p.mq) links.push({ type: "button", style: "link", height: "sm", color: C.ink, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } });
-  if (links.length) actions.push({ type: "box", layout: "horizontal", contents: links });
-  return { type: "bubble", size: "giga",
-    body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: C.br, contents: body },
-    footer: { type: "box", layout: "vertical", spacing: "xs", backgroundColor: C.y, paddingAll: "10px", contents: actions } };
+  if (p.us) links.push(T("TCGplayer ↗", { size: "xxs", color: K.peach, weight: "bold", decoration: "underline", flex: 0, action: { type: "uri", label: "TCGplayer", uri: p.uurl || "https://www.tcgplayer.com" } }));
+  if (p.sid) links.push(T("SNKRDUNK ↗", { size: "xxs", color: K.peach, weight: "bold", decoration: "underline", flex: 0, action: { type: "uri", label: "SNKRDUNK", uri: "https://snkrdunk.com/apparels/" + p.sid } }));
+  if (p.mq) links.push(T("Mercari ↗", { size: "xxs", color: K.peach, weight: "bold", decoration: "underline", flex: 0, action: { type: "uri", label: "Mercari", uri: "https://jp.mercari.com/search?keyword=" + encodeURIComponent(p.mq) + "&status=sold_out&sort=created_time&order=desc" } }));
+  body.push({ type: "box", layout: "vertical", flex: 1, contents: [] }); // 撐滿高度，輪播時下面不會留白
+  body.push({ type: "box", layout: "horizontal", spacing: "md", paddingStart: "16px", paddingEnd: "16px", paddingTop: "10px", paddingBottom: "12px", contents: [
+    T(p.us ? `美元匯率 ${D.usd || 32}・NT$` : `匯率 ${R}・NT$`, { size: "xxs", color: K.dim, flex: 1 }), ...(links.length ? [T("前往", { size: "xxs", color: K.dim, flex: 0 })] : []), ...links] });
+  return { type: "bubble", size: "giga", body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: K.bg, contents: body } };
 }
-function carousel(list, D, env, alt) {
-  const bs = list.slice(0, 10).map(p => bubble(p, D, env));
-  while (bs.length > 1 && JSON.stringify(bs).length > 46000) bs.pop(); // LINE 輪播訊息上限 50KB
+function carousel(list, D, env, alt, q) {
+  const L = list.slice(0, 10), size = x => new TextEncoder().encode(JSON.stringify(x)).length;
+  let bs = L.map(p => bubble(p, D, env));
+  // LINE 輪播上限 50KB：先拿掉後面幾張的相關卡片，還太大就少放幾張，最後補一張「更多結果」
+  if (size(bs) > 46000) bs = L.map((p, i) => i < 2 ? bs[i] : bubble({ ...p, _rel: null }, D, env));
+  let cut = false;
+  while (bs.length > 1 && size(bs) > 44500) { bs.pop(); cut = true; }
+  if (cut) {
+    const u = new URL(env.SITE_URL); if (q) u.searchParams.set("q", q); u.searchParams.set("openExternalBrowser", "1");
+    bs.push({ type: "bubble", size: "kilo", body: { type: "box", layout: "vertical", backgroundColor: K.bg, paddingAll: "18px", justifyContent: "center", spacing: "md", action: { type: "uri", label: "更多", uri: u.href }, contents: [
+      T("還有 " + (L.length - bs.length) + " 筆結果", { size: "md", weight: "bold", color: K.cream, align: "center" }), T("打更完整的卡名或卡號，或到網站看全部 ›", { size: "xs", color: K.mute, wrap: true, align: "center" })] } });
+  }
   return { type: "flex", altText: (alt || "查價結果").slice(0, 380), contents: { type: "carousel", contents: bs } };
 }
 

@@ -21,6 +21,7 @@ EN_DATA="$ENDIR/en.json" JP_DATA="$JPDIR/jp.json" US_DATA="$USDIR/us.json" BOX_D
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 python3 "$HERE/guide.py" "$OUT"
 cp "$HERE/auction.html" "$OUT/auction.html"
+mkdir -p "$OUT/icons" && cp "$HERE"/icons/*.png "$OUT/icons/"
 touch "$OUT/.nojekyll"
 cd "$OUT"
 git init -q -b site

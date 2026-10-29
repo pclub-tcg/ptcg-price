@@ -360,7 +360,7 @@ $("new").onclick=()=>{
   $("pf").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("up").textContent="處理中…";
     try{PHOTO=await shrink(f);if(PURL)URL.revokeObjectURL(PURL);PURL=URL.createObjectURL(PHOTO);$("up").innerHTML=`<img src="${PURL}" alt="商品照片預覽">`}catch(er){PHOTO=null;$("up").textContent="這張照片讀不出來，請換一張"}};
   $("cf").onsubmit=async e=>{e.preventDefault();const m=$("cm");m.textContent="";
-    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value,ref:REF};
+    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value,ref:REF!=null?REF:(window.__REF||null)};
     if(!b.title.trim())return m.textContent="請填商品名稱";if(!(b.start>=1))return m.textContent="請填起標價";if(!b.contact.trim())return m.textContent="請填聯絡方式";
     if(!$("ag").checked)return m.textContent="請先勾選同意刊登規則";
     if(!PHOTO&&!confirm("沒有附照片的商品比較少人出價，確定不附照片？"))return;
@@ -378,7 +378,9 @@ function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL
   out&&out.size<550*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
 
 const WANT_ADMIN=/admin/.test(location.hash);if(WANT_ADMIN)history.replaceState(null,"",location.pathname);
-drawWho();load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
+const SELL=(location.hash.match(/sell=([^&]*)(?:&ref=(\d+))?/)||[]);if(SELL[1])history.replaceState(null,"",location.pathname);
+drawWho();load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");
+  if(SELL[1]){$("new").click();if(TOK&&$("ti")){$("ti").value=decodeURIComponent(SELL[1]).slice(0,60);if(SELL[2]){const v=+SELL[2];$("rb").hidden=false;$("rb").innerHTML=`<span>日本近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(v)}</b>（會顯示給買家參考）</span><button type="button" class="btn sm" id="rbx">不顯示</button>`;window.__REF=v;$("rbx").onclick=()=>{window.__REF=null;$("rb").hidden=true};$("st").placeholder="參考：行情 "+nt(v)}}return}const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
 })();
 </script>
 </body>
