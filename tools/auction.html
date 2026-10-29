@@ -63,8 +63,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .cb{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
 .cb h3{margin:0;font-size:15px;line-height:1.35;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
 .pr{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
-.pr small{color:var(--muted);font-size:12px}
-.pr b{font-family:var(--f-num);font-size:19px;color:var(--hot)}
+.pr small{color:var(--muted);font-size:12px;white-space:nowrap}
+.pr{flex-wrap:wrap}
+.pr b{font-family:var(--f-num);font-size:clamp(15px,4.6vw,19px);color:var(--hot);white-space:nowrap}
 .meta{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;color:var(--muted)}
 .cd{font-family:var(--f-num);font-weight:600;color:var(--ink)}
 .cd.hot{color:var(--hot)}
