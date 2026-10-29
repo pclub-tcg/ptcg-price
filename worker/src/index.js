@@ -103,6 +103,8 @@ async function handle(ev, env) {
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
     if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
+    const more = q.match(/^(?:更多|全部)\s*(.{1,20})$/);
+    if (more) return reply(env, ev.replyToken, [await gridMsg(more[1].trim(), D, env)]);
     if (/^(庫存|我的庫存|出售清單|出圖|庫存出圖)$/.test(q)) { const u = new URL(env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "inv";
       return reply(env, ev.replyToken, [{ type: "template", altText: "我的庫存：" + u.href, template: { type: "buttons", title: "我的庫存", text: "記錄成本、看估值與損益，一鍵產生庫存圖或出售清單圖。資料存在你手機的瀏覽器。", actions: [{ type: "uri", label: "打開我的庫存", uri: u.href }] }, quickReply: { items: QUICK } }]); }
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
@@ -471,7 +473,7 @@ function bubble(p, D, env) {
   if (p._rel) {
     body.push({ type: "box", layout: "horizontal", margin: "md", paddingStart: "16px", paddingEnd: "16px", alignItems: "center", contents: [
       T("● ", { size: "xxs", color: K.or, flex: 0 }), T(p._rel.ch ? "相關卡片・" + p._rel.ch : "相關卡片", { size: "xs", weight: "bold", color: K.cream, flex: 1 }),
-      ...(p._rel.ch ? [T("看更多 ›", { size: "xs", weight: "bold", color: K.or, flex: 0, action: { type: "message", label: "看更多", text: p._rel.ch } })] : [])] });
+      ...(p._rel.ch ? [T("看更多 ›", { size: "xs", weight: "bold", color: K.or, flex: 0, action: { type: "message", label: "看更多", text: "更多 " + p._rel.ch } })] : [])] });
     body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "sm", paddingStart: "14px", paddingEnd: "14px", contents: [
       ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
         const g = x.p ? "PSA10" : x.b ? "原盒" : "裸卡", gp = { type: "box", layout: "horizontal", contents: [{ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "6px", paddingEnd: "6px",
@@ -507,6 +509,49 @@ function bubble(p, D, env) {
   body.push({ type: "box", layout: "horizontal", spacing: "md", paddingStart: "16px", paddingEnd: "16px", paddingTop: "10px", paddingBottom: "12px", contents: [
     T(p.us ? `美元匯率 ${D.usd || 32}・NT$` : `匯率 ${R}・NT$`, { size: "xxs", color: K.dim, flex: 1 }), ...(links.length ? [T("前往", { size: "xxs", color: K.dim, flex: 0 })] : []), ...links] });
   return { type: "bubble", size: "giga", body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: K.bg, contents: body } };
+}
+// 「看更多」：同角色最多 20 張卡的卡牌牆（4 欄，依日本成交價排序，點卡片查行情）
+async function gridMsg(ch, D, env) {
+  const site = env.SITE_URL, R = D.rate;
+  let cand = [];
+  try { cand = D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND h LIKE ? ESCAPE '\\' LIMIT 300").bind("%" + esc(norm(ch)) + "%").all())
+    : D.products.filter(x => !x.us && x.h.includes(norm(ch))); } catch (e) {}
+  const val = x => x.s ? x.s[0] * R : x.k1 ? x.k1 * (x.fx || R) : x.m ? x.m[0] * R : 0;
+  const seen = new Set(), list = [];
+  for (const x of cand.filter(x => x.img).sort((a, b) => val(b) - val(a))) { if (seen.has(x.k)) continue; seen.add(x.k); list.push(x); if (list.length === 20) break; }
+  if (!list.length) return text(`找不到「${ch}」相關的卡片。`);
+  const tile = (x, i) => {
+    const v = val(x), g = x.p ? "PSA10" : x.b ? "原盒" : "裸卡";
+    return { type: "box", layout: "vertical", flex: 1, backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "4px", spacing: "xs",
+      action: { type: "message", label: "查價", text: x.n.slice(0, 280) }, contents: [
+      { type: "box", layout: "vertical", cornerRadius: "6px", contents: [
+        { type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover" },
+        { type: "box", layout: "vertical", position: "absolute", offsetTop: "3px", offsetStart: "3px", cornerRadius: "20px", paddingStart: "4px", paddingEnd: "4px",
+          backgroundColor: x.p ? "#2A1C17CC" : "#FFF3E4DD", contents: [T(g, { size: "xxs", weight: "bold", color: x.p ? K.or : "#2A1C17" })] },
+        ...(i < 3 ? [{ type: "box", layout: "vertical", position: "absolute", offsetTop: "3px", offsetEnd: "3px", width: "18px", height: "18px", cornerRadius: "9px", backgroundColor: K.gold, justifyContent: "center",
+          contents: [T(String(i + 1), { size: "xxs", weight: "bold", color: "#2A1C17", align: "center" })] }] : []),
+      ] },
+      T(baseName(x.n).replace(/\s+\d+\/\S+$/, ""), { size: "xxs", color: K.soft, weight: "bold" }),
+      T(v ? num(v) : "—", { size: "xs", color: K.or, weight: "bold" }),
+    ] };
+  };
+  const rows = [];
+  for (let i = 0; i < list.length; i += 4) {
+    const r = list.slice(i, i + 4).map((x, j) => tile(x, i + j));
+    while (r.length < 4) r.push({ type: "box", layout: "vertical", flex: 1, contents: [] });
+    rows.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "sm", paddingStart: "12px", paddingEnd: "12px", contents: r });
+  }
+  const web = new URL(site); web.searchParams.set("q", ch); web.searchParams.set("openExternalBrowser", "1");
+  const bub = { type: "bubble", size: "giga", body: { type: "box", layout: "vertical", paddingAll: "0px", backgroundColor: K.bg, contents: [
+    { type: "box", layout: "horizontal", paddingAll: "14px", paddingBottom: "8px", alignItems: "flex-end", background: { type: "linearGradient", angle: "160deg", startColor: "#3A2418", endColor: K.bg }, contents: [
+      { type: "box", layout: "vertical", flex: 1, contents: [T("P’CLUB・卡牌牆", { size: "xxs", weight: "bold", color: K.or }), T(ch, { size: "xl", weight: "bold", color: K.cream })] },
+      { type: "box", layout: "vertical", flex: 0, contents: [T(`${list.length} 張`, { size: "sm", weight: "bold", color: K.peach, align: "end" }), T("依日本成交價排序", { size: "xxs", color: K.dim, align: "end" })] }] },
+    ...rows,
+    { type: "box", layout: "horizontal", paddingStart: "16px", paddingEnd: "16px", paddingTop: "10px", paddingBottom: "12px", contents: [
+      T("點卡片看行情・價格 NT$", { size: "xxs", color: K.dim, flex: 1 }),
+      T("網站看全部 ›", { size: "xxs", weight: "bold", color: K.or, flex: 0, action: { type: "uri", label: "網站", uri: web.href } })] },
+  ] } };
+  return { type: "flex", altText: `${ch} 相關卡片 ${list.length} 張`, contents: bub };
 }
 // 查價只回一張大卡片（PSA10 為主），同一張卡的裸卡（或 PSA10）排在相關卡片第一格，其他搜尋結果接在後面
 async function oneCard(hits, q, wantRaw, D, env) {
