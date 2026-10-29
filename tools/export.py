@@ -467,7 +467,7 @@ if os.path.isdir(os.path.join(out, "cut")):
 for p in bprods:  # 搜尋用字串先算好（Worker 不用每次冷啟動都做 NFKC，省 CPU）
     p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
                                    + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + (" 美版 us en" if p.get("us") or p.get("en") else " 日版 jp")).lower()
-    for k in ("kw", "cn", "kd"):  # 已併進 h，或機器人沒用到
+    for k in ("kw", "cn"):  # 已併進 h（kd＝最新成交日期，機器人要顯示）
         p.pop(k, None)
 # 美版另存 bot-us.json：查英文或「美版」時機器人才載入
 json.dump({"products": [p for p in bprods if p.get("us")]}, open(os.path.join(out, "data", "bot-us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
@@ -504,7 +504,7 @@ try:
         if not d.get("h"):
             d["h"] = unicodedata.normalize("NFKC", " ".join(str(d.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
                                           + (" box 原盒" if d.get("b") else "") + (" psa10 鑑定" if d.get("p") else "") + (" 美版 us en" if d.get("us") or d.get("en") else " 日版 jp")).lower()
-        for k in ("kw", "cn", "kd"):
+        for k in ("kw", "cn"):
             d.pop(k, None)
         if str(d.get("img") or "").startswith("img/") and not os.path.exists(os.path.join(out, d["img"])):
             d.pop("img", None)
