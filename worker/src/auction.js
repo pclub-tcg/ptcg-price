@@ -147,7 +147,7 @@ export async function auctionApi(req, env, url) {
       if (!(start >= 1 && start <= 10000000)) return J(env, req, { err: "起標價要在 NT$1～10,000,000" }, 400);
       if (!(inc >= 1 && inc <= start + 100000)) return J(env, req, { err: "每次加價至少 NT$1" }, 400);
       if (![1, 3, 6, 12, 24, 48, 72, 120, 168].includes(hours)) return J(env, req, { err: "競標時間不正確" }, 400);
-      if (buynow != null && !(buynow > start)) return J(env, req, { err: "直購價要高於起標價" }, 400);
+      if (buynow != null && !(buynow > start && buynow <= 10000000)) return J(env, req, { err: "直購價要高於起標價，且不超過 NT$10,000,000" }, 400);
       const contact = clip(b.contact, 60);
       if (!contact) return J(env, req, { err: "請填聯絡方式（結標後只給得標者看）" }, 400);
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM auctions WHERE seller = ? AND status = 'live'").bind(me.uid).first();
@@ -191,6 +191,8 @@ export async function auctionApi(req, env, url) {
     return J(env, req, { err: "not found" }, 404);
   } catch (e) {
     console.error("auction api", e && e.stack || e);
-    return J(env, req, { err: "系統忙碌，請稍後再試（" + String(e && e.message || e).slice(0, 120) + "）" }, 500);
+    const m = String(e && e.message || e);
+    if (/daily row write limit|exceeded D1/i.test(m)) return J(env, req, { err: "今天資料庫寫入額度已用完，台灣時間早上 8 點後恢復，請明天再上架／出價" }, 503);
+    return J(env, req, { err: "系統忙碌，請稍後再試（" + m.slice(0, 120) + "）" }, 500);
   }
 }
