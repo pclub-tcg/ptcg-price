@@ -3,7 +3,7 @@
 左邊一塊大的「查卡價」主面板（下方兩個小按鈕：開網站、使用說明），右邊 2x3 的功能方塊。
 用法：python3 richmenu.py <輸出 jpg 路徑>
 按鈕位置要跟 worker/src/index.js 的 setupRichMenu() 一致（AREAS 會印出來）。"""
-import os, sys
+import os, sys, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flame import draw_flame
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -126,9 +126,18 @@ def ic_fx(cx, cy, c):
     d.line([(cx + 22, cy - 74), (cx + 96, cy - 74)], fill=c, width=14)
 
 
+
+def ic_gavel(cx, cy, c):
+    def rect(x, y, w, h, ang):  # 以 (x,y) 為中心、旋轉 ang 度的長方形
+        a = math.radians(ang); co, si = math.cos(a), math.sin(a)
+        return [(x + dx * co - dy * si, y + dx * si + dy * co) for dx, dy in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2))]
+    d.polygon(rect(cx - 34, cy - 44, 160, 70, -45), fill=c)           # 槌頭
+    d.polygon(rect(cx + 38, cy + 28, 150, 26, 45), fill=c)             # 握柄（跟槌頭垂直）
+    d.rounded_rectangle([cx - 124, cy + 92, cx + 6, cy + 118], 10, fill=c)  # 底座
+
 TILES = [
     ("拍照查價", "拍卡號自動辨識", ic_cam, (255, 244, 228), CHAR),
-    ("比台灣便宜", "日本買回更划算", ic_coin, EMBER, WHITE),
+    ("競標市場", "出價・上架自己的卡", ic_gavel, EMBER, WHITE),
     ("漲最多", "30 天漲幅排行", ic_up, TEAL, WHITE),
     ("原盒行情", "成交價高到低", ic_box, CHAR2, GOLD),
     ("鑑定卡行情", "PSA10 漲跌", ic_slab, CHAR2, GOLD),

@@ -32,7 +32,10 @@ export default {
     ctx.waitUntil(Promise.all(events.map(ev => handle(ev, env).catch(e => console.error("event error", e && e.stack || e)))));
     return new Response("ok");
   },
-  async scheduled(ev, env, ctx) { ctx.waitUntil(settle(env).catch(e => console.error("settle", e && e.stack || e))); }, // 每 10 分鐘結標並通知
+  async scheduled(ev, env, ctx) { // 每 10 分鐘：結標並通知；圖文選單版本更新時自動重建
+    ctx.waitUntil(settle(env).catch(e => console.error("settle", e && e.stack || e)));
+    ctx.waitUntil(autoRichMenu(env).catch(e => console.error("richmenu", e && e.stack || e)));
+  },
 };
 
 async function safeEq(a, b) { // 固定時間比較，避免從回應時間猜密碼
@@ -61,14 +64,13 @@ async function reply(env, token, messages) {
 const text = t => ({ type: "text", text: t.slice(0, 4900) });
 
 const QUICK = [
-  { type: "action", action: { type: "message", label: "💰 比台灣便宜", text: "比台灣便宜" } },
+  { type: "action", action: { type: "message", label: "🔨 競標", text: "競標" } },
   { type: "action", action: { type: "message", label: "📈 漲最多", text: "漲最多" } },
   { type: "action", action: { type: "camera", label: "拍照查價" } },
   { type: "action", action: { type: "cameraRoll", label: "選照片查價" } },
   { type: "action", action: { type: "message", label: "📦 原盒", text: "原盒行情" } },
   { type: "action", action: { type: "message", label: "🏅 鑑定卡", text: "鑑定卡行情" } },
   { type: "action", action: { type: "message", label: "🗃️ 我的庫存", text: "我的庫存" } },
-  { type: "action", action: { type: "message", label: "🔨 競標", text: "競標" } },
   { type: "action", action: { type: "message", label: "使用說明", text: "說明" } },
 ];
 function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
@@ -133,7 +135,7 @@ async function handle(ev, env) {
 function guide(env) {
   if (!env.SITE_URL) return [text(HELP)];
   const u = p => new URL(p, env.SITE_URL).href;
-  return [{ type: "image", originalContentUrl: u("guide.jpg"), previewImageUrl: u("guide_s.jpg"), quickReply: { items: QUICK } }];
+  return [{ type: "image", originalContentUrl: u("guide.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_s.jpg?v=" + RICHMENU_V), quickReply: { items: QUICK } }];
 }
 
 const HELP = `P’CLUB｜日本成交價 × 台灣社團價
@@ -141,7 +143,6 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 🔍 查價：直接傳卡號、卡名或系列
 　例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX
 📷 拍照查價：傳卡片照片，自動辨識
-💰 比台灣便宜：日本買回比台灣便宜最多的商品
 📈 漲最多：SNKRDUNK 近 30 天漲幅排行
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
@@ -431,6 +432,16 @@ function carousel(list, D, env, alt) {
 }
 
 // ---------- 圖文選單（開一次網址 /setup/richmenu 就會建立） ----------
+const RICHMENU_V = "2026-10-29-auction"; // 改圖文選單（tools/richmenu.py 或 areas）時把這個字串改掉，排程就會自動重建
+async function autoRichMenu(env) {
+  if (!env.DB || !env.LINE_CHANNEL_ACCESS_TOKEN) return;
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)").run();
+  const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'richmenu'").first();
+  if (r && r.v === RICHMENU_V) return;
+  const res = await setupRichMenu(env);
+  if (res.ok) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('richmenu', ?)").bind(RICHMENU_V).run();
+  else console.error("richmenu failed", await res.text());
+}
 async function setupRichMenu(env) {
   const H = { authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN, "content-type": "application/json" };
   const site = env.SITE_URL;
@@ -442,7 +453,7 @@ async function setupRichMenu(env) {
     A(96, 1010, 524, 570, { type: "uri", uri: site }),
     A(652, 1010, 460, 570, msg("說明")),
     A(1208, 28, 618, 524, { type: "uri", uri: "https://line.me/R/nv/camera/" }),
-    A(1854, 28, 618, 524, msg("比台灣便宜")),
+    A(1854, 28, 618, 524, msg("競標")),
     A(1208, 580, 618, 524, msg("漲最多")),
     A(1854, 580, 618, 524, msg("原盒行情")),
     A(1208, 1132, 618, 524, msg("鑑定卡行情")),
