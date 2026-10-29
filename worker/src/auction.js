@@ -5,7 +5,8 @@
 
 const EXTEND_MS = 3 * 60 * 1000;      // 最後 3 分鐘有人出價就延長 3 分鐘（防秒殺）
 const MAX_LIVE = 20;                  // 每人同時上架上限
-const MAX_PHOTO = 450 * 1024;         // 照片（壓縮後 data URL）上限
+const MAX_PHOTO = 600 * 1024;         // 照片（壓縮後 JPEG）上限
+const CHUNK = 60 * 1024;              // 照片分段存（D1 單一參數／語句有大小限制）
 let READY = false;
 
 async function ensure(env) {
@@ -14,6 +15,7 @@ async function ensure(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_users (token TEXT PRIMARY KEY, uid TEXT NOT NULL, name TEXT, created INTEGER)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS auctions (id INTEGER PRIMARY KEY AUTOINCREMENT, seller TEXT NOT NULL, sname TEXT, title TEXT NOT NULL, cond TEXT, note TEXT, photo TEXT, start INTEGER NOT NULL, inc INTEGER NOT NULL, buynow INTEGER, price INTEGER, bidder TEXT, bname TEXT, nbids INTEGER DEFAULT 0, ends INTEGER NOT NULL, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'live', contact TEXT, ref INTEGER, notified INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_bids (aid INTEGER NOT NULL, uid TEXT NOT NULL, name TEXT, amount INTEGER NOT NULL, at INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS a_photos (aid INTEGER NOT NULL, i INTEGER NOT NULL, mime TEXT, data BLOB)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_reports (aid INTEGER NOT NULL, uid TEXT NOT NULL, reason TEXT, at INTEGER NOT NULL)"),
   ]);
   READY = true;
@@ -93,11 +95,27 @@ export async function auctionApi(req, env, url) {
   const p = url.pathname.replace(/^\/api\/a\/?/, ""), now = Date.now();
   try {
     if (p.startsWith("photo/")) {
-      const a = await env.DB.prepare("SELECT photo FROM auctions WHERE id = ?").bind(+p.slice(6) || 0).first();
-      const m = a && a.photo && a.photo.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
-      if (!m) return new Response("Not found", { status: 404, headers: cors(env, req) });
-      const bin = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
-      return new Response(bin, { headers: { "content-type": m[1], "cache-control": "public, max-age=86400", ...cors(env, req) } });
+      const id = +p.slice(6) || 0;
+      if (req.method === "POST") { // 上架後另外上傳照片（二進位，不轉 base64，省 CPU）
+        const me = await who(env, req);
+        if (!me) return J(env, req, { err: "請先登入", login: 1 }, 401);
+        const a = await env.DB.prepare("SELECT seller FROM auctions WHERE id = ?").bind(id).first();
+        if (!a || a.seller !== me.uid) return J(env, req, { err: "只能替自己的商品上傳照片" }, 403);
+        const mime = (req.headers.get("content-type") || "").split(";")[0];
+        if (!/^image\/(jpeg|png|webp)$/.test(mime)) return J(env, req, { err: "照片格式不支援" }, 400);
+        const buf = new Uint8Array(await req.arrayBuffer());
+        if (!buf.length || buf.length > MAX_PHOTO) return J(env, req, { err: "照片太大，請換一張" }, 400);
+        const st = [env.DB.prepare("DELETE FROM a_photos WHERE aid = ?").bind(id)];
+        for (let i = 0, k = 0; i < buf.length; i += CHUNK, k++) st.push(env.DB.prepare("INSERT INTO a_photos VALUES (?, ?, ?, ?)").bind(id, k, mime, buf.slice(i, i + CHUNK).buffer));
+        st.push(env.DB.prepare("UPDATE auctions SET photo = 'p' WHERE id = ?").bind(id));
+        await env.DB.batch(st);
+        return J(env, req, { ok: 1 });
+      }
+      const { results = [] } = await env.DB.prepare("SELECT mime, data FROM a_photos WHERE aid = ? ORDER BY i").bind(id).all();
+      if (!results.length) return new Response("Not found", { status: 404, headers: cors(env, req) });
+      const parts = results.map(r => new Uint8Array(r.data instanceof ArrayBuffer ? r.data : r.data)), n = parts.reduce((t, x) => t + x.length, 0), bin = new Uint8Array(n);
+      let o = 0; for (const x of parts) { bin.set(x, o); o += x.length; }
+      return new Response(bin, { headers: { "content-type": results[0].mime || "image/jpeg", "cache-control": "public, max-age=86400", ...cors(env, req) } });
     }
     if (p === "list") {
       if (Math.random() < 0.3) await settle(env); else await env.DB.prepare("UPDATE auctions SET status = 'ended' WHERE status = 'live' AND ends <= ?").bind(now).run();
@@ -130,14 +148,12 @@ export async function auctionApi(req, env, url) {
       if (!(inc >= 1 && inc <= start + 100000)) return J(env, req, { err: "每次加價至少 NT$1" }, 400);
       if (![1, 3, 6, 12, 24, 48, 72, 120, 168].includes(hours)) return J(env, req, { err: "競標時間不正確" }, 400);
       if (buynow != null && !(buynow > start)) return J(env, req, { err: "直購價要高於起標價" }, 400);
-      const photo = typeof b.photo === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(b.photo) ? b.photo : null;
-      if (photo && photo.length > MAX_PHOTO) return J(env, req, { err: "照片太大，請換一張" }, 400);
       const contact = clip(b.contact, 60);
       if (!contact) return J(env, req, { err: "請填聯絡方式（結標後只給得標者看）" }, 400);
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM auctions WHERE seller = ? AND status = 'live'").bind(me.uid).first();
       if (n && n.n >= MAX_LIVE) return J(env, req, { err: `同時最多上架 ${MAX_LIVE} 件` }, 400);
-      const r = await env.DB.prepare("INSERT INTO auctions (seller, sname, title, cond, note, photo, start, inc, buynow, price, nbids, ends, created, status, contact, ref) VALUES (?,?,?,?,?,?,?,?,?,NULL,0,?,?,'live',?,?)")
-        .bind(me.uid, me.name, title, clip(b.cond, 20), clip(b.note, 300), photo, start, inc, buynow, now + hours * 3600e3, now, contact, b.ref ? Math.round(+b.ref) || null : null).run();
+      const r = await env.DB.prepare("INSERT INTO auctions (seller, sname, title, cond, note, photo, start, inc, buynow, price, nbids, ends, created, status, contact, ref) VALUES (?,?,?,?,?,NULL,?,?,?,NULL,0,?,?,'live',?,?)")
+        .bind(me.uid, me.name || "玩家", title, clip(b.cond, 20), clip(b.note, 300), start, inc, buynow, now + hours * 3600e3, now, contact, b.ref ? Math.round(+b.ref) || null : null).run();
       return J(env, req, { ok: 1, id: r.meta.last_row_id });
     }
 
@@ -175,6 +191,6 @@ export async function auctionApi(req, env, url) {
     return J(env, req, { err: "not found" }, 404);
   } catch (e) {
     console.error("auction api", e && e.stack || e);
-    return J(env, req, { err: "系統忙碌，請稍後再試" }, 500);
+    return J(env, req, { err: "系統忙碌，請稍後再試（" + String(e && e.message || e).slice(0, 120) + "）" }, 500);
   }
 }

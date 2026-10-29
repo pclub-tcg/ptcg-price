@@ -168,7 +168,7 @@ async function api(path,body){
   const o={headers:{}};if(TOK)o.headers["x-tok"]=TOK;
   if(body){o.method="POST";o.headers["content-type"]="application/json";o.body=JSON.stringify(body)}
   let r;try{r=await fetch(API+path,o)}catch(e){throw new Error("連線失敗，請檢查網路")}
-  const j=await r.json().catch(()=>({err:"系統忙碌，請稍後再試"}));
+  const j=await r.json().catch(()=>({err:`系統忙碌，請稍後再試（錯誤 ${r.status}）`}));
   if(j.now)SKEW=j.now-Date.now();
   if(r.status===401&&j.login){TOK="";LS.del("atok");ME=null;drawWho()}
   if(!r.ok||j.err){const e=new Error(j.err||"發生錯誤");e.j=j;throw e}
@@ -287,24 +287,27 @@ $("new").onclick=()=>{
     <label class="agree full"><input type="checkbox" id="ag"><span>我確認商品為本人所有且照片為實拍，結標後會依得標價出貨。不實刊登或棄標會被下架並停權。</span></label>
     <div class="full row2"><button type="submit" class="btn main" id="go" style="flex:1">確認上架</button></div>
     <p class="msg err full" id="cm" aria-live="polite"></p></form>`);
-  let PHOTO=null;
+  let PHOTO=null,PURL=null;
   const pick=()=>$("pf").click();$("up").onclick=pick;$("up").onkeydown=e=>{if(e.key==="Enter")pick()};
   $("pf").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("up").textContent="處理中…";
-    try{PHOTO=await shrink(f);$("up").innerHTML=`<img src="${PHOTO}" alt="商品照片預覽">`}catch(er){PHOTO=null;$("up").textContent="這張照片讀不出來，請換一張"}};
+    try{PHOTO=await shrink(f);if(PURL)URL.revokeObjectURL(PURL);PURL=URL.createObjectURL(PHOTO);$("up").innerHTML=`<img src="${PURL}" alt="商品照片預覽">`}catch(er){PHOTO=null;$("up").textContent="這張照片讀不出來，請換一張"}};
   $("cf").onsubmit=async e=>{e.preventDefault();const m=$("cm");m.textContent="";
-    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value,photo:PHOTO};
+    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value};
     if(!b.title.trim())return m.textContent="請填商品名稱";if(!(b.start>=1))return m.textContent="請填起標價";if(!b.contact.trim())return m.textContent="請填聯絡方式";
     if(!$("ag").checked)return m.textContent="請先勾選同意刊登規則";
     if(!PHOTO&&!confirm("沒有附照片的商品比較少人出價，確定不附照片？"))return;
     $("go").disabled=true;$("go").textContent="上架中…";
-    try{const r=await api("create",b);LS.set("acontact",b.contact.trim());toast("上架成功！");setTab("live");openItem(r.id)}
+    try{const r=await api("create",b);LS.set("acontact",b.contact.trim());
+      if(PHOTO){$("go").textContent="上傳照片中…";try{const pr=await fetch(API+"photo/"+r.id,{method:"POST",headers:{"x-tok":TOK,"content-type":"image/jpeg"},body:PHOTO});const pj=await pr.json().catch(()=>({}));if(!pr.ok)throw new Error(pj.err||"照片上傳失敗")}catch(pe){toast("商品已上架，但照片上傳失敗："+pe.message)}}
+      toast("上架成功！");setTab("live");openItem(r.id)}
     catch(er){m.textContent=er.message;$("go").disabled=false;$("go").textContent="確認上架"}};
 };
 /* 照片壓縮：長邊 1200px，JPEG，控制在 400KB 內 */
-function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);
-  let w=im.naturalWidth,h=im.naturalHeight,s=Math.min(1,1200/Math.max(w,h)),q=.82,out="";
-  for(let i=0;i<6;i++){const c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);out=c.toDataURL("image/jpeg",q);if(out.length<400*1024)break;s*=.8;q=Math.max(.6,q-.06)}
-  out.length<450*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=async()=>{URL.revokeObjectURL(u);
+  let w=im.naturalWidth,h=im.naturalHeight,s=Math.min(1,1200/Math.max(w,h)),q=.82,out=null;
+  for(let i=0;i<6;i++){const c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    out=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(out&&out.size<350*1024)break;s*=.8;q=Math.max(.6,q-.06)}
+  out&&out.size<550*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
 
 drawWho();load().then(()=>{const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
 })();
