@@ -5,7 +5,7 @@
 用法：python3 fetch_us.py <舊 us.json 或空字串> <輸出 us.json>"""
 import json, os, sys, time, urllib.request
 
-UA = {"User-Agent": "Mozilla/5.0 ptcg-price (github.com/spickertop-afk/ptcg-price)"}
+UA = {"User-Agent": "Mozilla/5.0 ptcg-price (github.com/pclub-tcg/ptcg-price)"}
 
 
 def get(url, tries=3):

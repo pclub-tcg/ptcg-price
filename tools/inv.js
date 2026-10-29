@@ -166,7 +166,7 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
     g.fillStyle="#ff8a2b";rr(g,P+8,by+8,lw2+32,bh-16,(bh-16)/2);g.fill();
     g.textBaseline="middle";g.fillStyle="#1d130e";g.font="700 20px "+F;g.fillText("聯絡我",P+24,by+bh/2+1);
     g.fillStyle="#fff3e4";g.font="700 28px "+F;g.fillText(ct,P+lw2+56,by+bh/2+1);g.textBaseline="top"}
-  g.fillStyle="#8a7463";g.font="500 18px "+LF;g.fillText("行情由 P’CLUB 卡價比價整理，僅供參考・spickertop-afk.github.io/ptcg-price",P,H-44);
+  g.fillStyle="#8a7463";g.font="500 18px "+LF;g.fillText("行情由 P’CLUB 卡價比價整理，僅供參考・pclub-tcg.github.io/ptcg-price",P,H-44);
   const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(),"image/png")}catch(e){rej(e)}});
   if(OUTURL)URL.revokeObjectURL(OUTURL);OUTURL=URL.createObjectURL(blob);VIEW="out";
   const file=new File([blob],"pclub-"+(INV?"庫存":"出售清單")+"-"+today().replace(/\//g,"")+".png",{type:"image/png"}),canShare=navigator.canShare&&navigator.canShare({files:[file]});

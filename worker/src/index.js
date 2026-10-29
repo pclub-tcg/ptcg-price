@@ -444,7 +444,7 @@ function carousel(list, D, env, alt) {
 }
 
 // ---------- 圖文選單（開一次網址 /setup/richmenu 就會建立） ----------
-const RICHMENU_V = "2026-10-29-auction"; // 改圖文選單（tools/richmenu.py 或 areas）時把這個字串改掉，排程就會自動重建
+const RICHMENU_V = "2026-10-29-pclub-tcg"; // 改圖文選單（tools/richmenu.py 或 areas）時把這個字串改掉，排程就會自動重建
 async function autoRichMenu(env) {
   if (!env.DB || !env.LINE_CHANNEL_ACCESS_TOKEN) return;
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)").run();

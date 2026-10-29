@@ -101,7 +101,7 @@ for i, (t, desc, ex) in enumerate(FEAT):
 fy = HEAD + rows * (CH + G) + 10
 d.rounded_rectangle((M, fy, W - M, fy + 120), 28, fill=ORANGE)
 d.text((M + 34, fy + 38), "傳「說明」隨時再看這張圖", font=f(34), fill=INK, anchor="lm")
-d.text((M + 34, fy + 84), "網站：spickertop-afk.github.io/ptcg-price", font=f(24, FM), fill=(70, 40, 20), anchor="lm")
+d.text((M + 34, fy + 84), "網站：pclub-tcg.github.io/ptcg-price", font=f(24, FM), fill=(70, 40, 20), anchor="lm")
 d.text((M, H - 58), "價格取自各平台公開資訊，僅供參考；本服務與寶可夢公司、任天堂、SNKRDUNK、Mercari 無關。", font=f(19, FR), fill=(128, 108, 92))
 
 out = sys.argv[1] if len(sys.argv) > 1 else "."
