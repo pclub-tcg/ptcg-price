@@ -63,6 +63,7 @@ const QUICK = [
   { type: "action", action: { type: "cameraRoll", label: "選照片查價" } },
   { type: "action", action: { type: "message", label: "📦 原盒", text: "原盒行情" } },
   { type: "action", action: { type: "message", label: "🏅 鑑定卡", text: "鑑定卡行情" } },
+  { type: "action", action: { type: "message", label: "🗃️ 我的庫存", text: "我的庫存" } },
   { type: "action", action: { type: "message", label: "使用說明", text: "說明" } },
 ];
 function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
@@ -81,6 +82,8 @@ async function handle(ev, env) {
   if (ev.message.type === "text") {
     const q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
+    if (/^(庫存|我的庫存|出售清單|出圖|庫存出圖)$/.test(q)) { const u = new URL(env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "inv";
+      return reply(env, ev.replyToken, [{ type: "template", altText: "我的庫存：" + u.href, template: { type: "buttons", title: "我的庫存", text: "記錄成本、看估值與損益，一鍵產生庫存圖或出售清單圖。資料存在你手機的瀏覽器。", actions: [{ type: "uri", label: "打開我的庫存", uri: u.href }] }, quickReply: { items: QUICK } }]); }
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
@@ -128,6 +131,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 📈 漲最多：SNKRDUNK 近 30 天漲幅排行
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
+🗃️ 我的庫存：記錄持有的卡、算損益，產生庫存圖／出售清單圖
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
 點卡片上的「看 K 線」可以看日 K、週 K 走勢。

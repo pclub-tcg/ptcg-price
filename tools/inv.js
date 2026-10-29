@@ -149,4 +149,5 @@ async function render(list,mode){const INV=mode==="inv",SC=INV&&LS.get("invShowC
   $("inv-edit2").onclick=()=>{if(INV){VIEW="list";drawList()}else{VIEW="sell";drawSell()}};
   if(canShare)$("inv-share").onclick=()=>navigator.share({files:[file],title:INV?"我的卡片庫存":"出售清單"}).catch(()=>{});
 }
+if(location.hash==="#inv")setTimeout(open,0);
 })();
