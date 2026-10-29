@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""在 GitHub Actions 上執行：抓朱紫、MEGA、劍盾、太陽月亮、XY、BW 系列與特典卡「所有稀有度」日版卡的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
+"""在 GitHub Actions 上執行：抓朱紫、MEGA、劍盾、太陽月亮、XY、BW 系列與特典卡的日版卡（C／U／R 普通卡不抓，鏡面與特典照抓）的 SNKRDUNK 成交（裸卡 A 級、PSA10）與每日均價。
 只收有成交的卡。卡很多，所以分 3 天輪流更新：sid % 3 == 今天 % 3 的卡、新卡、成交中位 ¥3,000 以上的卡每天更新，其他沿用前一天的資料。
 輸出 jp.json：{"updated": ..., "cards": [{sid, b 卡名, r 稀有度, set, num, pk 擴充包, img, a: {s:[中位,筆數], k:[...]}, p: {...}}]}
 用法：python3 fetch_jp.py <輸出 jp.json> [前一天的 jp.json]"""
@@ -27,6 +27,8 @@ SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "
         "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P"]
 RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
 SETS_U = {x.upper() for x in SETS}
+COMMON = {"C", "U", "R"}
+PROMO = {"S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P"}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
 # 「ピカチュウex SAR [SV8 132/106](…)」「ピカチュウ C :マスターボールミラー [SV2a 025/165](…)」「ピカチュウ [S-P 143]」
 TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}))?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
@@ -128,6 +130,10 @@ def one(sid):
             c = {"sid": int(sid), "b": m.group(1).strip(), "v": (m.group(3) or "").strip(), "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
                  "en": (a.get("name") or "").split(" [")[0], "img": ((a.get("primaryMedia") or {}).get("imageUrl")) or "",
                  "pid": a["productCatalogId"]}
+        # 很普通的卡（C／U／R）不抓；特典卡、鏡面等特殊版本照抓
+        if c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"):
+            SKIP[sid] = TODAY; STAT["common skipped"] += 1
+            return None
         c["a"] = hist(c["pid"], "trading_card_single_nearly_unused", "A")
         c["p"] = hist(c["pid"], "trading_card_single_psa10", "PSA10")
         time.sleep(0.2)
