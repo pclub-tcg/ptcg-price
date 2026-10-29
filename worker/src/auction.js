@@ -7,7 +7,8 @@ const EXTEND_MS = 3 * 60 * 1000;      // 最後 3 分鐘有人出價就延長 3 
 const MAX_LIVE = 20;                  // 每人同時上架上限
 const MAX_PHOTO = 600 * 1024;         // 照片（壓縮後 JPEG）上限
 const CHUNK = 60 * 1024;              // 照片分段存（D1 單一參數／語句有大小限制）
-let READY = false;
+let READY = false, CATALOG = null;
+export const setCatalog = fn => { CATALOG = fn; }; // index.js 提供商品目錄搜尋（上架時帶入日本行情）
 
 async function ensure(env) {
   if (READY) return;
@@ -16,6 +17,10 @@ async function ensure(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS auctions (id INTEGER PRIMARY KEY AUTOINCREMENT, seller TEXT NOT NULL, sname TEXT, title TEXT NOT NULL, cond TEXT, note TEXT, photo TEXT, start INTEGER NOT NULL, inc INTEGER NOT NULL, buynow INTEGER, price INTEGER, bidder TEXT, bname TEXT, nbids INTEGER DEFAULT 0, ends INTEGER NOT NULL, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'live', contact TEXT, ref INTEGER, notified INTEGER DEFAULT 0)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_bids (aid INTEGER NOT NULL, uid TEXT NOT NULL, name TEXT, amount INTEGER NOT NULL, at INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_photos (aid INTEGER NOT NULL, i INTEGER NOT NULL, mime TEXT, data BLOB)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS a_watch (aid INTEGER NOT NULL, uid TEXT NOT NULL, warned INTEGER DEFAULT 0)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS a_ratings (aid INTEGER NOT NULL, from_uid TEXT NOT NULL, to_uid TEXT NOT NULL, score INTEGER NOT NULL, abandon INTEGER DEFAULT 0, note TEXT, at INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS a_banned (uid TEXT NOT NULL, reason TEXT, at INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS a_reports (aid INTEGER NOT NULL, uid TEXT NOT NULL, reason TEXT, at INTEGER NOT NULL)"),
   ]);
   READY = true;
@@ -34,12 +39,23 @@ const J = (env, req, obj, status = 200) => new Response(JSON.stringify(obj), { s
 async function who(env, req) {
   const t = req.headers.get("x-tok") || "";
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(t)) return null;
-  return await env.DB.prepare("SELECT uid, name FROM a_users WHERE token = ?").bind(t).first();
+  const u = await env.DB.prepare("SELECT uid, name FROM a_users WHERE token = ?").bind(t).first();
+  if (!u) return null;
+  const [ad, bn] = await Promise.all([env.DB.prepare("SELECT v FROM meta WHERE k = 'auction_admin'").first(), env.DB.prepare("SELECT 1 AS b FROM a_banned WHERE uid = ? LIMIT 1").bind(u.uid).first()]);
+  u.admin = !!(ad && ad.v === u.uid); u.banned = !!bn;
+  return u;
+}
+const meOut = me => me ? { name: me.name, admin: me.admin ? 1 : 0, banned: me.banned ? 1 : 0 } : null;
+// 評價統計：好評、負評、未完成交易（棄標／未出貨）
+async function stats(env, uid) {
+  if (!uid) return null;
+  const r = await env.DB.prepare("SELECT SUM(score > 0) AS pos, SUM(score < 0) AS neg, SUM(abandon) AS ab FROM a_ratings WHERE to_uid = ?").bind(uid).first();
+  return { pos: r && r.pos || 0, neg: r && r.neg || 0, ab: r && r.ab || 0 };
 }
 
 // 公開欄位（不含照片本體、不含 LINE userId）
-function pub(a, me) {
-  return { id: a.id, title: a.title, cond: a.cond, note: a.note, photo: a.photo ? 1 : 0, start: a.start, inc: a.inc, buynow: a.buynow, price: a.price, nbids: a.nbids,
+function pub(a, me, W) {
+  return { watched: !!(W && W.has(a.id)), id: a.id, title: a.title, cond: a.cond, note: a.note, photo: a.photo ? 1 : 0, start: a.start, inc: a.inc, buynow: a.buynow, price: a.price, nbids: a.nbids,
     ends: a.ends, created: a.created, status: a.status, ref: a.ref, seller: mask(a.sname), leader: a.bidder ? mask(a.bname) : null,
     mine: !!(me && a.seller === me.uid), leading: !!(me && a.bidder === me.uid),
     // 結標後只有得標者、賣家看得到對方聯絡方式
@@ -65,10 +81,28 @@ export async function settle(env) {
     const ok = await env.DB.prepare("UPDATE auctions SET notified = 1 WHERE id = ? AND notified = 0").bind(a.id).run();
     if (!ok.meta || !ok.meta.changes) continue;
     if (a.bidder) {
-      await push(env, a.bidder, [btnMsg(env, "🎉 恭喜得標", `${a.title}｜${ntd(a.price)}。請在 24 小時內聯絡賣家完成交易。`, a.id, "看賣家聯絡方式")]);
+      await push(env, a.bidder, [btnMsg(env, "🎉 恭喜得標", `${a.title}｜${ntd(a.price)}。請在 24 小時內聯絡賣家，交易後記得評價。`, a.id, "看賣家聯絡方式")]);
       await push(env, a.seller, [btnMsg(env, "✅ 你的競標已結標", `${a.title}｜${ntd(a.price)}，得標者 ${a.bname || "玩家"}。`, a.id, "看得標者")]);
     } else await push(env, a.seller, [btnMsg(env, "競標已結束（流標）", `${a.title} 沒有人出價，可以重新上架。`, a.id)]);
   }
+  // 關注的商品 30 分鐘內結標：提醒一次（目前最高出價者不用提醒）
+  const { results: ws = [] } = await env.DB.prepare("SELECT w.rowid AS rid, w.uid, a.id, a.title, a.price, a.start, a.nbids, a.bidder FROM a_watch w JOIN auctions a ON a.id = w.aid WHERE w.warned = 0 AND a.status = 'live' AND a.ends > ? AND a.ends <= ? LIMIT 50").bind(now, now + 30 * 60e3).all();
+  for (const w of ws) {
+    await env.DB.prepare("UPDATE a_watch SET warned = 1 WHERE rowid = ?").bind(w.rid).run();
+    if (w.uid !== w.bidder) await push(env, w.uid, [btnMsg(env, "⏰ 關注的商品快結標了", `${w.title} 30 分鐘內結標，目前 ${ntd(w.nbids ? w.price : w.start)}。`, w.id, "去出價")]);
+  }
+}
+
+// LINE 傳「管理競標」：第一個傳的人成為管理員（之後只有他能用）
+export async function lineAdmin(env, uid) {
+  await ensure(env);
+  const ad = await env.DB.prepare("SELECT v FROM meta WHERE k = 'auction_admin'").first();
+  if (ad && ad.v && ad.v !== uid) return { type: "text", text: "你不是競標管理員。" };
+  if (!ad) await env.DB.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES ('auction_admin', ?)").bind(uid).run();
+  const m = await lineToken(env, uid);
+  m.template.title = "競標管理後台"; m.template.text = (ad ? "" : "已把你設為管理員。") + "打開後點「管理」分頁，可以看檢舉、下架、停權。";
+  m.template.actions[0].uri = m.template.actions[0].uri.replace("#t=", "#admin&t="); m.template.actions[0].label = "打開管理後台";
+  return m;
 }
 
 // LINE 傳「競標」：發一個綁定這個 LINE 帳號的 token
@@ -125,8 +159,10 @@ export async function auctionApi(req, env, url) {
       if (st === "mine" && me) q = env.DB.prepare(`SELECT ${cols} FROM auctions WHERE status != 'cancel' AND (seller = ?1 OR bidder = ?1 OR id IN (SELECT aid FROM a_bids WHERE uid = ?1)) ORDER BY ends DESC LIMIT 100`).bind(me.uid);
       else if (st === "ended") q = env.DB.prepare(`SELECT ${cols} FROM auctions WHERE status = 'ended' ORDER BY ends DESC LIMIT 60`);
       else q = env.DB.prepare(`SELECT ${cols} FROM auctions WHERE status = 'live' ORDER BY ends ASC LIMIT 200`);
+      if (st === "watch" && me) q = env.DB.prepare(`SELECT ${cols} FROM auctions WHERE status != 'cancel' AND id IN (SELECT aid FROM a_watch WHERE uid = ?) ORDER BY ends DESC LIMIT 100`).bind(me.uid);
       const { results = [] } = await q.all();
-      return J(env, req, { now, me: me ? { name: me.name } : null, items: results.map(a => pub(a, me)) });
+      const W = me ? new Set(((await env.DB.prepare("SELECT aid FROM a_watch WHERE uid = ?").bind(me.uid).all()).results || []).map(r => r.aid)) : null;
+      return J(env, req, { now, me: meOut(me), items: results.map(a => pub(a, me, W)) });
     }
     if (p.startsWith("item/")) {
       const id = +p.slice(5) || 0, me = await who(env, req);
@@ -134,12 +170,63 @@ export async function auctionApi(req, env, url) {
       if (!a) return J(env, req, { err: "找不到這個競標" }, 404);
       if (a.status === "live" && a.ends <= now) { await settle(env); a.status = "ended"; }
       const { results = [] } = await env.DB.prepare("SELECT uid, name, amount, at FROM a_bids WHERE aid = ? ORDER BY amount DESC LIMIT 30").bind(id).all();
-      return J(env, req, { now, me: me ? { name: me.name } : null, item: pub(a, me), bids: results.map(b => ({ name: mask(b.name), amount: b.amount, at: b.at, me: !!(me && b.uid === me.uid) })) });
+      const W = me ? new Set(((await env.DB.prepare("SELECT aid FROM a_watch WHERE uid = ? AND aid = ?").bind(me.uid, id).all()).results || []).map(r => r.aid)) : null;
+      const party = me && a.status === "ended" && a.bidder && (a.seller === me.uid || a.bidder === me.uid);
+      const myRate = party ? await env.DB.prepare("SELECT score, abandon, note FROM a_ratings WHERE aid = ? AND from_uid = ?").bind(id, me.uid).first() : null;
+      return J(env, req, { now, me: meOut(me), sellerStats: await stats(env, a.seller), leaderStats: a.bidder ? await stats(env, a.bidder) : null,
+        rate: party ? { can: !myRate, mine: myRate, role: a.seller === me.uid ? "seller" : "buyer", abandonOk: now - a.ends > 24 * 3600e3 } : null,
+        item: pub(a, me, W), bids: results.map(b => ({ name: mask(b.name), amount: b.amount, at: b.at, me: !!(me && b.uid === me.uid) })) });
+    }
+    if (p === "search") {
+      const q = clip(url.searchParams.get("q"), 40);
+      if (q.length < 1 || !CATALOG) return J(env, req, { items: [] });
+      return J(env, req, { items: await CATALOG(q, env) });
+    }
+    if (p === "admin/reports") {
+      const me = await who(env, req);
+      if (!me || !me.admin) return J(env, req, { err: "只有管理員可以看" }, 403);
+      const { results: rs = [] } = await env.DB.prepare("SELECT a.id, a.title, a.status, a.seller, a.sname, COUNT(*) AS n, GROUP_CONCAT(r.reason, '｜') AS reasons, MAX(r.at) AS last FROM a_reports r JOIN auctions a ON a.id = r.aid GROUP BY a.id ORDER BY last DESC LIMIT 100").all();
+      const { results: bs = [] } = await env.DB.prepare("SELECT b.uid, b.reason, b.at, (SELECT name FROM a_users u WHERE u.uid = b.uid LIMIT 1) AS name FROM a_banned b ORDER BY b.at DESC LIMIT 100").all();
+      const { results: ab = [] } = await env.DB.prepare("SELECT to_uid AS uid, (SELECT name FROM a_users u WHERE u.uid = to_uid LIMIT 1) AS name, SUM(abandon) AS ab, SUM(score < 0) AS neg FROM a_ratings GROUP BY to_uid HAVING ab > 0 OR neg > 0 ORDER BY ab DESC, neg DESC LIMIT 100").all();
+      return J(env, req, { reports: rs, banned: bs, bad: ab });
     }
     if (req.method !== "POST") return J(env, req, { err: "not found" }, 404);
     const me = await who(env, req);
     if (!me) return J(env, req, { err: "請先從 LINE 登入（傳「競標」給 P’CLUB 官方帳號）", login: 1 }, 401);
     const b = await req.json().catch(() => ({}));
+    if (me.banned && ["create", "bid", "rate"].includes(p)) return J(env, req, { err: "你的帳號已被停權，無法上架或出價。如有疑問請聯絡 P’CLUB 官方帳號。" }, 403);
+
+    if (p === "watch") {
+      const id = +b.id || 0;
+      await env.DB.prepare("DELETE FROM a_watch WHERE aid = ? AND uid = ?").bind(id, me.uid).run();
+      if (b.on) await env.DB.prepare("INSERT INTO a_watch (aid, uid, warned) VALUES (?, ?, 0)").bind(id, me.uid).run();
+      return J(env, req, { ok: 1, on: b.on ? 1 : 0 });
+    }
+
+    if (p === "rate") {
+      const id = +b.id || 0, score = +b.score > 0 ? 1 : -1;
+      const a = await env.DB.prepare("SELECT seller, bidder, status, ends FROM auctions WHERE id = ?").bind(id).first();
+      if (!a || a.status !== "ended" || !a.bidder || (a.seller !== me.uid && a.bidder !== me.uid)) return J(env, req, { err: "只有得標者和賣家可以互相評價" }, 403);
+      if (await env.DB.prepare("SELECT 1 FROM a_ratings WHERE aid = ? AND from_uid = ?").bind(id, me.uid).first()) return J(env, req, { err: "你已經評價過了" }, 400);
+      const abandon = b.abandon && now - a.ends > 24 * 3600e3 ? 1 : 0;
+      if (b.abandon && !abandon) return J(env, req, { err: "結標 24 小時後才能回報對方未完成交易" }, 400);
+      await env.DB.prepare("INSERT INTO a_ratings VALUES (?, ?, ?, ?, ?, ?, ?)").bind(id, me.uid, a.seller === me.uid ? a.bidder : a.seller, abandon ? -1 : score, abandon, clip(b.note, 100), now).run();
+      return J(env, req, { ok: 1 });
+    }
+
+    if (p === "admin/act") {
+      if (!me.admin) return J(env, req, { err: "只有管理員可以操作" }, 403);
+      const id = +b.id || 0;
+      if (b.action === "remove") await env.DB.prepare("UPDATE auctions SET status = 'cancel' WHERE id = ?").bind(id).run();
+      else if (b.action === "ban" || b.action === "unban") {
+        const uid = b.uid || (await env.DB.prepare("SELECT seller FROM auctions WHERE id = ?").bind(id).first() || {}).seller;
+        if (!uid) return J(env, req, { err: "找不到這個使用者" }, 400);
+        await env.DB.prepare("DELETE FROM a_banned WHERE uid = ?").bind(uid).run();
+        if (b.action === "ban") await env.DB.batch([env.DB.prepare("INSERT INTO a_banned VALUES (?, ?, ?)").bind(uid, clip(b.reason, 100) || "管理員停權", now), env.DB.prepare("UPDATE auctions SET status = 'cancel' WHERE seller = ? AND status = 'live'").bind(uid)]);
+      } else if (b.action === "dismiss") await env.DB.prepare("DELETE FROM a_reports WHERE aid = ?").bind(id).run();
+      else return J(env, req, { err: "不明的操作" }, 400);
+      return J(env, req, { ok: 1 });
+    }
 
     if (p === "create") {
       const title = clip(b.title, 60), start = Math.round(+b.start), inc = Math.round(+b.inc), hours = Math.round(+b.hours), buynow = b.buynow ? Math.round(+b.buynow) : null;
@@ -185,6 +272,8 @@ export async function auctionApi(req, env, url) {
 
     if (p === "report") {
       const id = +b.id || 0, dup = await env.DB.prepare("SELECT 1 FROM a_reports WHERE aid = ? AND uid = ?").bind(id, me.uid).first();
+      const own = await env.DB.prepare("SELECT 1 FROM auctions WHERE id = ? AND seller = ?").bind(id, me.uid).first();
+      if (own) return J(env, req, { err: "不能檢舉自己的商品" }, 400);
       if (!dup) await env.DB.prepare("INSERT INTO a_reports VALUES (?, ?, ?, ?)").bind(id, me.uid, clip(b.reason, 200), now).run();
       return J(env, req, { ok: 1 });
     }

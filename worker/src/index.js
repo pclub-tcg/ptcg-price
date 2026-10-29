@@ -8,7 +8,7 @@
 //   IMAGE_LIMIT_PER_IP 選填，網站以圖搜尋每個 IP 每天幾次，預設 30
 //   ADMIN_KEY 選填：重建圖文選單 /setup/richmenu?key=… 用的密碼；沒設就關閉這個網址
 
-import { auctionApi, settle, lineToken } from "./auction.js";
+import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -90,6 +90,7 @@ async function handle(ev, env) {
     const q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
+    if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
     if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     if (/^(庫存|我的庫存|出售清單|出圖|庫存出圖)$/.test(q)) { const u = new URL(env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "inv";
       return reply(env, ev.replyToken, [{ type: "template", altText: "我的庫存：" + u.href, template: { type: "buttons", title: "我的庫存", text: "記錄成本、看估值與損益，一鍵產生庫存圖或出售清單圖。資料存在你手機的瀏覽器。", actions: [{ type: "uri", label: "打開我的庫存", uri: u.href }] }, quickReply: { items: QUICK } }]); }
@@ -228,6 +229,17 @@ function prep(list) {
   for (const p of list) if (!p.h) p.h = norm([p.n, p.j, p.kw, p.cn, p.num, p.set, p.rar, p.b ? "box 原盒" : "", p.p ? "psa10 鑑定" : "", p.us ? "" : "日版 jp"].join(" "));
 }
 const norm = s => String(s || "").normalize("NFKC").toLowerCase();
+// 競標上架用：搜尋商品目錄，回傳名稱、細項、圖、日本行情（成交中位 × 匯率，台幣）
+setCatalog(async (q, env) => {
+  const D = await base(env);
+  const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
+  const site = env.SITE_URL;
+  return hits.slice(0, 8).map(p => {
+    const ref = p.us ? (p.um ? p.um * (D.usd || 32) : null) : p.s ? p.s[0] * D.rate : p.m ? p.m[0] * D.rate : null;
+    return { n: p.n, meta: [p.us ? "美版" : "日版", p.num, p.set, p.b ? "原盒" : p.rar, p.p ? "PSA10" : ""].filter(x => x && x !== "-").join("・"),
+      img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "" };
+  });
+});
 
 function calc(p, D) {
   if (p.us) return p.um ? { src: "TCGplayer", med: p.um, n: 0, cost: p.um * (D.usd || 32), gap: null } : null;

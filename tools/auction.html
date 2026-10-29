@@ -38,6 +38,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .rules span{white-space:nowrap;flex:none;background:rgba(255,138,43,.14);border:1px solid rgba(255,138,43,.4);color:#ffd2a6;border-radius:999px;padding:4px 12px;font-size:12.5px}
 /* 工具列 */
 .tools{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 14px}.trow{display:flex;gap:10px;align-items:center;flex:1 1 360px;min-width:0}.trow .tabs{flex:1}.tabs button{flex:1}
+.tabs button{white-space:nowrap}
+@media (max-width:560px){.trow:first-child{flex-wrap:wrap}.trow .tabs{flex:1 1 100%;overflow-x:auto}.tabs button{padding:8px 4px;font-size:13.5px}#new{flex:1 1 100%}}
 .tabs{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px}
 .tabs button{border:0;background:none;border-radius:10px;padding:8px 16px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted)}
 .tabs button[aria-pressed="true"]{background:var(--navy);color:var(--brand)}
@@ -120,6 +122,29 @@ button,input,select,textarea{font:inherit;color:inherit}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40px;line-height:1.7}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:var(--navy-fg);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;z-index:60;box-shadow:0 8px 20px rgba(0,0,0,.25)}
 .toast[hidden]{display:none}
+.tag.star{background:#ffd34d;color:#2a1c17}
+.stat{font-size:12.5px;color:var(--muted)}.stat b{color:var(--good)}.stat i{font-style:normal;color:var(--bad)}
+.rate{display:flex;flex-direction:column;gap:10px}
+.rate .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rate .opts button[aria-pressed="true"]{background:var(--navy);color:var(--brand);border-color:var(--navy)}
+.rate textarea{border:1px solid var(--line);border-radius:12px;padding:10px;min-height:60px;font-size:14px;background:#fff}
+.rate label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted)}
+.rate label input{width:20px;height:20px;accent-color:var(--brand);margin:1px 0 0;flex:none}
+.cat{position:relative}
+.cat-list{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(42,28,23,.15);margin-top:4px;max-height:340px;overflow-y:auto}
+.cat-list[hidden]{display:none}
+.cat-it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--surface-2)}
+.cat-it:hover,.cat-it:focus{background:var(--surface-2);outline:none}
+.cat-it img,.cat-it .ni{width:44px;height:60px;object-fit:contain;border-radius:4px;background:#f4ece2}
+.cat-it b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-it small{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-it em{font-style:normal;font-family:var(--f-num);font-size:13px;color:var(--hot);white-space:nowrap}
+.refbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.adm{display:flex;flex-direction:column;gap:12px;grid-column:1/-1}
+.adm .box h3{margin:0 0 8px;font-size:16px}
+.adm-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.adm-row:last-child{border-bottom:0}
+.adm-row p{margin:2px 0 0;color:var(--muted);font-size:13px;word-break:break-all}
 @media (prefers-reduced-motion:reduce){.card{transition:none}}
 </style>
 </head>
@@ -137,7 +162,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40p
 
 <main class="wrap">
   <div class="tools">
-    <div class="trow"><div class="tabs" role="group" aria-label="競標分類"><button type="button" data-st="live" aria-pressed="true">進行中</button><button type="button" data-st="ended" aria-pressed="false">已結束</button><button type="button" data-st="mine" aria-pressed="false">我的</button></div>
+    <div class="trow"><div class="tabs" role="group" aria-label="競標分類"><button type="button" data-st="live" aria-pressed="true">進行中</button><button type="button" data-st="ended" aria-pressed="false">已結束</button><button type="button" data-st="watch" aria-pressed="false">關注</button><button type="button" data-st="mine" aria-pressed="false">我的</button><button type="button" data-st="admin" aria-pressed="false" id="tab-admin" hidden>管理</button></div>
     <button type="button" class="btn main" id="new">＋ 上架</button></div>
     <div class="trow"><div class="grow"><input type="search" id="q" placeholder="搜尋卡名、卡號" aria-label="搜尋競標"></div>
     <select id="sort" aria-label="排序"><option value="end">即將結束</option><option value="new">最新上架</option><option value="lo">價格低到高</option><option value="hi">價格高到低</option><option value="bids">出價最多</option></select></div>
@@ -160,7 +185,7 @@ const nt=v=>"NT$"+Math.round(v).toLocaleString("en-US");
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 
 /* LINE 帶來的 token：存起來後從網址拿掉 */
-(function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){LS.set("atok",m[1]);history.replaceState(null,"",location.pathname+location.search.replace(/[?&]openExternalBrowser=1/,""))}})();
+(function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){LS.set("atok",m[1]);history.replaceState(null,"",location.pathname+location.search.replace(/[?&]openExternalBrowser=1/,"")+(/admin/.test(location.hash)?"#admin":""))}})();
 let TOK=LS.get("atok",""),ME=null,ST="live",ITEMS=[],SKEW=0,CUR=null,TIMER=null;
 const now=()=>Date.now()+SKEW;
 
@@ -181,12 +206,15 @@ const photo=a=>a.photo?`<img src="${API}photo/${a.id}" alt="${esc(a.title)}" loa
 const minBid=a=>a.nbids?a.price+a.inc:a.start;
 
 function drawWho(){
+  $("tab-admin").hidden=!(ME&&ME.admin);
   $("who").innerHTML=ME?`<span class="nm">👤 ${esc(ME.name)}</span><button type="button" class="btn sm ghost" id="logout">登出</button>`:`<a class="btn sm line" href="${LINE_MSG}">LINE 登入</a>`;
   if(ME)$("logout").onclick=()=>{if(confirm("確定登出？之後要再從 LINE 傳「競標」登入。")){TOK="";LS.del("atok");ME=null;drawWho();if(ST==="mine")setTab("live");else load()}};
 }
 
 /* 列表 */
 async function load(){
+  if(ST==="admin")return loadAdmin();
+  if(ST==="watch"&&!TOK){$("grid").innerHTML=`<div class="empty">${loginHtml("登入後可以關注商品，快結標時用 LINE 提醒你")}</div>`;return}
   if(ST==="mine"&&!TOK){$("grid").innerHTML=`<div class="empty">${loginHtml("登入後可以看自己上架、出價、得標的商品")}</div>`;return}
   try{const j=await api("list?st="+ST);ME=j.me;ITEMS=j.items;drawWho();draw()}
   catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}<br><button type="button" class="btn sm" onclick="location.reload()" style="margin-top:10px">重新整理</button></div>`}
@@ -196,9 +224,9 @@ function draw(){
   let a=ITEMS.filter(x=>!q||(x.title+" "+(x.cond||"")+" "+(x.note||"")).toLowerCase().includes(q));
   const P=x=>x.nbids?x.price:x.start;
   a.sort(s==="new"?(x,y)=>y.created-x.created:s==="lo"?(x,y)=>P(x)-P(y):s==="hi"?(x,y)=>P(y)-P(x):s==="bids"?(x,y)=>y.nbids-x.nbids:ST==="live"?(x,y)=>x.ends-y.ends:(x,y)=>y.ends-x.ends);
-  if(!a.length){$("grid").innerHTML=`<div class="empty">${q?"找不到符合的商品":ST==="live"?"目前沒有進行中的競標，來當第一個上架的人吧！":ST==="mine"?"你還沒有上架或出價過":"還沒有結束的競標"}</div>`;return}
+  if(!a.length){$("grid").innerHTML=`<div class="empty">${q?"找不到符合的商品":ST==="live"?"目前沒有進行中的競標，來當第一個上架的人吧！":ST==="mine"?"你還沒有上架或出價過":ST==="watch"?"還沒有關注的商品。在商品頁按「☆ 關注」，快結標時會用 LINE 提醒你":"還沒有結束的競標"}</div>`;return}
   $("grid").innerHTML=a.map(x=>{const L=x.ends-now(),live=x.status==="live"&&L>0;
-    const tags=[live&&L<3600e3?`<span class="tag hot">即將結標</span>`:"",x.leading?`<span class="tag me">${live?"你出價最高":"你得標"}</span>`:"",x.mine?`<span class="tag">我的商品</span>`:"",x.buynow&&live?`<span class="tag buy">可直購</span>`:""].join("");
+    const tags=[live&&L<3600e3?`<span class="tag hot">即將結標</span>`:"",x.leading?`<span class="tag me">${live?"你出價最高":"你得標"}</span>`:"",x.mine?`<span class="tag">我的商品</span>`:"",x.buynow&&live?`<span class="tag buy">可直購</span>`:"",x.watched?`<span class="tag star">★ 關注</span>`:""].join("");
     return `<article class="card" data-id="${x.id}" tabindex="0"><div class="ph">${photo(x)}<div class="tags">${tags}</div></div><div class="cb"><h3>${esc(x.title)}</h3>
       <div class="pr"><small>${x.nbids?(live?"目前出價":"結標價"):(live?"起標價":"流標")}</small><b>${nt(x.nbids?x.price:x.start)}</b></div>
       <div class="meta"><span>${x.nbids} 次出價</span><span class="cd${live&&L<3600e3?" hot":""}" data-end="${x.ends}" data-st="${x.status}">${live?left(L):"已結束"}</span></div></div></article>`}).join("");
@@ -230,21 +258,51 @@ async function openItem(id,keep){
   $("sh-t").textContent=live?"競標中":"已結束";
   $("sb").innerHTML=`<div class="d-top"><div class="d-ph${a.photo?"":" np"}">${photo(a)}</div><div class="d-info">
     <h3>${esc(a.title)}</h3>
-    <div class="chips">${a.cond?`<span class="chip">${esc(a.cond)}</span>`:""}<span class="chip">賣家 ${esc(a.seller)}</span><span class="chip">${a.nbids} 次出價</span>${a.buynow?`<span class="chip">直購 ${nt(a.buynow)}</span>`:""}</div>
+    <div class="chips">${a.cond?`<span class="chip">${esc(a.cond)}</span>`:""}<span class="chip">賣家 ${esc(a.seller)}${statTxt(j.sellerStats)}</span>${a.ref?`<span class="chip">日本行情約 ${nt(a.ref)}</span>`:""}<span class="chip">${a.nbids} 次出價</span>${a.buynow?`<span class="chip">直購 ${nt(a.buynow)}</span>`:""}</div>
     ${a.note?`<p class="note" style="white-space:pre-wrap">${esc(a.note)}</p>`:""}
-    <div class="box"><div class="big"><div><small>${a.nbids?(live?"目前最高出價":"結標價"):(live?"起標價":"流標，沒有人出價")}</small><span class="v">${nt(a.nbids?a.price:a.start)}</span>${a.leader?`<small style="margin-top:6px">最高出價者 ${esc(a.leader)}${a.leading?"（你）":""}</small>`:""}</div>
+    <div class="box"><div class="big"><div><small>${a.nbids?(live?"目前最高出價":"結標價"):(live?"起標價":"流標，沒有人出價")}</small><span class="v">${nt(a.nbids?a.price:a.start)}</span>${a.leader?`<small style="margin-top:6px">最高出價者 ${esc(a.leader)}${a.leading?"（你）":""}${statTxt(j.leaderStats)}</small>`:""}</div>
       <div class="t"><small>${live?"剩餘時間":"結束時間"}</small><span class="cd${live&&L<3600e3?" hot":""}" data-end="${a.ends}" data-st="${a.status}">${live?left(L):new Date(a.ends).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span></div></div>
       ${live?bidBox(a,mb):""}
       ${a.contact?`<div class="win" style="margin-top:12px">${a.leading?`🎉 你得標了！請在 24 小時內聯絡賣家：<br>賣家 <b>${esc(a.contact.seller)}</b>　聯絡方式 <b>${esc(a.contact.contact)}</b>`:`得標者 <b>${esc(a.contact.winner)}</b> 會依你留的聯絡方式（${esc(a.contact.contact)}）聯絡你。`}</div>`:""}
     </div></div></div>
+    ${j.rate?rateBox(j.rate):""}
     <div class="box"><b style="font-size:15px">出價紀錄</b>${j.bids.length?`<ul class="hist" style="margin-top:6px">${j.bids.map(b=>`<li class="${b.me?"mine":""}"><span>${esc(b.name)}${b.me?"（你）":""}<small style="color:var(--muted);margin-left:8px">${new Date(b.at).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}</small></span><b>${nt(b.amount)}</b></li>`).join("")}</ul>`:`<p class="note" style="margin-top:6px">還沒有人出價${live?"，起標價就能出價":""}</p>`}</div>
-    <div class="row2"><button type="button" class="btn sm" id="share">分享</button>${a.mine&&live&&!a.nbids?`<button type="button" class="btn sm" id="cancel">下架</button>`:""}${!a.mine?`<button type="button" class="btn sm" id="report">檢舉</button>`:""}</div>`;
+    <div class="row2">${TOK&&!a.mine&&live?`<button type="button" class="btn sm${a.watched?" dark":""}" id="watch">${a.watched?"★ 已關注":"☆ 關注"}</button>`:""}<button type="button" class="btn sm" id="share">分享</button>${a.mine&&live&&!a.nbids?`<button type="button" class="btn sm" id="cancel">下架</button>`:""}${!a.mine?`<button type="button" class="btn sm" id="report">檢舉</button>`:""}</div>`;
   if(live)wireBid(a,mb,keepVal);
   $("share").onclick=()=>{const u=location.origin+location.pathname+"#a"+a.id,t=`${a.title}｜目前 ${nt(a.nbids?a.price:a.start)}｜P’CLUB 競標`;
     if(navigator.share)navigator.share({title:t,url:u}).catch(()=>{});else navigator.clipboard.writeText(t+" "+u).then(()=>toast("已複製連結"),()=>prompt("複製這個連結",u))};
+  if($("watch"))$("watch").onclick=async()=>{try{const r=await api("watch",{id:a.id,on:!a.watched});toast(r.on?"已關注，結標前 30 分鐘會用 LINE 提醒你":"已取消關注");openItem(a.id,true)}catch(e){toast(e.message)}};
+  if(j.rate&&j.rate.can)wireRate(a,j.rate);
   if($("cancel"))$("cancel").onclick=async()=>{if(!confirm("確定下架這個競標？"))return;try{await api("cancel",{id:a.id});toast("已下架");closeSheet();load()}catch(e){toast(e.message)}};
   if($("report"))$("report").onclick=async()=>{if(!TOK)return sheet("檢舉商品",loginHtml("檢舉需要先登入"));const r=prompt("請簡述檢舉原因（例如：疑似假卡、照片盜用、詐騙）");if(r==null)return;try{await api("report",{id:a.id,reason:r});toast("已收到檢舉，謝謝")}catch(e){toast(e.message)}};
   clearInterval(TIMER);if(live)TIMER=setInterval(()=>{if(!document.hidden&&CUR===a.id&&document.activeElement!==$("amt"))openItem(a.id,true)},8000);
+}
+function statTxt(s){if(!s)return"";const t=s.pos+s.neg;return t||s.ab?` <span class="stat">・<b>👍${s.pos}</b> <i>👎${s.neg}</i>${s.ab?` <i>未完成交易 ${s.ab}</i>`:""}</span>`:` <span class="stat">・新手</span>`}
+function rateBox(r){const who=r.role==="seller"?"得標者":"賣家";
+  if(!r.can){const m=r.mine;return `<div class="box"><b>交易評價</b><p class="note" style="margin-top:6px">你給${who}的評價：${m.abandon?"未完成交易":m.score>0?"👍 好評":"👎 負評"}${m.note?"｜"+esc(m.note):""}</p></div>`}
+  return `<div class="box rate"><b>給${who}評價</b><p class="note">交易完成後請互相評價，會顯示在對方的名字旁邊，幫其他玩家判斷。</p>
+    <div class="opts"><button type="button" class="btn" data-s="1">👍 好評</button><button type="button" class="btn" data-s="-1">👎 負評</button></div>
+    <label><input type="checkbox" id="rab"${r.abandonOk?"":" disabled"}><span>${r.role==="seller"?"得標者棄標（沒有付款或聯絡不到）":"賣家沒有出貨或聯絡不到"}${r.abandonOk?"":"（結標 24 小時後才能回報）"}</span></label>
+    <textarea id="rnote" maxlength="100" placeholder="簡短說明（選填）"></textarea>
+    <button type="button" class="btn main" id="rgo">送出評價</button><p class="msg err" id="rm"></p></div>`}
+function wireRate(a,r){let sc=0;document.querySelectorAll(".rate [data-s]").forEach(b=>b.onclick=()=>{sc=+b.dataset.s;document.querySelectorAll(".rate [data-s]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  $("rab").onchange=()=>{if($("rab").checked){sc=-1;document.querySelectorAll(".rate [data-s]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.s==="-1"))}};
+  $("rgo").onclick=async()=>{if(!sc){$("rm").textContent="請選好評或負評";return}if(!confirm("評價送出後不能修改，確定送出？"))return;
+    try{await api("rate",{id:a.id,score:sc,abandon:$("rab").checked?1:0,note:$("rnote").value});toast("已送出評價，謝謝");openItem(a.id,true)}catch(e){$("rm").textContent=e.message}}}
+/* 管理後台 */
+async function loadAdmin(){
+  $("grid").innerHTML=`<div class="empty">載入中…</div>`;
+  let j;try{j=await api("admin/reports")}catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+  const t=ms=>new Date(ms).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  $("grid").innerHTML=`<div class="adm">
+    <div class="box"><h3>檢舉（${j.reports.length}）</h3>${j.reports.length?j.reports.map(r=>`<div class="adm-row"><div style="flex:1;min-width:200px"><a href="#a${r.id}" data-open="${r.id}"><b>${esc(r.title)}</b></a>　<small>${r.status==="cancel"?"已下架":r.status==="ended"?"已結束":"競標中"}・賣家 ${esc(r.sname)}・${r.n} 次檢舉・${t(r.last)}</small><p>${esc(r.reasons||"")}</p></div>
+      <span class="row2"><button type="button" class="btn sm" data-act="remove" data-id="${r.id}">下架</button><button type="button" class="btn sm dark" data-act="ban" data-id="${r.id}">停權賣家</button><button type="button" class="btn sm" data-act="dismiss" data-id="${r.id}">忽略</button></span></div>`).join(""):`<p class="note">目前沒有檢舉</p>`}</div>
+    <div class="box"><h3>有負評／未完成交易的玩家</h3>${j.bad.length?j.bad.map(u=>`<div class="adm-row"><span><b>${esc(u.name||"玩家")}</b>　<small>未完成交易 ${u.ab}・負評 ${u.neg}</small></span><button type="button" class="btn sm dark" data-act="ban" data-uid="${esc(u.uid)}">停權</button></div>`).join(""):`<p class="note">目前沒有</p>`}</div>
+    <div class="box"><h3>已停權（${j.banned.length}）</h3>${j.banned.length?j.banned.map(u=>`<div class="adm-row"><span><b>${esc(u.name||"玩家")}</b>　<small>${esc(u.reason||"")}・${t(u.at)}</small></span><button type="button" class="btn sm" data-act="unban" data-uid="${esc(u.uid)}">解除停權</button></div>`).join(""):`<p class="note">沒有停權的玩家</p>`}</div></div>`;
+  $("grid").querySelectorAll("[data-open]").forEach(x=>x.onclick=e=>{e.preventDefault();openItem(+x.dataset.open)});
+  $("grid").querySelectorAll("[data-act]").forEach(x=>x.onclick=async()=>{const act=x.dataset.act,lab={remove:"下架這個商品",ban:"停權這個玩家（他上架中的商品也會一起下架）",unban:"解除停權",dismiss:"忽略這筆檢舉"}[act];
+    if(!confirm("確定要"+lab+"？"))return;const reason=act==="ban"?prompt("停權原因（選填）","違反刊登規則")||"":"";
+    try{await api("admin/act",{action:act,id:+x.dataset.id||0,uid:x.dataset.uid||"",reason});toast("已完成");loadAdmin()}catch(e){toast(e.message)}});
 }
 function bidBox(a,mb){
   if(!TOK)return `<div style="margin-top:12px">${loginHtml("出價需要先用 LINE 登入")}</div>`;
@@ -276,6 +334,8 @@ $("new").onclick=()=>{
   CUR=null;clearInterval(TIMER);
   sheet("上架競標",`<form class="f" id="cf" novalidate>
     <div class="full"><input type="file" id="pf" accept="image/*" hidden><div class="up" id="up" role="button" tabindex="0" aria-label="上傳商品照片">📷 點這裡上傳實拍照片<br><small>建議拍正面清楚、附上紙條寫日期與帳號，買家比較放心</small></div></div>
+    <div class="full cat"><label>從卡片目錄找（自動帶入日本行情，選填）<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、噴火龍 PSA10" autocomplete="off"></label><div class="cat-list" id="cl" hidden></div></div>
+    <div class="full refbox" id="rb" hidden></div>
     <label class="full">商品名稱<input id="ti" maxlength="60" required placeholder="例：噴火龍ex SAR 201/165 日版"></label>
     <label>卡況<select id="co"><option>全新未拆</option><option>近全新</option><option selected>良好</option><option>有瑕疵</option><option>鑑定卡</option></select></label>
     <label>競標時間<select id="hr"><option value="1">1 小時</option><option value="6">6 小時</option><option value="12">12 小時</option><option value="24" selected>1 天</option><option value="72">3 天</option><option value="120">5 天</option><option value="168">7 天</option></select></label>
@@ -287,12 +347,20 @@ $("new").onclick=()=>{
     <label class="agree full"><input type="checkbox" id="ag"><span>我確認商品為本人所有且照片為實拍，結標後會依得標價出貨。不實刊登或棄標會被下架並停權。</span></label>
     <div class="full row2"><button type="submit" class="btn main" id="go" style="flex:1">確認上架</button></div>
     <p class="msg err full" id="cm" aria-live="polite"></p></form>`);
-  let PHOTO=null,PURL=null;
+  let PHOTO=null,PURL=null,REF=null,CT=null,CQ=0;
+  $("cs").oninput=()=>{clearTimeout(CT);const q=$("cs").value.trim();if(!q){$("cl").hidden=true;return}CT=setTimeout(async()=>{const my=++CQ;
+    try{const r=await api("search?q="+encodeURIComponent(q));if(my!==CQ)return;
+      $("cl").innerHTML=r.items.length?r.items.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，直接在下面填商品名稱就好</p>`;
+      $("cl").hidden=false;
+      $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{const x=r.items[+el.dataset.i];$("ti").value=(x.n+" "+x.meta.replace(/・/g," ")).slice(0,60);REF=x.ref;
+        $("rb").hidden=!x.ref;$("rb").innerHTML=x.ref?`<span>${esc(x.src)} 近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(x.ref)}</b>（會顯示給買家參考）</span><button type="button" class="btn sm" id="rbx">不顯示</button>`:"";
+        if(x.ref&&!$("st").value)$("st").placeholder="參考：行情 "+nt(x.ref);if($("rbx"))$("rbx").onclick=()=>{REF=null;$("rb").hidden=true};$("cl").hidden=true;$("cs").value=""};
+        el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}})}catch(e){}},300)};
   const pick=()=>$("pf").click();$("up").onclick=pick;$("up").onkeydown=e=>{if(e.key==="Enter")pick()};
   $("pf").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("up").textContent="處理中…";
     try{PHOTO=await shrink(f);if(PURL)URL.revokeObjectURL(PURL);PURL=URL.createObjectURL(PHOTO);$("up").innerHTML=`<img src="${PURL}" alt="商品照片預覽">`}catch(er){PHOTO=null;$("up").textContent="這張照片讀不出來，請換一張"}};
   $("cf").onsubmit=async e=>{e.preventDefault();const m=$("cm");m.textContent="";
-    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value};
+    const b={title:$("ti").value,cond:$("co").value,hours:+$("hr").value,start:+$("st").value,inc:+$("ic").value,buynow:$("bn").value?+$("bn").value:null,contact:$("ct").value,note:$("nt").value,ref:REF};
     if(!b.title.trim())return m.textContent="請填商品名稱";if(!(b.start>=1))return m.textContent="請填起標價";if(!b.contact.trim())return m.textContent="請填聯絡方式";
     if(!$("ag").checked)return m.textContent="請先勾選同意刊登規則";
     if(!PHOTO&&!confirm("沒有附照片的商品比較少人出價，確定不附照片？"))return;
@@ -309,7 +377,8 @@ function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL
     out=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(out&&out.size<350*1024)break;s*=.8;q=Math.max(.6,q-.06)}
   out&&out.size<550*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
 
-drawWho();load().then(()=>{const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
+const WANT_ADMIN=/admin/.test(location.hash);if(WANT_ADMIN)history.replaceState(null,"",location.pathname);
+drawWho();load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
 })();
 </script>
 </body>
