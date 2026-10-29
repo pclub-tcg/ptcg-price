@@ -21,10 +21,9 @@ export default {
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
-      await addRelated(hits, D, env);
-      const msg = carousel(hits, D, env, q, q);
+      const msg = hits.length ? await oneCard(hits, q, false, D, env) : { type: "text", text: "no hits" };
       const r = await fetch("https://api.line.me/v2/bot/message/validate/reply", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ messages: [msg] }) });
-      return new Response(JSON.stringify({ status: r.status, line: await r.text(), cards: msg.contents.contents.length, bytes: JSON.stringify(msg).length, rel: hits.slice(0, 3).map(h => h._rel && h._rel.list.map(x => x.n)) }), { headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
+      return new Response(JSON.stringify({ status: r.status, line: await r.text(), main: msg.altText, bytes: JSON.stringify(msg).length, rel: JSON.stringify(msg).match(/"text":"(這張・)?(PSA10|裸卡|原盒)"/g) }), { headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
     }
     if (url.pathname === "/setup/richmenu") { // 管理用：要帶 ?key=ADMIN_KEY（Cloudflare 密鑰）才會執行；沒設 ADMIN_KEY 就整個關閉
       const k = url.searchParams.get("key") || "";
@@ -85,7 +84,7 @@ const QUICK = [
   { type: "action", action: { type: "message", label: "🗃️ 我的庫存", text: "我的庫存" } },
   { type: "action", action: { type: "message", label: "使用說明", text: "說明" } },
 ];
-function withQuick(msgs) { if (msgs.length) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
+function withQuick(msgs) { if (msgs.length && !msgs[msgs.length - 1].quickReply) msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], quickReply: { items: QUICK } }; return msgs; }
 
 const RANK = {
   gap: (D) => D.products.map(p => ({ p, c: calc(p, D) })).filter(x => x.c && x.c.gap != null && x.c.gap > 0).sort((a, b) => b.c.gap / b.c.cost - a.c.gap / a.c.cost).map(x => x.p),
@@ -99,7 +98,7 @@ async function handle(ev, env) {
   if (ev.type !== "message" || !ev.replyToken) return;
   const D = await base(env);
   if (ev.message.type === "text") {
-    const q = ev.message.text.trim();
+    let q = ev.message.text.trim();
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
@@ -118,16 +117,18 @@ async function handle(ev, env) {
       [/^(鑑定卡行情|鑑定卡|psa10?)$/i, "psa", "PSA10 鑑定卡近 30 天漲跌", "目前沒有鑑定卡資料。"]];
     for (const [re, k, title, none] of lists) if (re.test(q)) {
       const list = RANK[k](D.db ? { ...D, products: await dbRank(k, env) } : D).slice(0, 10);
-      if (list.length) await addRelated(list, D, env);
-      return reply(env, ev.replyToken, list.length ? [text(title + "，左右滑動看更多 👉"), carousel(list, D, env, title)] : [text(none)]);
+      if (!list.length) return reply(env, ev.replyToken, [text(none)]);
+      const first = { ...list[0] }; first._rel = { ch: "", list: list.slice(1, 4).filter(x => x.img) }; if (!first._rel.list.length) first._rel = null;
+      const msg = { type: "flex", altText: title.slice(0, 380), contents: bubble(first, D, env), quickReply: { items: [...list.slice(1, 10).map(x => ({ type: "action", action: { type: "message", label: (x.n.length > 20 ? x.n.slice(0, 19) + "…" : x.n), text: x.n.slice(0, 280) } })), ...QUICK].slice(0, 13) } };
+      return reply(env, ev.replyToken, [text(title + (list.length > 1 ? "\n第 1 名如下，第 2～4 名在卡片下方，其他名次點下方按鈕 👇" : "")), msg]);
     }
+    const wantRaw = /裸卡?/.test(q) && !/psa/i.test(q); q = q.replace(/裸卡?/g, " ").replace(/\s+/g, " ").trim() || q;
     const onlyUS = /美版|美國|英文|tcgplayer/i.test(q), q2 = q.replace(/美版|美國|英文|tcgplayer/gi, " ").trim();
     const hits = D.db ? await dbSearch(onlyUS ? (q2 || "box") : q, onlyUS ? 1 : wantUS(q) ? 2 : 0, env, D)
       : onlyUS ? search(q2 || "box", { ...D, products: await dataUS(env) })
       : search(q, wantUS(q) ? { ...D, products: D.products.concat(await dataUS(env)) } : D);
     if (!hits.length) return reply(env, ev.replyToken, [text(`找不到「${q}」。\n可以試試卡號（例如 201/165）、系列加卡號（SV8 132/106）、卡名（噴火龍）或加上 PSA10。\n也可以直接傳卡片照片給我。`)]);
-    await addRelated(hits, D, env);
-    return reply(env, ev.replyToken, [carousel(hits, D, env, "「" + q + "」的查價結果", q)]);
+    return reply(env, ev.replyToken, [await oneCard(hits, q, wantRaw, D, env)]);
   }
   if (ev.message.type === "image") {
     if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, ev.replyToken, [text("以圖搜尋還沒開啟。請先用文字查詢，例如「SV8 132/106」或「噴火龍 PSA10」。")]);
@@ -142,8 +143,7 @@ async function handle(ev, env) {
     const hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
-    await addRelated(hits, D, env);
-    return reply(env, ev.replyToken, [head, carousel(hits, D, env, label)]);
+    return reply(env, ev.replyToken, [head, await oneCard(hits, label, false, D, env)]);
   }
 }
 
@@ -394,6 +394,7 @@ const line = (k, v, color = "#FFFFFF") => ({ type: "box", layout: "horizontal", 
 // ---------- 查價卡片（深色版型：卡圖＋主價格、四格數字、走勢圖＋高均低、相關卡片、工具列） ----------
 const K = { bg: "#1F1510", sf: "#2B1E17", ch: "#2A1C17", ln: "#3D2B20", or: "#FF8A2B", gold: "#FFB627", cream: "#FFF3E4", peach: "#FFD0A3", soft: "#E9D3BD", mute: "#A8917F", dim: "#7A6656", up: "#FF6B5A", down: "#3EC98A" };
 const num = v => Math.round(v).toLocaleString("en-US");
+const baseName = n => String(n).replace(/\s*PSA\s*10/i, "").trim();
 const wrapX = (inner, margin = "md") => ({ type: "box", layout: "vertical", paddingStart: "14px", paddingEnd: "14px", margin, contents: [inner] });
 const opill = (t, on) => ({ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "1px", paddingBottom: "1px",
   ...(on ? { backgroundColor: K.or } : { borderWidth: "1px", borderColor: "#5A3F2E" }), contents: [T(t, { size: "xxs", weight: "bold", color: on ? "#2A1C17" : K.soft })] });
@@ -415,9 +416,9 @@ async function addRelated(list, D, env) {
       if (D.db) cand = rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND h LIKE ? ESCAPE '\\' AND k != ? AND (s > 0 OR top > 0) ORDER BY COALESCE(s, 0) DESC, top DESC LIMIT 12").bind("%" + esc(norm(ch)) + "%", p.k).all());
       else cand = D.products.filter(x => !x.us && x.k !== p.k && x.h.includes(norm(ch)) && (x.s || x.m)).slice(0, 12);
     } catch (e) { return; }
-    const base = n => String(n).replace(/\s*PSA\s*10/i, "").trim(), self = base(p.n);
+    const self = baseName(p.n);
     const seen = new Set([self + (p.p ? "p" : ""), self + (p.p ? "" : "p")]), out = [];
-    for (const x of cand) { const key = base(x.n); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
+    for (const x of cand) { const key = baseName(x.n); if (seen.has(key + (x.p ? "p" : ""))) continue; seen.add(key + (x.p ? "p" : "")); if (x.img) out.push(x); if (out.length === 3) break; }
     if (out.length) p._rel = { ch, list: out };
   }));
 }
@@ -468,14 +469,17 @@ function bubble(p, D, env) {
   // 相關卡片
   if (p._rel) {
     body.push({ type: "box", layout: "horizontal", margin: "md", paddingStart: "16px", paddingEnd: "16px", alignItems: "center", contents: [
-      T("● ", { size: "xxs", color: K.or, flex: 0 }), T("相關卡片・" + p._rel.ch, { size: "xs", weight: "bold", color: K.cream, flex: 1 }),
-      T("看更多 ›", { size: "xs", weight: "bold", color: K.or, flex: 0, action: { type: "message", label: "看更多", text: p._rel.ch } })] });
+      T("● ", { size: "xxs", color: K.or, flex: 0 }), T(p._rel.ch ? "相關卡片・" + p._rel.ch : "相關卡片", { size: "xs", weight: "bold", color: K.cream, flex: 1 }),
+      ...(p._rel.ch ? [T("看更多 ›", { size: "xs", weight: "bold", color: K.or, flex: 0, action: { type: "message", label: "看更多", text: p._rel.ch } })] : [])] });
     body.push({ type: "box", layout: "horizontal", spacing: "sm", margin: "sm", paddingStart: "14px", paddingEnd: "14px", contents: [
       ...p._rel.list.map(x => { const v = x.s ? x.s[0] * R : x.m ? x.m[0] * R : null;
+        const g = x.p ? "PSA10" : x.b ? "原盒" : "裸卡", gp = { type: "box", layout: "horizontal", contents: [{ type: "box", layout: "vertical", flex: 0, cornerRadius: "20px", paddingStart: "6px", paddingEnd: "6px",
+          backgroundColor: x.p ? K.or : "#E9D3BD", contents: [T(x._same ? "這張・" + g : g, { size: "xxs", weight: "bold", color: "#2A1C17" })] }] };
         return { type: "box", layout: "horizontal", flex: 1, spacing: "sm", backgroundColor: K.sf, cornerRadius: "10px", paddingAll: "5px", alignItems: "center",
-          action: { type: "message", label: "查價", text: x.n.slice(0, 280) }, contents: [
+          ...(x._same ? { borderWidth: "1.5px", borderColor: K.or } : {}),
+          action: { type: "message", label: "查價", text: (x.p || x.b ? x.n : baseName(x.n) + " 裸卡").slice(0, 280) }, contents: [
           { type: "image", url: new URL(x.img, site).href, size: "full", aspectRatio: "5:7", aspectMode: "cover", flex: 2 },
-          { type: "box", layout: "vertical", flex: 3, contents: [T(x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: K.cream }), T(x.p ? "PSA10" : x.b ? "原盒" : "裸卡", { size: "xxs", color: K.dim }), T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
+          { type: "box", layout: "vertical", flex: 3, contents: [T(x.n.replace(/\s*PSA10.*$/i, "").replace(/\s+\d+\/\S+$/, ""), { size: "xxs", weight: "bold", color: K.cream }), gp, T(v ? num(v) : "—", { size: "xs", weight: "bold", color: K.or })] }] }; }),
     ] });
   }
   // 工具列
@@ -502,6 +506,30 @@ function bubble(p, D, env) {
   body.push({ type: "box", layout: "horizontal", spacing: "md", paddingStart: "16px", paddingEnd: "16px", paddingTop: "10px", paddingBottom: "12px", contents: [
     T(p.us ? `美元匯率 ${D.usd || 32}・NT$` : `匯率 ${R}・NT$`, { size: "xxs", color: K.dim, flex: 1 }), ...(links.length ? [T("前往", { size: "xxs", color: K.dim, flex: 0 })] : []), ...links] });
   return { type: "bubble", size: "giga", body: { type: "box", layout: "vertical", paddingAll: "0px", spacing: "none", backgroundColor: K.bg, contents: body } };
+}
+// 查價只回一張大卡片（PSA10 為主），同一張卡的裸卡（或 PSA10）排在相關卡片第一格，其他搜尋結果接在後面
+async function oneCard(hits, q, wantRaw, D, env) {
+  const top = hits[0];
+  let main = top, other = null;
+  if (!top.us && !top.b && top.num) {
+    const nm = norm(top.num).replace(/\s/g, ""), bn = baseName(top.n);
+    let vs = [];
+    try { vs = D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 0 AND numn = ? LIMIT 30").bind(nm).all())
+      : D.products.filter(x => !x.us && !x.b && norm(x.num).replace(/\s/g, "") === nm); } catch (e) {}
+    vs = vs.filter(x => baseName(x.n) === bn || (top.set && x.set === top.set));
+    const psa = hits.find(x => x.p && baseName(x.n) === bn) || vs.find(x => x.p), raw = hits.find(x => !x.p && !x.b && baseName(x.n) === bn) || vs.find(x => !x.p);
+    main = wantRaw ? (raw || top) : (psa || top);
+    other = main.p ? raw : psa;
+  }
+  await addRelated([main], D, env);
+  const pool = [], keys = new Set([main.k]);
+  const add = (x, same) => { if (!x || keys.has(x.k) || x.us !== main.us) return; keys.add(x.k); pool.push({ ...x, img: x.img || (same ? main.img : null), _same: same }); };
+  add(other, true);
+  for (const x of hits) if (baseName(x.n) !== baseName(main.n)) add(x, false);
+  for (const x of (main._rel && main._rel.list) || []) add(x, false);
+  const list = pool.filter(x => x.img).slice(0, 3);
+  main._rel = list.length ? { ch: (main._rel && main._rel.ch) || "", list } : null;
+  return { type: "flex", altText: ("「" + q + "」的查價結果：" + main.n).slice(0, 380), contents: bubble(main, D, env) };
 }
 function carousel(list, D, env, alt, q) {
   const L = list.slice(0, 10), size = x => new TextEncoder().encode(JSON.stringify(x)).length;
