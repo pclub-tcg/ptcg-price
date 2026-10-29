@@ -76,12 +76,13 @@ const RANK = {
 };
 
 async function handle(ev, env) {
-  if (ev.type === "follow") return reply(env, ev.replyToken, [text(HELP)]);
+  if (ev.type === "follow") return reply(env, ev.replyToken, guide(env));
   if (ev.type !== "message" || !ev.replyToken) return;
   const D = await base(env);
   if (ev.message.type === "text") {
     const q = ev.message.text.trim();
-    if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
+    if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
+    if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(庫存|我的庫存|出售清單|出圖|庫存出圖)$/.test(q)) { const u = new URL(env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "inv";
       return reply(env, ev.replyToken, [{ type: "template", altText: "我的庫存：" + u.href, template: { type: "buttons", title: "我的庫存", text: "記錄成本、看估值與損益，一鍵產生庫存圖或出售清單圖。資料存在你手機的瀏覽器。", actions: [{ type: "uri", label: "打開我的庫存", uri: u.href }] }, quickReply: { items: QUICK } }]); }
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
@@ -120,6 +121,13 @@ async function handle(ev, env) {
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     return reply(env, ev.replyToken, [head, carousel(hits, D, env, label)]);
   }
+}
+
+// 使用說明圖（tools/guide.py 產生，跟網站一起發布）；網址失效時退回文字說明
+function guide(env) {
+  if (!env.SITE_URL) return [text(HELP)];
+  const u = p => new URL(p, env.SITE_URL).href;
+  return [{ type: "image", originalContentUrl: u("guide.jpg"), previewImageUrl: u("guide_s.jpg"), quickReply: { items: QUICK } }];
 }
 
 const HELP = `P’CLUB｜日本成交價 × 台灣社團價
