@@ -114,6 +114,7 @@ async function handle(ev, env) {
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
+    if (/^(市集教學|市集說明|市集怎麼用|怎麼賣卡|怎麼刊登|求卡教學)$/.test(q)) return reply(env, ev.replyToken, marketGuide(env).length ? marketGuide(env) : [text(HELP)]);
     if (/^(市集|刊登|賣卡|我要賣|買卡|交易|我的市集|刊登商品)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     const more = q.match(/^(?:更多|全部)\s*(.{1,20})$/);
@@ -166,7 +167,13 @@ async function handle(ev, env) {
 function guide(env) {
   if (!env.SITE_URL) return [text(HELP)];
   const u = p => new URL(p, env.SITE_URL).href;
-  return [{ type: "image", originalContentUrl: u("guide.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_s.jpg?v=" + RICHMENU_V), quickReply: { items: QUICK } }];
+  return [{ type: "image", originalContentUrl: u("guide.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_s.jpg?v=" + RICHMENU_V) }, ...marketGuide(env)];
+}
+// 市集使用教學圖（tools/guide_market.py 產生）
+function marketGuide(env) {
+  if (!env.SITE_URL) return [];
+  const u = p => new URL(p, env.SITE_URL).href;
+  return [{ type: "image", originalContentUrl: u("guide_market.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_market_s.jpg?v=" + RICHMENU_V), quickReply: { items: QUICK } }];
 }
 
 const HELP = `P’CLUB｜日本成交價 × 台灣社團價
@@ -178,7 +185,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
 🗃️ 我的庫存：記錄持有的卡、算損益，產生庫存圖／出售清單圖
-🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價
+🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價、貼出求卡；傳「市集教學」看圖解
 🔔 到價提醒：查價後按卡片下方「🔔 到價提醒」，跌到你要的價格時通知你；傳「我的提醒」管理
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
 
