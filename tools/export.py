@@ -269,6 +269,10 @@ if op_path and os.path.exists(op_path):
     PROMO_PK = re.compile(r"プロモ|記念|応募|コレクション|プレミアム|ジャンプ|大会|Fest|フラッグシップ|チャンピオンシップ|イラストレーション")
     VAR = {"コミパラ": "漫畫背景", "パラレル": "異圖", "和柄アート": "和風異圖", "イラスト修正前": "修正前"}
     no = 0
+    OPM = {}
+    _opm = os.environ.get("OPM_DATA")
+    if _opm and os.path.exists(_opm):
+        OPM = json.load(open(_opm, encoding="utf-8")).get("d", {})
     for c in json.load(open(op_path, encoding="utf-8"))["cards"]:
         en = c.get("lang") == "en"
         zh = op2zh(c["b"])
@@ -288,7 +292,7 @@ if op_path and os.path.exists(op_path):
                           "j": "%s %s [%s]%s%s" % (c["b"], c["r"], c["code"], "【英語版】" if en else "", (" " + c["pk"]) if c.get("pk") else ""),
                           "kw": " ".join(x for x in [c["b"], c.get("en", ""), c["code"], c["code"].replace("-", " "), c["set"], c["r"], c.get("v", ""), c.get("pk", ""), OPKW,
                                                      "psa10 鑑定" if psa else "裸卡", "美版 英文 us en" if en else "日版 jp"] if x),
-                          "num": c["code"], "set": st, "rar": c["r"] or "-", "p": 1 if psa else 0, "b": 0, "img": None, "m": None, "op": 1, **({"en": 1} if en else {}),
+                          "num": c["code"], "set": st, "rar": c["r"] or "-", "p": 1 if psa else 0, "b": 0, "img": None, "m": med((OPM.get(kk) or {}).get("p") or []), "op": 1, **({"en": 1} if en else {}),
                           "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "",
                           "mq": "%s %s%s" % (c["code"], c["r"] or "", " PSA10" if psa else ""), "cn": None, "sold": 0,
                           "cat": "%s【%s】{%s} [%s]%s" % (disp, c["r"] or "-", c["code"], st, "_PSA10" if psa else ""), "jn": c["b"]})
