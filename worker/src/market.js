@@ -7,7 +7,8 @@ const FREE_QUOTA = 10;                 // 每人同時刊登（刊登中＋保�
 const MAX_PHOTOS = 4;
 const MAX_PHOTO = 600 * 1024;
 const CHUNK = 60 * 1024;
-const LIFE_MS = 30 * 864e5;            // 刊登 30 天沒更新就過期
+const LIFE_MS = 30 * 864e5;
+const MAX_WANTS = 20;                  // 每人同時求卡上限            // 刊登 30 天沒更新就過期
 const OFFER_MS = 48 * 3600e3;          // 出價 48 小時沒回覆就失效
 const BUMP_MS = 24 * 3600e3;           // 每 24 小時可以「更新」一次（排到最新）
 let READY = false;
@@ -28,6 +29,7 @@ async function ensure(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS m_ratings (mid INTEGER NOT NULL, from_uid TEXT NOT NULL, to_uid TEXT NOT NULL, score INTEGER NOT NULL, abandon INTEGER DEFAULT 0, note TEXT, at INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS m_reports (mid INTEGER NOT NULL, uid TEXT NOT NULL, reason TEXT, at INTEGER NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS m_quota (uid TEXT PRIMARY KEY, max INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS m_wants (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT, shop TEXT, title TEXT NOT NULL, ip TEXT, kind TEXT, ckey TEXT, cimg TEXT, ref INTEGER, maxp INTEGER NOT NULL, note TEXT, status TEXT NOT NULL DEFAULT 'open', created INTEGER NOT NULL, bumped INTEGER NOT NULL, nresp INTEGER DEFAULT 0)"),
   ]);
   READY = true;
 }
@@ -80,12 +82,16 @@ function pub(m, me, W) {
     contact: party && m.buyer && (m.status === "held" || m.status === "sold") ? { seller: m.sname, contact: m.contact, buyer: m.bname, bcontact: m.bcontact } : null };
 }
 
+function pubWant(w, me) {
+  return { id: w.id, title: w.title, ip: w.ip || "pk", kind: w.kind || "card", ckey: w.ckey, cimg: w.cimg, ref: w.ref, maxp: w.maxp, note: w.note, status: w.status,
+    created: w.created, bumped: w.bumped, nresp: w.nresp || 0, buyer: mask(w.name), shop: w.shop, mine: !!(me && w.uid === me.uid) };
+}
 async function push(env, to, messages) {
   if (!env.LINE_CHANNEL_ACCESS_TOKEN || !to) return;
   const r = await fetch("https://api.line.me/v2/bot/message/push", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ to, messages }) });
   if (!r.ok) console.error("market push failed", r.status, await r.text());
 }
-const link = (env, id) => { const u = new URL("market.html", env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); if (id) u.hash = "m" + id; return u.href; };
+const link = (env, id) => { const u = new URL("market.html", env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); if (id) u.hash = String(id).startsWith("w") ? id : "m" + id; return u.href; };
 const btnMsg = (env, title, txt, id, label) => ({ type: "template", altText: title + "：" + txt, template: { type: "buttons", title: title.slice(0, 40), text: txt.slice(0, 60), actions: [{ type: "uri", label: (label || "查看商品").slice(0, 20), uri: link(env, id) }] } });
 
 // LINE 傳「市集」：發登入連結（token 和競標共用）
@@ -115,6 +121,7 @@ export async function marketCron(env) {
     const r = await env.DB.prepare("UPDATE m_offers SET status = 'expired' WHERE id = ? AND status = 'open'").bind(o.id).run();
     if (r.meta && r.meta.changes) await push(env, o.uid, [btnMsg(env, "出價已失效", `${o.title} 的出價 ${ntd(o.amount)} 賣家 48 小時沒回覆，已自動失效。`, o.mid, "再看看")]);
   }
+  await env.DB.prepare("UPDATE m_wants SET status = 'expired' WHERE status = 'open' AND bumped < ?").bind(now - 2 * LIFE_MS).run();
   const { results: ex = [] } = await env.DB.prepare("SELECT id, seller, title FROM m_items WHERE status = 'live' AND bumped < ? LIMIT 30").bind(now - LIFE_MS).all();
   for (const m of ex) {
     const r = await env.DB.prepare("UPDATE m_items SET status = 'expired' WHERE id = ? AND status = 'live'").bind(m.id).run();
@@ -169,6 +176,21 @@ export async function marketApi(req, env, url, catalog) {
       return J(env, req, { now, me: meOut(me, me ? await quota(env, me) : null), pending, items: results.map(m => pub(m, me, W)) });
     }
 
+    if (p === "wants") {
+      const me = await who(env, req), st = url.searchParams.get("st") || "open";
+      const q = st === "mine" && me ? env.DB.prepare("SELECT * FROM m_wants WHERE uid = ? AND status != 'cancel' ORDER BY bumped DESC LIMIT 100").bind(me.uid)
+        : env.DB.prepare("SELECT * FROM m_wants WHERE status = 'open' ORDER BY bumped DESC LIMIT 400");
+      const { results = [] } = await q.all();
+      return J(env, req, { now, me: meOut(me, me ? await quota(env, me) : null), items: results.map(w => pubWant(w, me)) });
+    }
+    if (p.startsWith("want/") && req.method === "GET") {
+      const id = +p.slice(5) || 0, me = await who(env, req);
+      const w = await env.DB.prepare("SELECT * FROM m_wants WHERE id = ? AND status != 'cancel'").bind(id).first();
+      if (!w) return J(env, req, { err: "找不到這筆求卡，可能已關閉" }, 404);
+      // 市集上同一張卡（卡片目錄同一個 key）正在賣的
+      const { results: ms = [] } = w.ckey ? await env.DB.prepare("SELECT * FROM m_items WHERE ckey = ? AND status = 'live' ORDER BY price ASC LIMIT 10").bind(w.ckey).all() : { results: [] };
+      return J(env, req, { now, me: meOut(me, me ? await quota(env, me) : null), want: pubWant(w, me), buyerStats: await stats(env, w.uid), selling: ms.map(m => pub(m, me, null)) });
+    }
     if (p.startsWith("shop/")) {
       const sid = clip(p.slice(5), 20), me = await who(env, req);
       const s = await env.DB.prepare("SELECT seller, sname FROM m_items WHERE shop = ? ORDER BY id DESC LIMIT 1").bind(sid).first();
@@ -209,7 +231,7 @@ export async function marketApi(req, env, url, catalog) {
     const me = await who(env, req);
     if (!me) return J(env, req, { err: "請先從 LINE 登入（傳「市集」給 P’CLUB 官方帳號）", login: 1 }, 401);
     const b = await req.json().catch(() => ({}));
-    if (me.banned && ["create", "edit", "buy", "offer", "rate", "bump"].includes(p)) return J(env, req, { err: "你的帳號已被停權，無法刊登或購買。如有疑問請聯絡 P’CLUB 官方帳號。" }, 403);
+    if (me.banned && ["create", "edit", "buy", "offer", "rate", "bump", "want/create", "want/bump"].includes(p)) return J(env, req, { err: "你的帳號已被停權，無法刊登或購買。如有疑問請聯絡 P’CLUB 官方帳號。" }, 403);
     const id = +b.id || 0;
 
     if (p === "create") {
@@ -223,14 +245,51 @@ export async function marketApi(req, env, url, catalog) {
       const ip = b.ip === "op" ? "op" : "pk", kind = KINDS[b.kind] ? b.kind : "card", ckey = clip(b.ckey, 80) || null;
       const r = await env.DB.prepare("INSERT INTO m_items (seller, sname, shop, title, ip, kind, cond, note, price, nego, ref, ckey, cimg, nphoto, contact, status, created, bumped) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,'live',?,?)")
         .bind(me.uid, me.name || "玩家", me.shop, title, ip, kind, clip(b.cond, 20), clip(b.note, 500), price, b.nego ? 1 : 0, b.ref ? Math.round(+b.ref) || null : null, ckey, /^https:\/\/[\w./%-]+$/.test(b.cimg || "") ? b.cimg.slice(0, 300) : null, contact, now, now).run();
-      const mid = r.meta.last_row_id;
+      const mid = r.meta.last_row_id, told = new Set([me.uid]);
+      // 從求卡按「我有這張」刊登的：通知那位求卡的人
+      if (b.want) {
+        const w = await env.DB.prepare("SELECT * FROM m_wants WHERE id = ? AND status = 'open'").bind(+b.want || 0).first();
+        if (w && w.uid !== me.uid) { told.add(w.uid); await env.DB.prepare("UPDATE m_wants SET nresp = IFNULL(nresp, 0) + 1 WHERE id = ?").bind(w.id).run();
+          await push(env, w.uid, [btnMsg(env, "📮 有人回應你的求卡", `${w.title}｜賣家開價 ${ntd(price)}（你收 ${ntd(w.maxp)}）`, mid, "去看看")]); }
+      }
+      // 卡片目錄同一張、價格在收購價內的求卡：一起通知
+      if (ckey) {
+        const { results: ws = [] } = await env.DB.prepare("SELECT id, uid, title, maxp FROM m_wants WHERE ckey = ? AND status = 'open' AND maxp >= ? LIMIT 50").bind(ckey, price).all();
+        for (const w of ws) if (!told.has(w.uid)) { told.add(w.uid); await env.DB.prepare("UPDATE m_wants SET nresp = IFNULL(nresp, 0) + 1 WHERE id = ?").bind(w.id).run();
+          await push(env, w.uid, [btnMsg(env, "📮 你在收的卡有人賣了", `${title}｜${ntd(price)}（你收 ${ntd(w.maxp)}）`, mid, "去看看")]); }
+      }
       // 行情提醒：關注這張卡的人收到通知（自己除外）
       if (ckey) {
         const { results: fs = [] } = await env.DB.prepare("SELECT DISTINCT uid FROM m_follow WHERE ckey = ? AND uid != ? LIMIT 100").bind(ckey, me.uid).all();
         const cheap = b.ref && price < +b.ref ? `，比日本行情 ${ntd(+b.ref)} 便宜` : "";
-        for (const f of fs) await push(env, f.uid, [btnMsg(env, "🔔 你關注的卡有人刊登", `${title}｜${ntd(price)}${cheap}`, mid, "去看看")]);
+        for (const f of fs) if (!told.has(f.uid)) await push(env, f.uid, [btnMsg(env, "🔔 你關注的卡有人刊登", `${title}｜${ntd(price)}${cheap}`, mid, "去看看")]);
       }
       return J(env, req, { ok: 1, id: mid, quota: { ...q, used: q.used + 1 } });
+    }
+
+    if (p === "want/create") {
+      const title = clip(b.title, 60), maxp = Math.round(+b.maxp);
+      if (title.length < 2) return J(env, req, { err: "請填想收的卡" }, 400);
+      if (!(maxp >= 1 && maxp <= 10000000)) return J(env, req, { err: "收購價要在 NT$1～10,000,000" }, 400);
+      const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM m_wants WHERE uid = ? AND status = 'open'").bind(me.uid).first();
+      if (n && n.n >= MAX_WANTS) return J(env, req, { err: `同時最多 ${MAX_WANTS} 筆求卡，請先關閉收到的或不需要的` }, 400);
+      const r = await env.DB.prepare("INSERT INTO m_wants (uid, name, shop, title, ip, kind, ckey, cimg, ref, maxp, note, status, created, bumped) VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',?,?)")
+        .bind(me.uid, me.name || "玩家", me.shop, title, b.ip === "op" ? "op" : "pk", KINDS[b.kind] ? b.kind : "card", clip(b.ckey, 80) || null, /^https:\/\/[\w./%-]+$/.test(b.cimg || "") ? b.cimg.slice(0, 300) : null,
+          b.ref ? Math.round(+b.ref) || null : null, maxp, clip(b.note, 300), now, now).run();
+      // 市集上已經有人在賣這張、而且價格在收購價內：通知求卡的人
+      let hits = 0;
+      if (b.ckey) { const h = await env.DB.prepare("SELECT COUNT(*) AS n FROM m_items WHERE ckey = ? AND status = 'live' AND price <= ?").bind(clip(b.ckey, 80), maxp).first(); hits = h ? h.n : 0; }
+      return J(env, req, { ok: 1, id: r.meta.last_row_id, hits });
+    }
+    if (p === "want/close" || p === "want/bump") {
+      const w = await env.DB.prepare("SELECT * FROM m_wants WHERE id = ?").bind(id).first();
+      if (!w || w.uid !== me.uid) return J(env, req, { err: "只能管理自己的求卡" }, 403);
+      if (p === "want/close") await env.DB.prepare("UPDATE m_wants SET status = ? WHERE id = ?").bind(b.got ? "done" : "cancel", id).run();
+      else {
+        if (w.status === "open" && now - w.bumped < BUMP_MS) return J(env, req, { err: "每 24 小時可以更新一次" }, 400);
+        await env.DB.prepare("UPDATE m_wants SET status = 'open', bumped = ? WHERE id = ?").bind(now, id).run();
+      }
+      return J(env, req, { ok: 1 });
     }
 
     if (p === "edit") {

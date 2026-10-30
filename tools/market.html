@@ -65,6 +65,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ph .nophoto{color:var(--muted);font-size:13px;text-align:center;padding:12px;font-weight:700}
 .tags{position:absolute;left:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100% - 16px)}
 .tag{background:rgba(42,28,23,.85);color:var(--navy-fg);font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 9px}
+.tag.want{background:var(--teal);color:#fff;font-size:12.5px}.ph .wantph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--teal);font-weight:900;font-size:40px}.ph .wantph small{font-size:13px;color:var(--muted);font-weight:700;padding:0 10px;text-align:center}.mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}.mini .card .cb h3{font-size:13px}
 .tag.deal{background:var(--good);color:#fff}.tag.nego{background:var(--teal);color:#fff}.tag.hold{background:var(--hot);color:#fff}.tag.me{background:var(--brand);color:var(--brand-ink)}.tag.star{background:#ffd34d;color:#2a1c17}
 .cb{padding:10px 12px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
 .cb h3{margin:0;font-size:14.5px;line-height:1.35;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
@@ -168,11 +169,11 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40p
 
 <main class="wrap">
   <div class="tools">
-    <div class="tabs" role="group" aria-label="分類"><button type="button" data-st="live" aria-pressed="true">全部</button><button type="button" data-st="mine" aria-pressed="false">我的<span class="dot" id="pend" hidden></span></button><button type="button" data-st="watch" aria-pressed="false">關注</button><button type="button" data-st="sold" aria-pressed="false">最近成交</button><button type="button" data-st="admin" aria-pressed="false" id="tab-admin" hidden>管理</button></div>
+    <div class="tabs" role="group" aria-label="分類"><button type="button" data-st="live" aria-pressed="true">全部</button><button type="button" data-st="wants" aria-pressed="false">求卡</button><button type="button" data-st="mine" aria-pressed="false">我的<span class="dot" id="pend" hidden></span></button><button type="button" data-st="watch" aria-pressed="false">關注</button><button type="button" data-st="sold" aria-pressed="false">最近成交</button><button type="button" data-st="admin" aria-pressed="false" id="tab-admin" hidden>管理</button></div>
     <div class="grow"><input type="search" id="q" placeholder="搜尋卡名、卡號、賣家" aria-label="搜尋"></div>
     <select id="kind" aria-label="種類"><option value="">全部種類</option><option value="card">單卡</option><option value="psa">鑑定卡</option><option value="box">原盒</option><option value="other">其他</option></select>
     <select id="sort" aria-label="排序"><option value="new">最新</option><option value="cheap">比行情便宜</option><option value="lo">價格低到高</option><option value="hi">價格高到低</option></select>
-    <div class="newbox"><span class="quota" id="quota"></span><button type="button" class="btn main" id="new">＋ 刊登商品</button></div>
+    <div class="newbox"><span class="quota" id="quota"></span><button type="button" class="btn teal" id="newwant">＋ 我要收</button><button type="button" class="btn main" id="new">＋ 刊登商品</button></div>
   </div>
   <div class="grid" id="grid"><div class="empty">載入中…</div></div>
 </main>
@@ -226,12 +227,13 @@ function statTxt(s,nw){if(!s)return"";return s.pos+s.neg||s.ab?` <span class="st
 async function load(){
   if(ST==="admin")return loadAdmin();
   if(ST==="shop")return loadShop(SHOP);
+  if(ST==="wants"){try{const j=await api("wants");ME=j.me;ITEMS=j.items;drawWho();draw()}catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}</div>`}return}
   if((ST==="mine"||ST==="watch")&&!TOK){$("grid").innerHTML=`<div class="empty">${loginHtml(ST==="mine"?"登入後可以管理自己的刊登、出價和交易":"登入後可以關注商品，降價時用 LINE 通知你")}</div>`;return}
   try{const j=await api("list?st="+ST);ME=j.me;ITEMS=j.items;drawWho();
     const p=$("pend");p.hidden=!j.pending;p.textContent=j.pending||"";draw()}
   catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}<br><button type="button" class="btn sm" onclick="location.reload()" style="margin-top:10px">重新整理</button></div>`}
 }
-function counts(){const c={pk:0,op:0};ITEMS.forEach(m=>{if(m.status==="live")c[m.ip==="op"?"op":"pk"]++});$("n-pk").textContent=c.pk+" 件刊登";$("n-op").textContent=c.op+" 件刊登"}
+function counts(){if(ST==="wants")return;const c={pk:0,op:0};ITEMS.forEach(m=>{if(m.status==="live")c[m.ip==="op"?"op":"pk"]++});$("n-pk").textContent=c.pk+" 件刊登";$("n-op").textContent=c.op+" 件刊登"}
 function cardHtml(m){
   const tags=[m.status==="held"?`<span class="tag hold">保留中</span>`:m.status==="sold"?`<span class="tag">已售出</span>`:m.status==="expired"?`<span class="tag">已過期</span>`:"",
     m.mine?`<span class="tag me">我的</span>`:"",m.buying?`<span class="tag deal">我買的</span>`:"",m.status==="live"&&m.ref&&m.price<=m.ref*.9?`<span class="tag deal">低於行情</span>`:"",m.status==="live"&&m.nego?`<span class="tag nego">可議價</span>`:"",m.watched?`<span class="tag star">★</span>`:""].join("");
@@ -240,8 +242,18 @@ function cardHtml(m){
     ${m.ref?`<div class="ref">${refTxt(m)}</div>`:""}
     <div class="meta"><span>${esc(KIND[m.kind]||"")}${m.cond?"・"+esc(m.cond):""}</span><span>${m.status==="sold"?ago(m.dealt||m.bumped):ago(m.bumped)}</span></div></div></article>`;
 }
+function wantCard(w){
+  const tags=[`<span class="tag want">收</span>`,w.mine?`<span class="tag me">我的</span>`:"",w.nresp?`<span class="tag deal">${w.nresp} 人回應</span>`:"",w.status!=="open"?`<span class="tag">${w.status==="done"?"已收到":"已結束"}</span>`:""].join("");
+  const img=w.cimg?`<img class="cat" src="${esc(w.cimg)}" alt="${esc(w.title)}" loading="lazy">`:`<span class="wantph">收<small>${esc(w.title)}</small></span>`;
+  return `<article class="card" data-w="${w.id}" tabindex="0"><div class="ph">${img}<div class="tags">${tags}</div></div><div class="cb"><h3>${esc(w.title)}</h3>
+    <div class="pr"><small style="color:var(--teal);font-weight:700">收購價</small><b style="color:var(--teal)">${nt(w.maxp)}</b></div>${w.ref?`<div class="ref">日本行情 ${nt(w.ref)}</div>`:""}
+    <div class="meta"><span>${esc(w.buyer)} 在收</span><span>${ago(w.bumped)}</span></div></div></article>`}
 function draw(){
   counts();
+  if(ST==="wants"){const q=$("q").value.trim().toLowerCase(),k=$("kind").value,s=$("sort").value;
+    let a=ITEMS.filter(w=>(q||(w.ip==="op")===(IP==="op"))&&(!k||w.kind===k)&&(!q||(w.title+" "+(w.note||"")).toLowerCase().includes(q)));
+    a.sort(s==="lo"?(x,y)=>x.maxp-y.maxp:s==="hi"?(x,y)=>y.maxp-x.maxp:(x,y)=>y.bumped-x.bumped);
+    $("grid").innerHTML=a.length?a.map(wantCard).join(""):`<div class="empty">${q||k?"找不到符合的求卡":"目前還沒有人在收"+(IP==="op"?"海賊王":"寶可夢")+"卡。<br>按「＋ 我要收」貼出你想收的卡，有人刊登時用 LINE 通知你。"}</div>`;return}
   const q=$("q").value.trim().toLowerCase(),k=$("kind").value,s=$("sort").value;
   let a=ITEMS.filter(m=>(ST!=="live"||q||(m.ip==="op")===(IP==="op"))&&(!k||m.kind===k)&&(!q||(m.title+" "+(m.note||"")+" "+m.seller).toLowerCase().includes(q)));
   const P=m=>m.price,D=m=>m.ref?(m.price-m.ref)/m.ref:9;
@@ -249,11 +261,13 @@ function draw(){
   if(!a.length){$("grid").innerHTML=`<div class="empty">${q||k?"找不到符合的商品":ST==="live"?`目前還沒有${IP==="op"?"海賊王":"寶可夢"}商品，來當第一個刊登的人吧！`:ST==="mine"?"你還沒有刊登、購買或出價過":ST==="watch"?"還沒有關注的商品。在商品頁按「☆ 關注」，降價時會用 LINE 通知你":"還沒有成交紀錄"}</div>`;return}
   $("grid").innerHTML=a.map(cardHtml).join("");
 }
-$("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)});
-$("grid").addEventListener("keydown",e=>{if(e.key==="Enter"){const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)}});
+const openCard=c=>{if(!c)return;if(c.dataset.w)openWant(+c.dataset.w);else openItem(+c.dataset.id)};
+$("grid").addEventListener("click",e=>openCard(e.target.closest(".card")));
+$("grid").addEventListener("keydown",e=>{if(e.key==="Enter")openCard(e.target.closest(".card"))});
+$("sb").addEventListener("click",e=>{const c=e.target.closest(".mini .card");if(c){e.preventDefault();openItem(+c.dataset.id)}});
 function setTab(st){ST=st;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.st===st));load()}
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.st));
-document.querySelectorAll(".ipseg button").forEach(b=>b.onclick=()=>{IP=b.dataset.ip;LS.set("mip",IP);syncIp();if(ST!=="live")setTab("live");else draw()});
+document.querySelectorAll(".ipseg button").forEach(b=>b.onclick=()=>{IP=b.dataset.ip;LS.set("mip",IP);syncIp();if(ST!=="live"&&ST!=="wants")setTab("live");else draw()});
 function syncIp(){document.querySelectorAll(".ipseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===IP))}
 $("q").oninput=draw;$("kind").onchange=draw;$("sort").onchange=draw;
 setInterval(()=>{if(!document.hidden&&$("bg").hidden&&ST!=="admin")load()},45000);
@@ -276,9 +290,70 @@ function share(t,u){if(navigator.share)navigator.share({title:t,url:u}).catch(()
 
 /* 彈出視窗 */
 function sheet(t,html){$("sh-t").textContent=t;$("sb").innerHTML=html;$("bg").hidden=false;document.body.style.overflow="hidden"}
-function closeSheet(){$("bg").hidden=true;document.body.style.overflow="";CUR=null;if(/^#m\d+/.test(location.hash))history.replaceState(null,"",location.pathname)}
+function closeSheet(){$("bg").hidden=true;document.body.style.overflow="";CUR=null;if(/^#[mw]\d+/.test(location.hash))history.replaceState(null,"",location.pathname)}
 $("x").onclick=closeSheet;$("bg").addEventListener("click",e=>{if(e.target===$("bg"))closeSheet()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("bg").hidden)closeSheet()});
+
+/* 求卡 */
+async function openWant(id){
+  CUR="w"+id;sheet("求卡",`<p class="note">載入中…</p>`);history.replaceState(null,"","#w"+id);
+  let j;try{j=await api("want/"+id)}catch(e){$("sb").innerHTML=`<p class="msg err">${esc(e.message)}</p>`;return}
+  if(CUR!=="w"+id)return;ME=j.me||ME;drawWho();const w=j.want,open=w.status==="open";
+  $("sh-t").textContent=open?"求卡中":"已結束";
+  $("sb").innerHTML=`<div class="d-top"><div class="gal"><div class="main">${w.cimg?`<img src="${esc(w.cimg)}" alt="${esc(w.title)}" style="padding:16px">`:`<span class="wantph" style="font-size:64px;color:var(--teal);font-weight:900">收</span>`}</div>${w.cimg?`<span class="cap">示意圖（卡片目錄）</span>`:""}</div><div class="d-info">
+    <h3>${esc(w.title)}</h3>
+    <div class="chips"><span class="chip">${w.ip==="op"?"海賊王":"寶可夢"}・${esc(KIND[w.kind]||"")}</span><span class="chip">${esc(w.buyer)} 在收${statTxt(j.buyerStats,"新手")}</span><span class="chip">${ago(w.bumped)}更新</span>${w.nresp?`<span class="chip">${w.nresp} 人回應</span>`:""}</div>
+    <div class="box"><div class="price"><div><small>收購價（最高）</small><span class="v" style="color:var(--teal)">${nt(w.maxp)}</span></div>${w.ref?`<div class="cmp"><small>日本近期成交</small><b>${nt(w.ref)}</b></div>`:""}</div>
+      ${open&&!w.mine?(TOK?`<div class="acts"><button type="button" class="btn main" id="have">我有這張，刊登賣他</button></div><p class="note" style="margin-top:8px">刊登後會用 LINE 通知對方，他可以直接購買或出價。</p>`:`<div style="margin-top:12px">${loginHtml("回應求卡需要先用 LINE 登入")}</div>`):""}
+      ${w.mine&&open?`<div class="acts"><button type="button" class="btn main" id="got">已經收到了</button><button type="button" class="btn" id="wbump">更新</button><button type="button" class="btn" id="wstop">不收了</button></div><p class="note" style="margin-top:8px">有人刊登這張卡、而且價格在收購價內時，會用 LINE 通知你。</p>`:""}
+      ${w.mine&&!open?`<div class="acts"><button type="button" class="btn main" id="wbump">重新求卡</button></div>`:""}</div>
+    ${w.note?`<p class="note" style="white-space:pre-wrap;font-size:14px;color:var(--ink)">${esc(w.note)}</p>`:""}</div></div>
+    ${j.selling.length?`<div class="box"><b>市集上正在賣這張</b><div class="mini">${j.selling.map(cardHtml).join("")}</div></div>`:""}
+    <div class="row2"><button type="button" class="btn sm" id="wshare">分享</button></div>`;
+  const on=(i,f)=>{const e=$(i);if(e)e.onclick=f};
+  on("have",()=>openCreate({title:w.title,ip:w.ip,kind:w.kind,ckey:w.ckey,cimg:w.cimg,ref:w.ref,price:w.maxp,want:w.id}));
+  on("got",async()=>{try{await api("want/close",{id,got:1});toast("恭喜收到！");closeSheet();load()}catch(e){toast(e.message)}});
+  on("wstop",async()=>{if(!confirm("確定不收了？"))return;try{await api("want/close",{id});toast("已關閉");closeSheet();load()}catch(e){toast(e.message)}});
+  on("wbump",async()=>{try{await api("want/bump",{id});toast("已更新");openWant(id);load()}catch(e){toast(e.message)}});
+  on("wshare",()=>share(`收 ${w.title}｜${nt(w.maxp)}｜P’CLUB 市集`,location.origin+location.pathname+"#w"+id));
+}
+$("newwant").onclick=()=>{
+  if(!TOK)return sheet("我要收卡",loginHtml("求卡需要先用 LINE 登入，有人刊登時才通知得到你"));
+  CUR=null;
+  sheet("我要收卡",`<form class="f" id="wf" novalidate>
+    <div class="full cat"><label>從卡片目錄找（建議，有人刊登同一張卡時才能自動通知你）<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、OP01-120" autocomplete="off"></label><div class="cat-list" id="cl" hidden></div></div>
+    <div class="full refbox" id="rb" hidden></div>
+    <label class="full">想收的卡<input id="ti" maxlength="60" required placeholder="例：噴火龍ex SAR 201/165 日版"></label>
+    <div class="full"><span class="note">卡牌種類</span><div class="seg2" id="ipp" style="margin-top:5px"><button type="button" data-v="pk" aria-pressed="${IP!=="op"}">⚡ 寶可夢</button><button type="button" data-v="op" aria-pressed="${IP==="op"}">☠️ 海賊王</button></div></div>
+    <label>種類<select id="kd"><option value="card">單卡</option><option value="psa">鑑定卡</option><option value="box">原盒</option><option value="other">其他</option></select></label>
+    <label>收購價上限（NT$）<input id="mx" type="number" inputmode="numeric" min="1" required placeholder="例：1500"></label>
+    <label class="full">備註（選填）<textarea id="nt" maxlength="300" placeholder="例：要近全新、可台北面交"></textarea></label>
+    <div class="full row2"><button type="submit" class="btn teal" id="go" style="flex:1">貼出求卡</button></div>
+    <p class="note full">求卡 60 天沒更新會自動結束，同時最多 20 筆。</p><p class="msg err full" id="cm"></p></form>`);
+  const st={ip:IP,ref:null,ckey:null,cimg:null};
+  wireCatalog(st,x=>{if(x.ref)$("mx").placeholder="參考行情 "+nt(x.ref)});
+  $("wf").onsubmit=async e=>{e.preventDefault();const m=$("cm");m.textContent="";
+    const b={title:$("ti").value,ip:st.ip,kind:$("kd").value,maxp:+$("mx").value,note:$("nt").value,ref:st.ref,ckey:st.ckey,cimg:st.cimg};
+    if(!b.title.trim())return m.textContent="請填想收的卡";if(!(b.maxp>=1))return m.textContent="請填收購價";
+    $("go").disabled=true;
+    try{const r=await api("want/create",b);toast(r.hits?`已貼出！市集上已經有 ${r.hits} 件在你的價格內`:"已貼出！有人刊登時會用 LINE 通知你");IP=st.ip;LS.set("mip",IP);syncIp();setTab("wants");openWant(r.id)}
+    catch(er){m.textContent=er.message;$("go").disabled=false}};
+};
+/* 卡片目錄搜尋（刊登、求卡共用）：st 會被填入 ip、ref、ckey、cimg */
+function wireCatalog(st,after){
+  const setIp=v=>{st.ip=v;document.querySelectorAll("#ipp button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v))};
+  document.querySelectorAll("#ipp button").forEach(b=>b.onclick=()=>setIp(b.dataset.v));
+  let CT=null,CQ=0;
+  $("cs").oninput=()=>{clearTimeout(CT);const qq=$("cs").value.trim();if(!qq){$("cl").hidden=true;return}CT=setTimeout(async()=>{const my=++CQ;
+    try{const r=await api("search?q="+encodeURIComponent(qq),null,AAPI);if(my!==CQ)return;
+      $("cl").innerHTML=r.items.length?r.items.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${x.op?"海賊王・":""}${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，直接在下面填名稱就好</p>`;
+      $("cl").hidden=false;
+      $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{const x=r.items[+el.dataset.i];$("ti").value=(x.n+(/美版/.test(x.meta)?" 美版":"")).slice(0,60);st.ref=x.ref||null;st.ckey=x.k||x.n;st.cimg=x.img||null;
+        setIp(x.op?"op":"pk");$("kd").value=x.b?"box":x.psa?"psa":"card";if($("co")){if(x.psa)$("co").value="鑑定卡";if(x.b)$("co").value="全新未拆"}
+        $("rb").hidden=!x.ref;$("rb").innerHTML=x.ref?`<span>${esc(x.src)} 近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(x.ref)}</b></span><button type="button" class="btn sm" id="rbx">不顯示</button>`:"";
+        if($("rbx"))$("rbx").onclick=()=>{st.ref=null;$("rb").hidden=true};$("cl").hidden=true;$("cs").value="";if(after)after(x)};
+        el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}})}catch(e){}},300)};
+}
 
 /* 商品頁 */
 async function openItem(id,keep){
@@ -359,7 +434,9 @@ function editItem(m){
 }
 
 /* 刊登 */
-$("new").onclick=()=>{
+$("new").onclick=()=>openCreate();
+function openCreate(pre){
+  pre=pre||{};
   if(!TOK)return sheet("刊登商品",loginHtml("刊登需要先用 LINE 登入，有人購買或出價時才通知得到你"));
   const q=ME&&ME.quota;if(q&&q.used>=q.max)return sheet("刊登商品",`<div class="warn">你已經有 <b>${q.used}</b> 件刊登中或保留中的商品，達到免費上限 ${q.max} 件。<br>請先下架不賣的商品、或把完成的交易按「交易已完成」，就能再刊登。需要更多刊登數可以傳訊息給 P’CLUB 官方帳號申請。</div><div class="row2"><button type="button" class="btn" onclick="this.closest('.sheet-bg').querySelector('.x').click()">好</button></div>`);
   CUR=null;
@@ -367,11 +444,12 @@ $("new").onclick=()=>{
     <div class="full"><div class="ups" id="ups"></div><p class="note" style="margin-top:6px">最多 4 張實拍照片，第 1 張是封面。建議附紙條寫日期與暱稱，買家比較放心。</p></div>
     <div class="full cat"><label>從卡片目錄找（自動帶入名稱、日本行情，選填）<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、OP01-120、噴火龍 PSA10" autocomplete="off"></label><div class="cat-list" id="cl" hidden></div></div>
     <div class="full refbox" id="rb" hidden></div>
-    <label class="full">商品名稱<input id="ti" maxlength="60" required placeholder="例：噴火龍ex SAR 201/165 日版"></label>
-    <div class="full"><span class="note">卡牌種類</span><div class="seg2" id="ipp" style="margin-top:5px"><button type="button" data-v="pk" aria-pressed="${IP!=="op"}">⚡ 寶可夢</button><button type="button" data-v="op" aria-pressed="${IP==="op"}">☠️ 海賊王</button></div></div>
+    ${pre.want?`<div class="full win">📮 回應求卡：對方收購價 <b>${nt(pre.price)}</b>，刊登後會用 LINE 通知他。</div>`:""}
+    <label class="full">商品名稱<input id="ti" maxlength="60" required placeholder="例：噴火龍ex SAR 201/165 日版" value="${esc(pre.title||"")}"></label>
+    <div class="full"><span class="note">卡牌種類</span><div class="seg2" id="ipp" style="margin-top:5px"><button type="button" data-v="pk" aria-pressed="${(pre.ip||IP)!=="op"}">⚡ 寶可夢</button><button type="button" data-v="op" aria-pressed="${(pre.ip||IP)==="op"}">☠️ 海賊王</button></div></div>
     <label>種類<select id="kd"><option value="card">單卡</option><option value="psa">鑑定卡</option><option value="box">原盒</option><option value="other">其他</option></select></label>
     <label>卡況<select id="co"><option>全新未拆</option><option>近全新</option><option selected>良好</option><option>有瑕疵</option><option>鑑定卡</option></select></label>
-    <label>售價（NT$）<input id="pr" type="number" inputmode="numeric" min="1" required placeholder="例：1200"></label>
+    <label>售價（NT$）<input id="pr" type="number" inputmode="numeric" min="1" required placeholder="例：1200" value="${pre.price||""}"></label>
     <label>聯絡方式（有人購買後才給買家看）<input id="ct" maxlength="60" required placeholder="例：LINE ID abc123" value="${esc(LS.get("acontact",""))}"></label>
     <label class="chk full"><input type="checkbox" id="ng" checked><span>接受出價議價（買家可以出比售價低的價格，你決定接不接受）</span></label>
     <label class="full">說明（選填）<textarea id="nt" maxlength="500" placeholder="例：只面交台北車站，或 7-11 賣貨便；卡況細節"></textarea></label>
@@ -379,33 +457,24 @@ $("new").onclick=()=>{
     <div class="full row2"><button type="submit" class="btn main" id="go" style="flex:1">確認刊登</button></div>
     <p class="note full">${q?`目前刊登 ${q.used} / ${q.max} 件（免費上限）。`:""}刊登 30 天沒更新會自動下架，每天可以按一次「更新」排到最新。</p>
     <p class="msg err full" id="cm" aria-live="polite"></p></form>`);
-  const PH=[];let REF=null,CKEY=null,CIMG=null,CT=null,CQ=0,IPV=IP;
+  const PH=[],st={ip:pre.ip||IP,ref:pre.ref||null,ckey:pre.ckey||null,cimg:pre.cimg||null};
   const drawUps=()=>{$("ups").innerHTML=PH.map((p,i)=>`<div class="up"><img src="${p.u}" alt="照片 ${i+1}"><button type="button" class="rm" data-i="${i}" aria-label="移除照片">×</button></div>`).join("")+(PH.length<4?`<label class="up" tabindex="0">📷<br>${PH.length?"再加一張":"上傳照片"}<input type="file" accept="image/*" multiple hidden id="pf"></label>`:"");
     $("ups").querySelectorAll(".rm").forEach(b=>b.onclick=e=>{e.preventDefault();const p=PH.splice(+b.dataset.i,1)[0];URL.revokeObjectURL(p.u);drawUps()});
     if($("pf"))$("pf").onchange=async e=>{for(const f of [...e.target.files].slice(0,4-PH.length)){try{const b=await shrink(f);PH.push({b,u:URL.createObjectURL(b)})}catch(er){toast("有一張照片讀不出來，請換一張")}}drawUps()}};
   drawUps();
-  document.querySelectorAll("#ipp button").forEach(b=>b.onclick=()=>{IPV=b.dataset.v;document.querySelectorAll("#ipp button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
-  const setIp=v=>{IPV=v;document.querySelectorAll("#ipp button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v))};
-  $("cs").oninput=()=>{clearTimeout(CT);const qq=$("cs").value.trim();if(!qq){$("cl").hidden=true;return}CT=setTimeout(async()=>{const my=++CQ;
-    try{const r=await api("search?q="+encodeURIComponent(qq),null,AAPI);if(my!==CQ)return;
-      $("cl").innerHTML=r.items.length?r.items.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${x.op?"海賊王・":""}${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，直接在下面填商品名稱就好</p>`;
-      $("cl").hidden=false;
-      $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{const x=r.items[+el.dataset.i];$("ti").value=(x.n+(/美版/.test(x.meta)?" 美版":"")).slice(0,60);REF=x.ref||null;CKEY=x.k||x.n;CIMG=x.img||null;
-        setIp(x.op?"op":"pk");$("kd").value=x.b?"box":x.psa?"psa":"card";if(x.psa)$("co").value="鑑定卡";if(x.b)$("co").value="全新未拆";
-        $("rb").hidden=!x.ref;$("rb").innerHTML=x.ref?`<span>${esc(x.src)} 近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(x.ref)}</b>（會顯示給買家參考）</span><button type="button" class="btn sm" id="rbx">不顯示</button>`:"";
-        if(x.ref)$("pr").placeholder="參考行情 "+nt(x.ref);if($("rbx"))$("rbx").onclick=()=>{REF=null;$("rb").hidden=true};$("cl").hidden=true;$("cs").value=""};
-        el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}})}catch(e){}},300)};
+  wireCatalog(st,x=>{if(x.ref)$("pr").placeholder="參考行情 "+nt(x.ref)});
+  if(pre.kind)$("kd").value=pre.kind;if(pre.ref){$("rb").hidden=false;$("rb").innerHTML=`<span>日本近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(pre.ref)}</b>（會顯示給買家參考）</span>`}
   $("cf").onsubmit=async e=>{e.preventDefault();const msg=$("cm");msg.textContent="";
-    const b={title:$("ti").value,ip:IPV,kind:$("kd").value,cond:$("co").value,price:+$("pr").value,nego:$("ng").checked?1:0,contact:$("ct").value,note:$("nt").value,ref:REF,ckey:CKEY,cimg:PH.length?null:CIMG};
+    const b={title:$("ti").value,ip:st.ip,kind:$("kd").value,cond:$("co").value,price:+$("pr").value,nego:$("ng").checked?1:0,contact:$("ct").value,note:$("nt").value,ref:st.ref,ckey:st.ckey,cimg:PH.length?null:st.cimg,want:pre.want||null};
     if(!b.title.trim())return msg.textContent="請填商品名稱";if(!(b.price>=1))return msg.textContent="請填售價";if(!b.contact.trim())return msg.textContent="請填聯絡方式";
     if(!$("ag").checked)return msg.textContent="請先勾選同意刊登規則";
     if(!PH.length&&!confirm("沒有實拍照片的商品比較難賣，確定不附照片？"))return;
     $("go").disabled=true;$("go").textContent="刊登中…";
     try{const r=await api("create",b);LS.set("acontact",b.contact.trim());
       for(let i=0;i<PH.length;i++){$("go").textContent=`上傳照片 ${i+1}/${PH.length}…`;try{const pr=await fetch(API+"photo/"+r.id+"?n="+i,{method:"POST",headers:{"x-tok":TOK,"content-type":"image/jpeg"},body:PH[i].b});const pj=await pr.json().catch(()=>({}));if(!pr.ok)throw new Error(pj.err||"照片上傳失敗")}catch(pe){toast("商品已刊登，但第 "+(i+1)+" 張照片上傳失敗："+pe.message)}}
-      toast("刊登成功！");IP=IPV;LS.set("mip",IP);syncIp();setTab("live");openItem(r.id)}
+      toast(pre.want?"刊登成功！已通知求卡的人":"刊登成功！");IP=st.ip;LS.set("mip",IP);syncIp();setTab("live");openItem(r.id)}
     catch(er){msg.textContent=er.message;$("go").disabled=false;$("go").textContent="確認刊登"}};
-};
+}
 /* 照片壓縮：長邊 1200px，JPEG，控制在 400KB 內 */
 function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=async()=>{URL.revokeObjectURL(u);
   let w=im.naturalWidth,h=im.naturalHeight,s=Math.min(1,1200/Math.max(w,h)),q=.82,out=null;
@@ -437,7 +506,7 @@ const SH=H.match(/^#s=([\w-]+)/);
 if(SH){openShop(SH[1]);api("list?st=live").then(j=>{ME=j.me;drawWho()}).catch(()=>{})}
 else load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");
   if(SELL[1]){$("new").click();if(TOK&&$("ti")){$("ti").value=decodeURIComponent(SELL[1]).slice(0,60);$("cs").value=decodeURIComponent(SELL[1]).slice(0,40);$("cs").dispatchEvent(new Event("input"))}return}
-  const m=H.match(/^#m(\d+)/);if(m)openItem(+m[1])});
+  const m=H.match(/^#m(\d+)/);if(m)openItem(+m[1]);const w=H.match(/^#w(\d+)/);if(w){setTab("wants");openWant(+w[1])}});
 })();
 </script>
 </body>

@@ -10,6 +10,7 @@
 
 import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.js";
 import { marketApi, marketCron, marketToken } from "./market.js";
+import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -44,6 +45,7 @@ export default {
   async scheduled(ev, env, ctx) { // 每 10 分鐘：結標並通知；圖文選單版本更新時自動重建
     ctx.waitUntil(settle(env).catch(e => console.error("settle", e && e.stack || e)));
     ctx.waitUntil(marketCron(env).catch(e => console.error("market cron", e && e.stack || e)));
+    ctx.waitUntil((async () => { const D = await base(env); if (D.db) await alertCron(env, D, rowsTo, p => ({ type: "flex", altText: p.n.slice(0, 300), contents: bubble({ ...p, _rel: null }, D, env) })); })().catch(e => console.error("alert cron", e && e.stack || e)));
     ctx.waitUntil(autoRichMenu(env).catch(e => console.error("richmenu", e && e.stack || e)));
   },
 };
@@ -99,10 +101,16 @@ const RANK = {
 
 async function handle(ev, env) {
   if (ev.type === "follow") return reply(env, ev.replyToken, guide(env));
+  if (ev.type === "postback" && ev.replyToken && ev.source && ev.source.userId) {
+    const D = await base(env), r = D.db ? await alertPostback(env, ev.source.userId, ev.postback && ev.postback.data, D, rowsTo) : null;
+    if (r) return reply(env, ev.replyToken, r);
+    return;
+  }
   if (ev.type !== "message" || !ev.replyToken) return;
   const D = await base(env);
   if (ev.message.type === "text") {
     let q = ev.message.text.trim();
+    if (D.db && ev.source && ev.source.userId) { const r = await alertText(env, ev.source.userId, q, D, rowsTo); if (r) return reply(env, ev.replyToken, r); }
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
@@ -171,6 +179,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 💱 試算 25000：算日圓價格的到手成本
 🗃️ 我的庫存：記錄持有的卡、算損益，產生庫存圖／出售清單圖
 🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價
+🔔 到價提醒：查價後按卡片下方「🔔 到價提醒」，跌到你要的價格時通知你；傳「我的提醒」管理
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
@@ -582,7 +591,7 @@ async function oneCard(hits, q, wantRaw, D, env) {
   for (const x of (main._rel && main._rel.list) || []) add(x, false);
   const list = pool.filter(x => x.img).slice(0, 3);
   main._rel = list.length ? { ch: (main._rel && main._rel.ch) || charOf(main.n), list } : null;
-  return { type: "flex", altText: ("「" + q + "」的查價結果：" + main.n).slice(0, 380), contents: bubble(main, D, env) };
+  return { type: "flex", altText: ("「" + q + "」的查價結果：" + main.n).slice(0, 380), contents: bubble(main, D, env), quickReply: { items: [...alertQuick(main), ...QUICK].slice(0, 13) } };
 }
 function carousel(list, D, env, alt, q) {
   const L = list.slice(0, 10), size = x => new TextEncoder().encode(JSON.stringify(x)).length;
