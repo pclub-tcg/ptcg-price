@@ -18,9 +18,10 @@ if git -C "$REPO" fetch -q origin opdata 2>/dev/null; then git -C "$REPO" --work
 if git -C "$REPO" fetch -q origin usdata 2>/dev/null; then git -C "$REPO" --work-tree="$USDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi
 # 海賊王日版補 TCG Japan：每次發佈現抓；抓不到就沿用網站上一版的 tcgj_op.json
 TJ="$OPDIR/tcgj_op.json"
-if ! python3 "$HERE/fetch_tcgj_op.py" "$TJ"; then
-  echo "TCG Japan 抓取失敗，沿用網站上一版"
-  curl -fsS -m 30 -o "$TJ" "${SITE_URL:-https://pclub-tcg.github.io/ptcg-price}/tcgj_op.json" || rm -f "$TJ"
+TJLOG="$(mktemp)"
+if ! python3 "$HERE/fetch_tcgj_op.py" "$TJ" >"$TJLOG" 2>&1; then
+  echo "TCG Japan 抓取失敗，改用模板附的或網站上一版" >>"$TJLOG"
+  if [ -s "$(dirname "$1")/tcgj_op.json" ]; then cp "$(dirname "$1")/tcgj_op.json" "$TJ"; else curl -fsS -m 30 -o "$TJ" "${SITE_URL:-https://pclub-tcg.github.io/ptcg-price}/tcgj_op.json" || rm -f "$TJ"; fi
 fi
 # Artifact 模板：改網站名稱、美版併進卡片目錄
 TPL="$(mktemp --suffix=.html)"; python3 "$HERE/patch_page.py" "$1" "$TPL"
@@ -36,4 +37,5 @@ git init -q -b site
 git add -A
 git -c user.name="spickertop-afk" -c user.email="spickertop@gmail.com" commit -qm "網站資料 $(date -u +%F)"
 git push -q --force "$REMOTE" site
+echo "TCG Japan: $(tail -c 300 "$TJLOG" | tr '\n' ' ')"
 echo "published $(du -sh "$OUT" | cut -f1)"
