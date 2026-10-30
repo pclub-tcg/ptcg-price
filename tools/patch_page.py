@@ -366,5 +366,27 @@ rep('const VL={good:"有賺頭",warn:"利潤薄",bad:"不划算",rev:"反向機�
 rep('筆有賺頭｜依報酬率排序', '筆價差大｜依價差比例排序')
 h = h.replace("不能直接套利", "不能直接比價")
 
+# 14. 卡片目錄分「寶可夢／海賊王」（extra.json、us.json 的 op 欄位）；搜尋時兩種都找
+rep('<h2 class="sec" id="ctitle">卡片目錄</h2>', '<div class="ipseg" role="group" aria-label="卡牌種類"><button type="button" data-ip="pk" aria-pressed="true"><span>⚡</span>寶可夢</button><button type="button" data-ip="op" aria-pressed="false"><span>🏴‍☠️</span>海賊王</button></div>\n  <h2 class="sec" id="ctitle">卡片目錄</h2>')
+rep('o.extra=1;o.jn=e.jn||"";', 'o.extra=1;o.op=e.op?1:0;if(o.op)o.hay+=" 海賊王 航海王 one piece";o.jn=e.jn||"";')
+rep('ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,', 'ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,op:x.op?1:0,x,')
+rep('let list=ROWS.filter(o=>{if(cf.us&&!o.us&&!o.en)return false;', 'let list=ROWS.filter(o=>{if(!q&&(window.IP==="op")!==!!o.op)return false;if(cf.us&&!o.us&&!o.en)return false;')
+rep('</style>\n\n<header class="bar">', """.ipseg{display:inline-flex;background:var(--surface);border-radius:16px;padding:5px;gap:4px;box-shadow:var(--shadow);margin:0 0 14px}
+.ipseg button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:900;font-size:15px;padding:9px 20px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.ipseg button[aria-pressed="true"]{background:var(--navy);color:var(--brand)}
+.ipseg.dim{opacity:.55}
+</style>
+
+<header class="bar">""")
+h += """
+<script>
+(function(){let ip="pk";try{ip=localStorage.getItem("ip")||"pk"}catch(e){}if(new URLSearchParams(location.search).get("ip")==="op")ip="op";window.IP=ip;
+const seg=document.querySelector(".ipseg");if(!seg)return;const T={pk:"寶可夢卡片目錄",op:"海賊王卡片目錄"};
+function sync(){seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===window.IP));const t=document.getElementById("ctitle");if(t)t.textContent=T[window.IP];const q=document.getElementById("q");seg.classList.toggle("dim",!!(q&&q.value.trim()))}
+seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{window.IP=b.dataset.ip;try{localStorage.setItem("ip",window.IP)}catch(e){}const q=document.getElementById("q");if(q&&q.value.trim()){q.value="";}sync();try{render(true)}catch(e){try{render()}catch(_){}}});
+document.getElementById("q")&&document.getElementById("q").addEventListener("input",sync);sync();})();
+</script>
+"""
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")

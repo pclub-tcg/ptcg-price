@@ -162,6 +162,7 @@ if bd_path and os.path.exists(bd_path):
         nb += 1
     print("extra boxes", nb)
 
+OPKW = "海賊王 航海王 one piece onepiece 海賊"
 # 4c. 日版高稀有度卡（GitHub Actions 每天抓的 jp.json，publish.sh 用 JP_DATA 傳進來）
 jp_path = os.environ.get("JP_DATA")
 EN2ZH = {}
@@ -219,14 +220,15 @@ if us_path and os.path.exists(us_path):
     nu = 0
     for it in ud["items"]:
         kk = "u%d" % it["id"]
-        zh = en2zh(it["n"], it["t"] == "s", it.get("set", ""))
+        op = it.get("ip") == "op"
+        zh = "" if op else en2zh(it["n"], it["t"] == "s", it.get("set", ""))
         if it["t"] == "s" and zh:  # 原盒名稱裡的寶可夢名也翻
             zh = re.sub(r"[A-Z][a-z]+(?: [A-Z][a-z]+)?(?: (?:VSTAR|VMAX|ex|EX|GX|V))?", lambda m: en2zh(m.group(0)) or m.group(0), zh)
         nzh = (zh + (" " + it["num"] if it.get("num") else "")) if zh else it["n"]
-        prods.append({"k": "u:%d" % it["id"], "n": nzh, "j": it["n"], "zh": zh or "", "kw": " ".join(x for x in [zh or "", zh_for(it["n"]), it.get("v", ""), "美版 英文 us en", "box 原盒 未拆" if it["t"] == "s" else ""] if x),
+        prods.append({"k": "u:%d" % it["id"], "n": nzh, "j": it["n"], "zh": zh or "", "kw": " ".join(x for x in [zh or "", "" if op else zh_for(it["n"]), it.get("v", ""), "美版 英文 us en", "box 原盒 未拆" if it["t"] == "s" else "", OPKW if op else ""] if x),
                       "num": it.get("num", ""), "set": it["set"], "rar": it.get("r", ""), "p": 0, "b": 1 if it["t"] == "s" else 0,
                       "us": 1, "um": it["m"], "ul": it.get("l"), "uurl": it.get("url"), "uimg": it.get("img"), "img": it.get("img"),
-                      "kk": kk, "fx": round(USD / 100, 5)})
+                      "kk": kk, "fx": round(USD / 100, 5), **({"op": 1} if op else {})})
         EXTRA_K[kk] = it["k"]
         nu += 1
     print("us items", nu, "usd", USD)
@@ -242,6 +244,8 @@ if en_path and os.path.exists(en_path):
             usn.setdefault((re.split(r"\s+-\s*|\s+\(", q["j"])[0].lower(), q["num"]), q["zh"])
     ne = 0
     for c in ed["cards"]:
+        if re.match(r"((OP|EB|ST|PRB)\d{2}|P)-\d{3}", str(c.get("num") or "")) or re.match(r"(OP|EB|ST|PRB)\d{2}$", str(c.get("set") or "")):
+            continue  # 海賊王英文版改由 op.json 收
         d = c.get("p") or {}
         if not d.get("s"):
             continue
@@ -257,6 +261,40 @@ if en_path and os.path.exists(en_path):
             EXTRA_K[kk] = d["k"]
         ne += 1
     print("en psa10", ne)
+
+# 4f. 海賊王（GitHub Actions 每天抓的 SNKRDUNK 海賊王卡 op.json，日版＋英文版，publish.sh 用 OP_DATA 傳進來）
+op_path = os.environ.get("OP_DATA")
+if op_path and os.path.exists(op_path):
+    from opzh import op2zh
+    PROMO_PK = re.compile(r"プロモ|記念|応募|コレクション|プレミアム|ジャンプ|大会|Fest|フラッグシップ|チャンピオンシップ|イラストレーション")
+    VAR = {"コミパラ": "漫畫背景", "パラレル": "異圖", "和柄アート": "和風異圖", "イラスト修正前": "修正前"}
+    no = 0
+    for c in json.load(open(op_path, encoding="utf-8"))["cards"]:
+        en = c.get("lang") == "en"
+        zh = op2zh(c["b"])
+        name = zh or c["b"]
+        tags = [VAR.get(c["v"], c["v"])] if c.get("v") else []
+        if PROMO_PK.search(c.get("pk") or ""):
+            tags.append("特典")
+        disp = " ".join([name] + tags)
+        for kind, d in (("a", c.get("a") or {}), ("p", c.get("p") or {})):
+            if not d.get("s"):
+                continue
+            psa = kind == "p"
+            kk = "%d~%s" % (c["sid"], kind)
+            st = c["set"] + (" EN" if en else "")
+            prods.append({"k": "o:%d%s" % (c["sid"], "p" if psa else ""), "n": "%s %s %s%s" % (disp, c["r"] or "", c["code"], " PSA10" if psa else ""),
+                          "j": "%s %s [%s]%s%s" % (c["b"], c["r"], c["code"], "【英語版】" if en else "", (" " + c["pk"]) if c.get("pk") else ""),
+                          "kw": " ".join(x for x in [c["b"], c.get("en", ""), c["code"], c["code"].replace("-", " "), c["set"], c["r"], c.get("v", ""), c.get("pk", ""), OPKW,
+                                                     "psa10 鑑定" if psa else "裸卡", "美版 英文 us en" if en else "日版 jp"] if x),
+                          "num": c["code"], "set": st, "rar": c["r"] or "-", "p": 1 if psa else 0, "b": 0, "img": None, "m": None, "op": 1, **({"en": 1} if en else {}),
+                          "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "",
+                          "mq": "%s %s%s" % (c["code"], c["r"] or "", " PSA10" if psa else ""), "cn": None, "sold": 0,
+                          "cat": "%s【%s】{%s} [%s]%s" % (disp, c["r"] or "-", c["code"], st, "_PSA10" if psa else ""), "jn": c["b"]})
+            if d.get("k"):
+                EXTRA_K[kk] = d["k"]
+            no += 1
+    print("one piece", no)
 
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
@@ -420,12 +458,12 @@ print("cutout images", ncut)
 print("hi-res images", nhi)
 
 # 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
-json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {}), **({"en": 1, "jn": q["j"]} if q.get("en") else {})}
-           for q in prods if q["k"][:2] in ("x:", "j:", "e:") and q.get("s")],
+json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {}), **({"en": 1, "jn": q["j"]} if q.get("en") else {}), **({"op": 1} if q.get("op") else {})}
+           for q in prods if q["k"][:2] in ("x:", "j:", "e:", "o:") and q.get("s")],
           open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 # 美版另外給網站用
 json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["j"], "zh": q.get("zh", ""), "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
-            "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", "")} for q in prods if q.get("us")]},
+            "m": q["um"], "img": q.get("uimg"), "url": q.get("uurl"), "kw": q.get("kw", ""), **({"op": 1} if q.get("op") else {})} for q in prods if q.get("us")]},
           open(os.path.join(out, "us.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 for p in prods:
     p.pop("cat", None); p.pop("uimg", None); p.pop("jn", None); p.pop("zh", None)

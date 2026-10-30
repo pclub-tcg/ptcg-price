@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""在 GitHub Actions 上執行：從 tcgcsv.com（每天同步 TCGplayer）抓美版寶可夢的市場價，並累積每日價格。
+"""在 GitHub Actions 上執行：從 tcgcsv.com（每天同步 TCGplayer）抓美版寶可夢與海賊王的市場價，並累積每日價格。
 只收：卡片市場價 ≥ US$5、未拆商品（盒、ETB 等）市場價 ≥ US$20。
 輸出 us.json：{"updated", "items": [{id, n 名稱, set, num, r 稀有度, t c卡/s未拆, img, url, v 版本, m 市場價, l 最低價, k: [起始日, 價格(美分), 間隔天數, 價格...]}]}
 用法：python3 fetch_us.py <舊 us.json 或空字串> <輸出 us.json>"""
@@ -24,12 +24,15 @@ if sys.argv[1] and os.path.exists(sys.argv[1]):
     old = {str(x["id"]): x for x in json.load(open(sys.argv[1]))["items"]}
 today = int((time.time() + 8 * 3600) // 86400)
 items = []
-groups = get("https://tcgcsv.com/tcgplayer/3/groups")["results"]
+groups = []
+# 3＝寶可夢、68＝海賊王（ONE PIECE CARD GAME）
+for cat in (3, 68):
+    groups += [dict(g, _cat=cat) for g in get("https://tcgcsv.com/tcgplayer/%d/groups" % cat)["results"]]
 for g in groups:
-    gid = g["groupId"]
+    gid, cat = g["groupId"], g["_cat"]
     try:
-        prods = {p["productId"]: p for p in get("https://tcgcsv.com/tcgplayer/3/%d/products" % gid)["results"]}
-        prices = get("https://tcgcsv.com/tcgplayer/3/%d/prices" % gid)["results"]
+        prods = {p["productId"]: p for p in get("https://tcgcsv.com/tcgplayer/%d/%d/products" % (cat, gid))["results"]}
+        prices = get("https://tcgcsv.com/tcgplayer/%d/%d/prices" % (cat, gid))["results"]
     except Exception as e:
         print("fail group", gid, e)
         continue
@@ -50,7 +53,7 @@ for g in groups:
             continue
         it = {"id": pid, "n": p.get("name", ""), "set": g["name"], "num": ext.get("Number", ""), "r": ext.get("Rarity", ""),
               "t": "c" if card else "s", "img": (p.get("imageUrl") or "").replace("_200w.jpg", "_400w.jpg"),
-              "url": p.get("url", ""), "v": sub, "m": round(m, 2), "l": round(low, 2) if low else None}
+              "url": p.get("url", ""), "v": sub, "m": round(m, 2), "l": round(low, 2) if low else None, **({"ip": "op"} if cat == 68 else {})}
         # 累積每日價格（美分）
         pts = []
         o = old.get(str(pid))

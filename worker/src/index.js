@@ -429,7 +429,7 @@ function bubble(p, D, env) {
   const c = calc(p, D), site = env.SITE_URL, R = D.rate, FX = p.fx || R;
   const grade = p.b ? (p.us ? "未拆" : "原盒") : p.p ? "PSA10" : "裸卡";
   let title = String(p.n).replace(/\s*PSA\s*10/i, "").replace(p.num ? new RegExp("\\s*" + p.num.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")) : /$^/, "").trim() || p.n;
-  const chips = [opill(grade, true), opill(p.us || p.en ? "美版" : "日版"), ...(p.rar && p.rar !== "-" && p.rar !== "BOX" ? [opill(p.rar)] : []), ...(p.set || p.num ? [opill([p.set, p.num].filter(Boolean).join(" "))] : [])];
+  const chips = [opill(grade, true), ...(p.op ? [opill("海賊王")] : []), opill(p.us || p.en ? (p.op ? "英文版" : "美版") : "日版"), ...(p.rar && p.rar !== "-" && p.rar !== "BOX" ? [opill(p.rar)] : []), ...(p.set || p.num ? [opill(p.op ? p.num : [p.set, p.num].filter(Boolean).join(" "))] : [])];
   // 主價格
   let lab, main, subp;
   if (p.us) { lab = "TCGplayer 市場價"; main = p.um ? p.um * (D.usd || 32) : null; subp = p.um ? "US$" + p.um.toFixed(2) : ""; }
@@ -440,9 +440,9 @@ function bubble(p, D, env) {
   const img = p.img ? [{ type: "box", layout: "vertical", width: "84px", flex: 0, cornerRadius: "6px", borderWidth: "1.5px", borderColor: "#9A6A44", contents: [{ type: "image", url: new URL(p.img, site).href, aspectRatio: "5:7", aspectMode: "cover", size: "full" }] }] : [];
   const head = { type: "box", layout: "horizontal", spacing: "lg", paddingAll: "14px", paddingBottom: "10px", background: { type: "linearGradient", angle: "160deg", startColor: "#3A2418", endColor: K.bg }, contents: [...img,
     { type: "box", layout: "vertical", flex: 1, spacing: "xs", contents: [
-      T(p.us ? "P’CLUB・美國行情" : "P’CLUB・日本行情", { size: "xxs", weight: "bold", color: K.or }),
+      T(p.op ? (p.us ? "P’CLUB・海賊王・美國行情" : "P’CLUB・海賊王行情") : p.us ? "P’CLUB・美國行情" : "P’CLUB・日本行情", { size: "xxs", weight: "bold", color: K.or }),
       T(title, { size: "lg", weight: "bold", color: K.cream, wrap: true, maxLines: 2 }),
-      { type: "box", layout: "horizontal", spacing: "xs", contents: chips.slice(0, 4) },
+      { type: "box", layout: "horizontal", spacing: "xs", contents: chips.slice(0, 5) },
       { type: "box", layout: "vertical", flex: 1, contents: [] },
       T(lab, { size: "xxs", color: K.mute, weight: "bold", margin: "sm" }),
       { type: "box", layout: "baseline", spacing: "sm", contents: [T(main != null ? nt(main) : "—", { size: "xxl", weight: "bold", color: K.or, flex: 0 }), T(subp, { size: "xxs", color: K.dim, flex: 0 })] },

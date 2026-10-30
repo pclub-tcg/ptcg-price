@@ -1,0 +1,31 @@
+name: 更新海賊王卡行情
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "52 22 * * *"   # 每天台灣時間 06:52
+  push:
+    branches: [main]
+    paths: [tools/fetch_op.py, .github/workflows/op.yml]
+permissions:
+  contents: write
+jobs:
+  op:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: 取出前一天的資料（分天輪流更新用）
+        run: |
+          mkdir -p /tmp/old /tmp/out
+          if git fetch -q origin opdata; then git --work-tree=/tmp/old checkout FETCH_HEAD -- op.json || true; fi
+      - name: 抓 SNKRDUNK 海賊王卡（日版＋英文版，有成交的）
+        env:
+          BUDGET_MIN: "200"
+        run: python3 tools/fetch_op.py /tmp/out/op.json /tmp/old/op.json 2>&1 | tail -40 | tee /tmp/out/log.txt
+      - name: 推到 opdata 分支
+        run: |
+          cd /tmp/out
+          git init -q -b opdata
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -qm "海賊王卡行情"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" opdata
