@@ -5,7 +5,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(dirname "$HERE")"
 OUT="$(mktemp -d)"
-REMOTE="$(git -C "$REPO" remote get-url origin)"
+REMOTE="${PUSH_URL:-$(git -C "$REPO" remote get-url origin)}"
 # 商品大圖在 img 分支（GitHub Actions 下載的）
 IMGDIR="$(mktemp -d)"
 if git -C "$REPO" fetch -q origin img 2>/dev/null; then git -C "$REPO" --work-tree="$IMGDIR" checkout FETCH_HEAD -- . && git -C "$REPO" reset -q; fi

@@ -1,0 +1,35 @@
+name: 每日發布網站
+# 每天 10:41（台灣時間）用 tpl 分支的網站模板＋各資料分支，跑 tools/publish.sh 產生網站並推到 site 分支（GitHub Pages）。
+# 網站更新後，worker.yml 會自動把資料同步到 LINE 機器人的 D1 資料庫。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 2 * * *"   # 每天台灣時間 10:41
+permissions:
+  contents: write
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝中文字型與 Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-cjk-extra > /dev/null
+          pip install -q pillow
+          ls /usr/share/fonts/opentype/noto/ | grep -c NotoSansCJK
+      - name: 取出網站模板（tpl 分支）
+        run: |
+          mkdir -p /tmp/tpl
+          git fetch -q --depth 1 origin tpl
+          git --work-tree=/tmp/tpl checkout FETCH_HEAD -- .
+          git reset -q
+          ls /tmp/tpl /tmp/tpl/sprites | head
+      - name: 產生網站並推到 site 分支
+        env:
+          PUSH_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: bash tools/publish.sh /tmp/tpl/index.html /tmp/tpl/kline.json /tmp/tpl/sprites 2>&1 | tail -15
