@@ -404,5 +404,20 @@ rep('if(Object.values(SNK.cards).some(c=>c.id===e.sid&&c!==SNK.cards[e.n]))conti
 # 16. 補進來的卡（非原盒）不要寫「SNKRDUNK 原盒」
 rep('${o.extra?"SNKRDUNK 原盒（TCG Japan 未販售）":', '${o.extra?(o.box?"SNKRDUNK 原盒（TCG Japan 未販售）":o.op?"SNKRDUNK 成交價":"SNKRDUNK 成交價（TCG Japan 未販售）"):')
 
+# 17. 海賊王日版補 TCG Japan（extra.json 的 tj 欄位）：台幣售價、商品圖、商品頁連結；SNKRDUNK 沒有的卡也列出來
+rep('SNK.cards[e.n]={id:e.sid,s:Array(e.c).fill(e.m)};if(ex)continue;', 'if(e.sid)SNK.cards[e.n]={id:e.sid,s:Array(e.c).fill(e.m)};if(ex)continue;')
+rep('if(Object.entries(SNK.cards).some(([k,c])=>c.id===e.sid&&', 'if(e.sid&&Object.entries(SNK.cards).some(([k,c])=>c.id===e.sid&&')
+rep('o.store=sUrl(e.sid);o.mq=e.mq||null;', 'o.store=e.sid?sUrl(e.sid):"";if(e.tj){o.tj=e.tj;o.price=e.tj.p;o.sold=!e.tj.q&&!e.sid;}o.mq=e.mq||null;')
+rep('function crow(o,P){if(o.us)return urow(o);', 'const TJU=u=>"https://store.tcg-japan.com/zh-hant/items/"+u+"?tradeMode=store";\nfunction crow(o,P){if(o.us)return urow(o);')
+rep(':`<span class="cimg none">卡圖補拍中</span>`;\n  return `<div class="crow',
+    ':o.tj&&o.tj.img?`<img class="cimg" src="${esc(o.tj.img)}" alt="${esc(o.base)} 商品圖" loading="lazy" style="object-fit:contain;background:#fff">`:`<span class="cimg none">卡圖補拍中</span>`;\n  return `<div class="crow')
+rep('${o.extra?"":`<a href="${o.store}" target="_blank" rel="noopener">TCG Japan ›</a>`}',
+    '${o.tj?`<a href="${TJU(o.tj.u)}" target="_blank" rel="noopener">TCG Japan ›</a>`:o.extra?"":`<a href="${o.store}" target="_blank" rel="noopener">TCG Japan ›</a>`}')
+rep('<span class="lbl">${o.extra?(o.box?', '<span class="lbl">${o.tj?`${o.sid||SNK.cards[o.n]?"SNKRDUNK 成交價｜":""}TCG Japan 售價 ${o.tj.q?N(o.tj.p):"售完"}`:o.extra?(o.box?')
+# 詳情：圖片、TCG Japan 商品頁
+rep('imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?sprBox(o.spr,84):"";}',
+    'imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?sprBox(o.spr,84):o.tj&&o.tj.img?`<img src="${esc(o.tj.img)}" alt="" style="background:#fff">`:"";}')
+rep('if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}', 'if(o.tj)links.push([TJU(o.tj.u),"TCG Japan 商品頁"]);else if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")

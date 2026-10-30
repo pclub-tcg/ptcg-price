@@ -297,6 +297,35 @@ if op_path and os.path.exists(op_path):
             no += 1
     print("one piece", no)
 
+# 4g. 海賊王日版補 TCG Japan（publish.sh 每次發佈時抓，TJ_DATA 傳進來）：繁中卡名、台幣售價、商品圖
+#     SNKRDUNK 已有同一張（卡號＋稀有度＋裸卡／PSA10 對得上、只有一筆）就把 TCG Japan 售價和圖掛上去；沒有就另外列一筆
+TJ_OF, TJ_ROWS = {}, []
+tj_path = os.environ.get("TJ_DATA")
+if tj_path and os.path.exists(tj_path) and os.path.getsize(tj_path) > 0:
+    def _nr(r):
+        return re.sub(r"\s+", "", (r or "").replace("/", "-").replace("SP CARD", "SP")).upper()
+    opj = {}
+    for q in prods:
+        if q.get("op") and not q.get("en"):
+            opj.setdefault((q["num"], _nr(q["rar"]), q["p"]), []).append(q)
+    nm, na = 0, 0
+    for t in json.load(open(tj_path, encoding="utf-8"))["items"]:
+        info = {"u": t["u"], "p": t["p"], "q": t["q"], "img": t["img"]}
+        c = opj.get((t["code"], _nr(t["r"]), t["psa"])) or []
+        if len(c) > 1:  # 同卡號同稀有度好幾種（漫畫背景、和風異圖…）：只掛沒有額外標記的那張
+            c = [q for q in c if not re.search(r"漫畫背景|和風異圖|修正前|特典", q["n"])]
+        if len(c) == 1 and c[0]["k"] not in TJ_OF:
+            TJ_OF[c[0]["k"]] = info
+            nm += 1
+            continue
+        st = t["code"].split("-")[0]
+        TJ_ROWS.append({"n": "%s【%s】{%s} [%s]%s" % (t["n"], t["r"], t["code"], st, "_PSA10" if t["psa"] else ""), "sid": None, "m": None, "c": 0, "op": 1,
+                        "kw": " ".join(x for x in [t["code"], t["code"].replace("-", " "), st, t["r"], ("再版 " + t["rs"]) if t["rs"] else "", OPKW,
+                                                    "psa10 鑑定" if t["psa"] else "裸卡", "日版 jp"] if x),
+                        "mq": "%s %s%s" % (t["code"], t["r"].replace("/", "-"), " PSA10" if t["psa"] else ""), "tj": info})
+        na += 1
+    print("tcg japan one piece: matched", nm, "added", na)
+
 # 5. 走勢圖（給 LINE 卡片用，噴火龍配色）＋ 統計數字
 from PIL import ImageDraw, ImageFont
 import datetime
@@ -459,8 +488,8 @@ print("cutout images", ncut)
 print("hi-res images", nhi)
 
 # 8. 網站目錄要額外加的列：額外原盒＋日版高稀有度卡（名稱用目錄格式）
-json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {}), **({"en": 1, "jn": q["j"]} if q.get("en") else {}), **({"op": 1} if q.get("op") else {})}
-           for q in prods if q["k"][:2] in ("x:", "j:", "e:", "o:") and q.get("s")],
+json.dump([{"n": q.get("cat") or q["n"], "sid": q["sid"], "m": q["s"][0], "c": q["s"][1], "kw": q["kw"], "mq": q["mq"], **({"jn": q["jn"]} if q.get("jn") else {}), **({"en": 1, "jn": q["j"]} if q.get("en") else {}), **({"op": 1} if q.get("op") else {}), **({"tj": TJ_OF[q["k"]]} if q["k"] in TJ_OF else {})}
+           for q in prods if q["k"][:2] in ("x:", "j:", "e:", "o:") and q.get("s")] + TJ_ROWS,
           open(os.path.join(out, "extra.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 # 美版另外給網站用
 json.dump({"usd": USD, "items": [{"id": int(q["k"][2:]), "n": q["j"], "zh": q.get("zh", ""), "set": q["set"], "num": q.get("num", ""), "r": q.get("rar", ""), "t": "s" if q.get("b") else "c",
