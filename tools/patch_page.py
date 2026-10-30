@@ -388,5 +388,8 @@ document.getElementById("q")&&document.getElementById("q").addEventListener("inp
 </script>
 """
 
+# 15. 補進來的日版卡：同一張卡的裸卡和 PSA10 都要顯示（原本同一個 SNKRDUNK id 只留一筆）
+rep('if(Object.values(SNK.cards).some(c=>c.id===e.sid&&c!==SNK.cards[e.n]))continue;', 'const ep=/PSA10/i.test(e.n);if(Object.entries(SNK.cards).some(([k,c])=>c.id===e.sid&&k!==e.n&&/PSA10/i.test(k)===ep))continue;')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
