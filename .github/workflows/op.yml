@@ -2,7 +2,7 @@ name: 更新海賊王卡行情
 on:
   workflow_dispatch:
   schedule:
-    - cron: "52 22 * * *"   # 每天台灣時間 06:52
+    - cron: "37 23 * * *"   # 每天台灣時間 07:37（跟寶可夢日版卡同時）
   push:
     branches: [main]
     paths: [tools/fetch_op.py, .github/workflows/op.yml]
