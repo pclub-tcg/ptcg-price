@@ -401,5 +401,8 @@ document.getElementById("q")&&document.getElementById("q").addEventListener("inp
 # 15. 補進來的日版卡：同一張卡的裸卡和 PSA10 都要顯示（原本同一個 SNKRDUNK id 只留一筆）
 rep('if(Object.values(SNK.cards).some(c=>c.id===e.sid&&c!==SNK.cards[e.n]))continue;', 'const ep=/PSA10/i.test(e.n);if(Object.entries(SNK.cards).some(([k,c])=>c.id===e.sid&&k!==e.n&&/PSA10/i.test(k)===ep))continue;')
 
+# 16. 補進來的卡（非原盒）不要寫「SNKRDUNK 原盒」
+rep('${o.extra?"SNKRDUNK 原盒（TCG Japan 未販售）":', '${o.extra?(o.box?"SNKRDUNK 原盒（TCG Japan 未販售）":o.op?"SNKRDUNK 成交價":"SNKRDUNK 成交價（TCG Japan 未販售）"):')
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
