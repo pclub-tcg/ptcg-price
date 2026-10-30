@@ -163,7 +163,15 @@ async function handle(ev, env) {
     const hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
-    return reply(env, ev.replyToken, [head, await oneCard(hits, label, false, D, env)]);
+    const card = await oneCard(hits, label, false, D, env);
+    // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
+    const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
+    for (const x of hits.slice(1)) { const key = baseName(x.n) + "|" + norm(x.num); if (seen.has(key)) continue; seen.add(key); cands.push(x); }
+    if (cands.length && (r.confidence !== "high" || !fixNum(r.number))) {
+      head.text += "\n\n不是這張？點下方的候選卡 👇";
+      card.quickReply = { items: [...cands.slice(0, 6).map(x => { const l = (baseName(x.n) + " " + (x.num || "")).trim(); return { type: "action", action: { type: "message", label: l.length > 20 ? l.slice(0, 19) + "…" : l, text: (x.n || "").slice(0, 280) } }; }), ...alertQuick(hits[0]), ...QUICK].slice(0, 13) };
+    }
+    return reply(env, ev.replyToken, [head, card]);
   }
 }
 
@@ -240,12 +248,27 @@ const RANK_SQL = {
   psa: "us = 0 AND p = 1 AND k1 > 0 ORDER BY COALESCE(c30, -99) DESC LIMIT 30",
 };
 async function dbRank(k, env) { return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE " + RANK_SQL[k]).all()); }
+// 看圖讀到的卡號容錯：全形→半形、O→0、I/l→1、S→5、B→8（只改數字的位置），補前導 0
+function fixNum(s) {
+  const n = norm(s).replace(/\s/g, "").replace(/[‐‑–—ー－]/g, "-").replace(/^no\.?/, "");
+  const dig = t => t.replace(/o/g, "0").replace(/[il|]/g, "1").replace(/s/g, "5").replace(/b/g, "8");
+  const op = n.match(/^(op|eb|st|prb)-?([0-9oilsb]{2})-?([0-9oilsb]{3})$/);
+  if (op) return `${op[1]}${dig(op[2])}-${dig(op[3])}`;
+  const pp = n.match(/^p-?([0-9oilsb]{3})$/);
+  if (pp) return "p-" + dig(pp[1]);
+  const m = n.match(/^([0-9oils|b]{1,3})\/([0-9a-z-]+)$/);
+  if (m) { const b = /^[0-9oilsb]+$/.test(m[2]) ? dig(m[2]).padStart(3, "0") : m[2]; return dig(m[1]).padStart(3, "0") + "/" + b; }
+  return n;
+}
+const numHead = n => { const m = String(n || "").match(/^0*(\d{1,3})\//); return m ? m[1] : ""; };
 async function dbImage(r, env) {
   if (r.box) return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 1").all());
-  const num = norm(r.number).replace(/\s/g, ""), zh = String(r.name_zh || "").trim();
+  const raw = norm(r.number).replace(/\s/g, ""), num = fixNum(r.number), zh = String(r.name_zh || "").trim(), ja = norm(r.name_ja || "").replace(/\s/g, "");
   const conds = [], args = [];
-  if (num) { conds.push("numn = ?"); args.push(num); }
+  if (num) { conds.push("numn IN (?, ?)"); args.push(num, raw); }
+  if (numHead(num)) { conds.push("n0 = ?"); args.push(numHead(num)); } // 分母讀錯時，用分子＋卡名／系列再比一次
   if (zh) { conds.push("h LIKE ? ESCAPE '\\'"); args.push("%" + esc(norm(zh)) + "%"); }
+  if (ja.length >= 2) { conds.push("h LIKE ? ESCAPE '\\'"); args.push("%" + esc(ja) + "%"); }
   if (!conds.length) return [];
   return rowsTo(await env.DB.prepare(`SELECT j FROM products WHERE us = 0 AND b = 0 AND (${conds.join(" OR ")}) LIMIT 500`).bind(...args).all());
 }
@@ -321,29 +344,32 @@ function search(q, D) {
 }
 
 function matchImage(r, D) {
-  const nz = norm, num = nz(r.number).replace(/\s/g, ""), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim();
+  const nz = norm, num = fixNum(r.number), head = numHead(num), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
   const wantPsa = /PSA\s*10/i.test(r.grade || "");
   const sc = D.products.map(p => {
     let s = 0;
     if (r.box) { if (!p.b) return [p, -1]; const bn = nz(r.box_name_ja).replace(/box$/, ""); if (zh && p.n.includes(zh)) s += 6; if (bn && p.h.includes(bn)) s += 6; return [p, s]; }
     if (p.b) return [p, -1];
-    const pn = nz(p.num);
-    if (num && pn === num) s += 6; else if (num) s -= 3;
+    const pn = fixNum(p.num);
+    if (num && pn === num) s += 6; else if (head && numHead(pn) === head) s += 2; else if (num) s -= 3;
+    if (ja.length >= 2 && p.h.includes(ja)) s += 3;
     if (set && nz(p.set) === set) s += 3;
     if (rar && String(p.rar || "").toUpperCase() === rar) s += 1;
     if (zh && p.h.includes(norm(zh))) s += 3;
     if (wantPsa === !!p.p) s += 2;
     return [p, s];
   });
-  const exact = num ? sc.filter(x => !x[0].b && nz(x[0].num) === num && x[1] >= 6) : [];
+  const exact = num ? sc.filter(x => !x[0].b && fixNum(x[0].num) === num && x[1] >= 6) : [];
   return (exact.length ? exact : sc.filter(x => x[1] >= 6)).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
 }
 
 // ---------- Claude 看圖 ----------
-const PROMPT = `You are identifying a Japanese Pokémon Trading Card Game product from a photo (it may be a raw card, a graded slab such as PSA, or a sealed booster box).
-Read the card number printed at the bottom (e.g. "132/106", "143/S-P", "020/M-P"), the set code (e.g. "SV8", "SV2a", "M2a", "s8b", "S-P"), the rarity mark (e.g. SAR, SR, AR, UR, HR, MUR, MA, CHR, CSR, RR, C, U, R, P) and the Pokémon or trainer name. If it is in a grading slab, read the grade from the label.
+const PROMPT = `You are identifying a Japanese trading card product from a photo: either a Pokémon Card Game card or a ONE PIECE Card Game card (it may be a raw card, a graded slab such as PSA, or a sealed booster box).
+Pokémon: read the card number printed at the bottom left (e.g. "132/106", "143/S-P", "020/M-P"), the set code next to it (e.g. "SV8", "SV2a", "M2a", "s8b"), the rarity mark (e.g. SAR, SR, AR, UR, HR, MUR, MA, CHR, CSR, RR, C, U, R, P) and the Pokémon or trainer name.
+ONE PIECE: the card code is printed at the bottom right, like "OP01-120", "EB01-003", "ST10-006", "PRB01-001" or "P-001" — put the whole code in "number" and the prefix (e.g. "OP01") in "set"; rarity is L, SEC, SR, R, UC, C, SP or P; the character name is in katakana at the bottom.
+Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label.
 Reply with only one JSON object and nothing else:
-{"name_ja": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
+{"game": "pokemon/onepiece", "name_ja": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
 
 // Cloudflare Workers AI（免費額度）能看圖的模型，依序嘗試
 const CF_MODELS = ["@cf/meta/llama-4-scout-17b-16e-instruct", "@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/google/gemma-3-12b-it"];
