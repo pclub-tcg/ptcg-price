@@ -367,14 +367,22 @@ rep('筆有賺頭｜依報酬率排序', '筆價差大｜依價差比例排序')
 h = h.replace("不能直接套利", "不能直接比價")
 
 # 14. 卡片目錄分「寶可夢／海賊王」（extra.json、us.json 的 op 欄位）；搜尋時兩種都找
-rep('<h2 class="sec" id="ctitle">卡片目錄</h2>', '<div class="ipseg" role="group" aria-label="卡牌種類"><button type="button" data-ip="pk" aria-pressed="true"><span>⚡</span>寶可夢</button><button type="button" data-ip="op" aria-pressed="false"><span>🏴‍☠️</span>海賊王</button></div>\n  <h2 class="sec" id="ctitle">卡片目錄</h2>')
+rep('<h2 class="sec" id="ctitle">卡片目錄</h2>', '<div class="ipseg" role="group" aria-label="卡牌種類"><button type="button" data-ip="pk" aria-pressed="true"><span class="ic">⚡</span><span class="tx"><b>寶可夢</b><small id="ipn-pk">&nbsp;</small></span></button><button type="button" data-ip="op" aria-pressed="false"><span class="ic">☠️</span><span class="tx"><b>海賊王</b><small id="ipn-op">&nbsp;</small></span></button></div>\n  <h2 class="sec" id="ctitle">卡片目錄</h2>')
 rep('o.extra=1;o.jn=e.jn||"";', 'o.extra=1;o.op=e.op?1:0;if(o.op)o.hay+=" 海賊王 航海王 one piece";o.jn=e.jn||"";')
 rep('ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,x,', 'ROWS.push({ix:ROWS.length,n:"us:"+x.id,us:1,op:x.op?1:0,x,')
 rep('let list=ROWS.filter(o=>{if(cf.us&&!o.us&&!o.en)return false;', 'let list=ROWS.filter(o=>{if(!q&&(window.IP==="op")!==!!o.op)return false;if(cf.us&&!o.us&&!o.en)return false;')
-rep('</style>\n\n<header class="bar">', """.ipseg{display:inline-flex;background:var(--surface);border-radius:16px;padding:5px;gap:4px;box-shadow:var(--shadow);margin:0 0 14px}
-.ipseg button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:900;font-size:15px;padding:9px 20px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.ipseg button[aria-pressed="true"]{background:var(--navy);color:var(--brand)}
-.ipseg.dim{opacity:.55}
+rep('</style>\n\n<header class="bar">', """.ipseg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:26px 0 18px}
+.ipseg button{border:2px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;border-radius:18px;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px;text-align:left;box-shadow:var(--shadow);transition:transform .15s,border-color .15s,background .15s;min-height:72px}
+.ipseg button:hover{transform:translateY(-2px)}
+.ipseg .ic{width:44px;height:44px;border-radius:14px;background:var(--surface-2);display:grid;place-items:center;font-size:22px;flex:none}
+.ipseg .tx{display:flex;flex-direction:column;min-width:0}
+.ipseg b{font-size:17px;font-weight:900;line-height:1.2}
+.ipseg small{font-size:12px;color:var(--muted);font-family:var(--f-num);margin-top:2px}
+.ipseg button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff3e4}
+.ipseg button[aria-pressed="true"] .ic{background:var(--brand)}
+.ipseg button[aria-pressed="true"] small{color:#d9bfa6}
+.ipseg.dim button[aria-pressed="true"]{background:var(--surface);color:var(--ink);border-color:var(--brand)}
+@media (max-width:480px){.ipseg{gap:8px}.ipseg button{padding:10px 12px;gap:10px;min-height:64px}.ipseg .ic{width:38px;height:38px;font-size:19px}.ipseg b{font-size:16px}}
 </style>
 
 <header class="bar">""")
@@ -382,7 +390,9 @@ h += """
 <script>
 (function(){let ip="pk";try{ip=localStorage.getItem("ip")||"pk"}catch(e){}if(new URLSearchParams(location.search).get("ip")==="op")ip="op";window.IP=ip;
 const seg=document.querySelector(".ipseg");if(!seg)return;const T={pk:"寶可夢卡片目錄",op:"海賊王卡片目錄"};
-function sync(){seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===window.IP));const q=document.getElementById("q");seg.classList.toggle("dim",!!(q&&q.value.trim()))}
+function cnt(){try{let a=0,b=0;for(const o of ROWS){if(o.op)b++;else a++}const f=n=>n.toLocaleString("en-US")+" 項商品";document.getElementById("ipn-pk").textContent=f(a);document.getElementById("ipn-op").textContent=f(b)}catch(e){}}
+setInterval(cnt,1500);setTimeout(cnt,300);
+function sync(){cnt();seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===window.IP));const q=document.getElementById("q");seg.classList.toggle("dim",!!(q&&q.value.trim()))}
 seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{window.IP=b.dataset.ip;try{localStorage.setItem("ip",window.IP)}catch(e){}const q=document.getElementById("q");if(q&&q.value.trim()){q.value="";}sync();try{render(true)}catch(e){try{render()}catch(_){}}});
 document.getElementById("q")&&document.getElementById("q").addEventListener("input",sync);sync();})();
 </script>
