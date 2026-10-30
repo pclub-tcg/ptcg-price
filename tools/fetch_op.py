@@ -128,10 +128,7 @@ def due(sid):
     o = OLD.get(sid)
     if sid in SKIP:
         return (TODAY - SKIP[sid]) >= 7 and sid % 3 == TODAY % 3
-    if not o:
-        return True
-    hi = max(((o.get("a") or {}).get("s") or [0])[0], ((o.get("p") or {}).get("s") or [0])[0])
-    return hi >= 3000 or sid % 3 == TODAY % 3
+    return True  # 有成交的海賊王卡每天都更新（沒成交／普通卡才分 7 天重查）
 
 
 def one(sid):
