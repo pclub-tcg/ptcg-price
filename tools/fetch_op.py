@@ -65,9 +65,14 @@ def parse(loc):
             "code": "%s-%s" % (m.group(1), m.group(2)), "lang": lang, "pk": pk}
 
 
+PROMO_PK = re.compile(r"プロモ|記念|応募|コレクション|プレミアム|ジャンプ|大会|Fest|フラッグシップ|チャンピオンシップ|イラストレーション|限定")
+
+
 def common(c):
+    """一般版的 C／UC／R／L 不抓；特典、異圖、-P／-SP 版照抓"""
     base = (c.get("r") or "").split("-")[0]
-    return base in COMMON and "-" not in (c.get("r") or "") and not c.get("v") and c.get("set") != "P"
+    return (base in COMMON and "-" not in (c.get("r") or "") and not c.get("v") and c.get("set") != "P"
+            and not PROMO_PK.search(c.get("pk") or ""))
 
 
 T0 = time.time()
