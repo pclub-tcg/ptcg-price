@@ -11,6 +11,7 @@
 import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.js";
 import { marketApi, marketCron, marketToken } from "./market.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
+import { announceText, announcePostback } from "./announce.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -102,6 +103,8 @@ const RANK = {
 async function handle(ev, env) {
   if (ev.type === "follow") return reply(env, ev.replyToken, guide(env));
   if (ev.type === "postback" && ev.replyToken && ev.source && ev.source.userId) {
+    const ab = await announcePostback(env, ev.source.userId, ev.postback && ev.postback.data);
+    if (ab) return reply(env, ev.replyToken, ab);
     const D = await base(env), r = D.db ? await alertPostback(env, ev.source.userId, ev.postback && ev.postback.data, D, rowsTo) : null;
     if (r) return reply(env, ev.replyToken, r);
     return;
@@ -110,6 +113,7 @@ async function handle(ev, env) {
   const D = await base(env);
   if (ev.message.type === "text") {
     let q = ev.message.text.trim();
+    if (env.DB && ev.source && ev.source.userId) { const r = await announceText(env, ev.source.userId, q); if (r) return reply(env, ev.replyToken, r); }
     if (D.db && ev.source && ev.source.userId) { const r = await alertText(env, ev.source.userId, q, D, rowsTo); if (r) return reply(env, ev.replyToken, r); }
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);

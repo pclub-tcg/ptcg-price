@@ -35,6 +35,7 @@ cp "$HERE/market.html" "$OUT/market.html"
 [ -s "$TJ" ] && cp "$TJ" "$OUT/tcgj_op.json"
 [ -s "$OUT/data/d1.sql" ] && cp "$OUT/data/d1.sql" /tmp/d1.sql
 mkdir -p "$OUT/icons" && cp "$HERE"/icons/*.png "$OUT/icons/"
+mkdir -p "$OUT/announce" && cp "$HERE"/announce/*.jpg "$OUT/announce/"
 touch "$OUT/.nojekyll"
 cd "$OUT"
 git init -q -b site
