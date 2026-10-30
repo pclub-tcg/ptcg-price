@@ -273,7 +273,8 @@ if op_path and os.path.exists(op_path):
         en = c.get("lang") == "en"
         zh = op2zh(c["b"])
         name = zh or c["b"]
-        tags = [VAR.get(c["v"], c["v"])] if c.get("v") else []
+        v = c.get("v") or ""
+        tags = [VAR.get(v) or ("和風異圖" if "和柄" in v else "漫畫背景" if "コミパラ" in v else "異圖" if "パラレル" in v else v)] if v else []
         if PROMO_PK.search(c.get("pk") or ""):
             tags.append("特典")
         disp = " ".join([name] + tags)

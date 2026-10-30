@@ -382,7 +382,7 @@ h += """
 <script>
 (function(){let ip="pk";try{ip=localStorage.getItem("ip")||"pk"}catch(e){}if(new URLSearchParams(location.search).get("ip")==="op")ip="op";window.IP=ip;
 const seg=document.querySelector(".ipseg");if(!seg)return;const T={pk:"寶可夢卡片目錄",op:"海賊王卡片目錄"};
-function sync(){seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===window.IP));const t=document.getElementById("ctitle");if(t)t.textContent=T[window.IP];const q=document.getElementById("q");seg.classList.toggle("dim",!!(q&&q.value.trim()))}
+function sync(){seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===window.IP));const q=document.getElementById("q");seg.classList.toggle("dim",!!(q&&q.value.trim()))}
 seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{window.IP=b.dataset.ip;try{localStorage.setItem("ip",window.IP)}catch(e){}const q=document.getElementById("q");if(q&&q.value.trim()){q.value="";}sync();try{render(true)}catch(e){try{render()}catch(_){}}});
 document.getElementById("q")&&document.getElementById("q").addEventListener("input",sync);sync();})();
 </script>
