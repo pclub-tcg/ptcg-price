@@ -135,13 +135,22 @@ def ic_gavel(cx, cy, c):
     d.polygon(rect(cx + 38, cy + 28, 150, 26, 45), fill=c)             # 握柄（跟槌頭垂直）
     d.rounded_rectangle([cx - 124, cy + 92, cx + 6, cy + 118], 10, fill=c)  # 底座
 
+def ic_shop(cx, cy, c):  # 小店面：遮雨棚＋店身＋門
+    w = 92
+    d.polygon([(cx - w - 14, cy - 40), (cx - w + 6, cy - 104), (cx + w - 6, cy - 104), (cx + w + 14, cy - 40)], fill=c)
+    for i in range(4):  # 遮雨棚下緣的半圓
+        x = cx - w - 14 + i * (2 * w + 28) / 4
+        d.pieslice([x, cy - 66, x + (2 * w + 28) / 4, cy - 14], 0, 180, fill=c)
+    d.rectangle([cx - w + 8, cy - 30, cx + w - 8, cy + 104], outline=c, width=16)
+    d.rectangle([cx - 26, cy + 26, cx + 26, cy + 104], fill=c)
+
 TILES = [
     ("拍照查價", "拍卡號自動辨識", ic_cam, (255, 244, 228), CHAR),
     ("競標市場", "出價・上架自己的卡", ic_gavel, EMBER, WHITE),
     ("漲最多", "30 天漲幅排行", ic_up, TEAL, WHITE),
     ("原盒行情", "成交價高到低", ic_box, CHAR2, GOLD),
     ("鑑定卡行情", "PSA10 漲跌", ic_slab, CHAR2, GOLD),
-    ("匯率試算", "日圓換到手成本", ic_fx, (255, 244, 228), CHAR),
+    ("玩家市集", "刊登・直購・議價", ic_shop, (255, 244, 228), CHAR),
 ]
 areas = [("text:查價", (G, G, 1152, 960)), ("uri:site", B1), ("text:說明", B2)]
 for i, (title, sub, ic, bg, fg) in enumerate(TILES):

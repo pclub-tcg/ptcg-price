@@ -9,6 +9,7 @@
 //   ADMIN_KEY 選填：重建圖文選單 /setup/richmenu?key=… 用的密碼；沒設就關閉這個網址
 
 import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.js";
+import { marketApi, marketCron, marketToken } from "./market.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -18,6 +19,7 @@ export default {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
+    if (url.pathname.startsWith("/api/m/")) return marketApi(req, env, url);
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
@@ -41,6 +43,7 @@ export default {
   },
   async scheduled(ev, env, ctx) { // 每 10 分鐘：結標並通知；圖文選單版本更新時自動重建
     ctx.waitUntil(settle(env).catch(e => console.error("settle", e && e.stack || e)));
+    ctx.waitUntil(marketCron(env).catch(e => console.error("market cron", e && e.stack || e)));
     ctx.waitUntil(autoRichMenu(env).catch(e => console.error("richmenu", e && e.stack || e)));
   },
 };
@@ -75,6 +78,7 @@ async function reply(env, token, messages) {
 const text = t => ({ type: "text", text: t.slice(0, 4900) });
 
 const QUICK = [
+  { type: "action", action: { type: "message", label: "🛒 市集", text: "市集" } },
   { type: "action", action: { type: "message", label: "🔨 競標", text: "競標" } },
   { type: "action", action: { type: "message", label: "📈 漲最多", text: "漲最多" } },
   { type: "action", action: { type: "camera", label: "拍照查價" } },
@@ -102,6 +106,7 @@ async function handle(ev, env) {
     if (/^(說明|help|使用說明|功能|\?|？)$/i.test(q)) return reply(env, ev.replyToken, guide(env));
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
+    if (/^(市集|刊登|賣卡|我要賣|買卡|交易|我的市集|刊登商品)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     const more = q.match(/^(?:更多|全部)\s*(.{1,20})$/);
     if (more) return reply(env, ev.replyToken, [await gridMsg(more[1].trim(), D, env)]);
@@ -165,6 +170,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 📦 原盒行情／🏅 鑑定卡行情
 💱 試算 25000：算日圓價格的到手成本
 🗃️ 我的庫存：記錄持有的卡、算損益，產生庫存圖／出售清單圖
+🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
@@ -254,7 +260,7 @@ setCatalog(async (q, env) => {
   return hits.slice(0, 8).map(p => {
     const ref = p.us ? (p.um ? p.um * (D.usd || 32) : null) : p.s ? p.s[0] * D.rate : p.m ? p.m[0] * D.rate : null;
     return { n: p.n, meta: [p.us ? "美版" : "日版", p.num, p.set, p.b ? "原盒" : p.rar, p.p ? "PSA10" : ""].filter(x => x && x !== "-").join("・"),
-      img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "" };
+      img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "", op: p.op ? 1 : 0, k: p.k, b: p.b ? 1 : 0, psa: p.p ? 1 : 0 };
   });
 });
 
@@ -594,7 +600,7 @@ function carousel(list, D, env, alt, q) {
 }
 
 // ---------- 圖文選單（開一次網址 /setup/richmenu 就會建立） ----------
-const RICHMENU_V = "2026-10-29-pclub-tcg"; // 改圖文選單（tools/richmenu.py 或 areas）時把這個字串改掉，排程就會自動重建
+const RICHMENU_V = "2026-10-30-market"; // 改圖文選單（tools/richmenu.py 或 areas）時把這個字串改掉，排程就會自動重建
 async function autoRichMenu(env) {
   if (!env.DB || !env.LINE_CHANNEL_ACCESS_TOKEN) return;
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)").run();
@@ -619,7 +625,7 @@ async function setupRichMenu(env) {
     A(1208, 580, 618, 524, msg("漲最多")),
     A(1854, 580, 618, 524, msg("原盒行情")),
     A(1208, 1132, 618, 524, msg("鑑定卡行情")),
-    A(1854, 1132, 618, 524, msg("匯率試算")),
+    A(1854, 1132, 618, 524, msg("市集")),
   ];
   const old = await (await fetch("https://api.line.me/v2/bot/richmenu/list", { headers: H })).json();
   const r = await fetch("https://api.line.me/v2/bot/richmenu", { method: "POST", headers: H, body: JSON.stringify({ size: { width: 2500, height: 1686 }, selected: true, name: "P’CLUB 主選單", chatBarText: "選單｜查卡價", areas }) });

@@ -353,7 +353,7 @@ rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{co
 h += "\n<script>\n" + open(_os.path.join(_D, "inv.js"), encoding="utf-8").read() + "\n</script>\n"
 
 # 12. 頁首加「競標」入口（tools/auction.html，publish 時複製到網站根目錄）
-rep('<a href="%s" target="_blank" rel="noopener" style="background:#06c755' % LINE_URL, '<a href="auction.html" class="nav-auc" style="background:#ff8a2b;color:#2a1c17;font-weight:900;font-size:13px;border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap"><span class="lw">🔨 </span>競標</a><a href="%s" target="_blank" rel="noopener" style="background:#06c755' % LINE_URL)
+rep('<a href="%s" target="_blank" rel="noopener" style="background:#06c755' % LINE_URL, '<a href="auction.html" class="nav-auc" style="background:#ff8a2b;color:#2a1c17;font-weight:900;font-size:13px;border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap"><span class="lw">🔨 </span>競標</a><a href="market.html" class="nav-auc" style="background:#0f7c74;color:#fff;font-weight:900;font-size:13px;border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap"><span class="lw">🛒 </span>市集</a><a href="%s" target="_blank" rel="noopener" style="background:#06c755' % LINE_URL)
 
 rep('text-decoration:none;white-space:nowrap">加入 LINE 好友</a>', 'text-decoration:none;white-space:nowrap"><span class="lw">加入 </span>LINE<span class="lw"> 好友</span></a><style>@media (max-width:480px){.lw{display:none}.nav-auc{padding:5px 10px!important}.bar .wrap>span{gap:6px!important}.bar .wrap>span>a{padding:5px 10px!important}}@media (max-width:360px){.bar .brand span{display:none}}</style>')
 

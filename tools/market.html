@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P’CLUB 市集</title>
+<meta name="description" content="P’CLUB 卡牌市集：寶可夢、海賊王卡玩家互相買賣。用 LINE 登入就能刊登、直接購買或出價議價，附日本行情參考。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6ea;--surface:#fff;--surface-2:#fff3e6;--line:#f3dcc0;--ink:#2a1c17;--muted:#7a6656;--navy:#2a1c17;--navy-fg:#ffe0b8;--brand:#ff8a2b;--brand-ink:#2a1c17;--good:#1f8a5b;--bad:#c2333a;--hot:#e5482b;--teal:#0f7c74;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;--f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;--logo:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.bar{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;font-size:18px;color:var(--brand)}
+.logo b{font-family:var(--logo);letter-spacing:.02em}.logo svg{width:24px;height:24px}
+.nav{display:flex;align-items:center;gap:6px;font-size:13px}
+.nav a.lk{color:var(--navy-fg);text-decoration:none;padding:6px 8px;border-radius:8px;font-weight:700}.nav a.lk:hover{background:rgba(255,255,255,.08)}
+.who{display:flex;align-items:center;gap:8px}.who .nm{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3e4;font-weight:700}
+@media (max-width:520px){.nav a.lk{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;min-height:42px;text-decoration:none;white-space:nowrap;background:var(--surface-2);color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:999px}
+.btn.ghost{background:transparent;border-color:rgba(255,224,184,.35);color:var(--navy-fg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* 首區：左邊標題，右邊 IP 切換 */
+.hero{background:radial-gradient(700px 280px at 0% 120%,rgba(15,124,116,.45),transparent 70%),radial-gradient(700px 300px at 100% -40%,rgba(255,138,43,.35),transparent 70%),var(--navy);color:var(--navy-fg);padding:22px 0 0}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:900;color:#fff3e4;letter-spacing:.04em}
+.hero p{margin:6px 0 0;font-size:14px;color:#d9bfa6;max-width:520px;line-height:1.6}
+.ipseg{display:flex;gap:0;align-self:flex-end}
+.ipseg button{border:0;background:rgba(255,255,255,.06);color:#d9bfa6;padding:12px 22px 14px;font-weight:900;font-size:15px;cursor:pointer;border-radius:14px 14px 0 0;margin-left:4px}
+.ipseg button[aria-pressed="true"]{background:var(--bg);color:var(--ink)}
+.ipseg small{display:block;font-weight:500;font-size:11.5px;opacity:.75;margin-top:2px}
+.hero-sp{height:22px}
+@media (max-width:560px){.hero .wrap{flex-direction:column;align-items:stretch}.ipseg{align-self:stretch}.ipseg button{flex:1;margin:0 2px 0 0}}
+/* 工具列 */
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 14px;align-items:center}
+.tabs{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tabs button{border:0;background:none;border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted);white-space:nowrap;position:relative}
+.tabs button[aria-pressed="true"]{background:var(--navy);color:var(--brand)}
+.tabs .dot{position:absolute;top:3px;right:3px;min-width:17px;height:17px;border-radius:9px;background:var(--hot);color:#fff;font-size:11px;line-height:17px;padding:0 4px;font-family:var(--f-num)}
+.tools .grow{flex:1 1 200px;min-width:0}
+.tools input[type=search],.tools select{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 12px;min-height:42px}
+.tools select{width:auto}
+.newbox{display:flex;align-items:center;gap:8px;margin-left:auto}
+.quota{font-size:12.5px;color:var(--muted);white-space:nowrap}.quota b{font-family:var(--f-num);color:var(--ink)}
+@media (max-width:640px){.tabs{flex:1 1 100%}.tools .grow{flex:1 1 100%}.tools select{flex:1 1 0}.newbox{flex:1 1 100%;margin:0}.newbox .btn{flex:1}}
+/* 商品格：橫向資訊，照片正方 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding-bottom:40px}
+@media (max-width:520px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(42,28,23,.12)}
+.card.held{opacity:.72}
+.ph{aspect-ratio:1/1;background:#f4ece2;display:grid;place-items:center;overflow:hidden;position:relative}
+.ph img{width:100%;height:100%;object-fit:cover}.ph img.cat{object-fit:contain;padding:8px}
+.ph .nophoto{color:var(--muted);font-size:13px;text-align:center;padding:12px;font-weight:700}
+.tags{position:absolute;left:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100% - 16px)}
+.tag{background:rgba(42,28,23,.85);color:var(--navy-fg);font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 9px}
+.tag.deal{background:var(--good);color:#fff}.tag.nego{background:var(--teal);color:#fff}.tag.hold{background:var(--hot);color:#fff}.tag.me{background:var(--brand);color:var(--brand-ink)}.tag.star{background:#ffd34d;color:#2a1c17}
+.cb{padding:10px 12px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
+.cb h3{margin:0;font-size:14.5px;line-height:1.35;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
+.pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pr b{font-family:var(--f-num);font-size:clamp(16px,4.6vw,20px);color:var(--ink)}
+.pr s{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.ref{font-size:12px;color:var(--muted)}.ref .lo{color:var(--good);font-weight:700}.ref .hi{color:var(--bad);font-weight:700}
+.meta{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);margin-top:auto}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:50px 16px;background:var(--surface);border:1px dashed var(--line);border-radius:18px;line-height:1.7}
+/* 賣場頭 */
+.shophead{grid-column:1/-1;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
+.shophead h2{margin:0;font-size:20px}.shophead .st{display:flex;gap:16px;font-size:13px;color:var(--muted)}.shophead .st b{display:block;font-family:var(--f-num);font-size:20px;color:var(--ink)}
+/* 彈出視窗 */
+.sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(20,12,8,.55);display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet-bg[hidden]{display:none}
+.sheet{background:var(--bg);width:min(760px,100%);border-radius:22px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.sh-head{position:sticky;top:0;z-index:2;background:var(--navy);color:var(--navy-fg);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 14px 20px}
+.sh-head h2{margin:0;font-size:17px;color:#fff3e4}
+.x{border:0;background:rgba(255,255,255,.1);color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none}
+.sh-body{padding:16px;display:flex;flex-direction:column;gap:14px}
+@media (max-width:560px){.sheet-bg{padding:0;align-items:flex-end}.sheet{border-radius:22px 22px 0 0;max-height:94vh;overflow-y:auto}}
+.d-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:16px}
+@media (max-width:600px){.d-top{grid-template-columns:1fr}}
+.gal{display:flex;flex-direction:column;gap:8px}
+.gal .main{border-radius:16px;overflow:hidden;background:#f4ece2;aspect-ratio:1/1;display:grid;place-items:center}
+.gal .main img{width:100%;height:100%;object-fit:contain}
+.gal .th{display:flex;gap:6px}.gal .th button{width:60px;height:60px;border-radius:10px;overflow:hidden;border:2px solid var(--line);padding:0;cursor:pointer;background:#f4ece2}
+.gal .th button[aria-pressed="true"]{border-color:var(--brand)}.gal .th img{width:100%;height:100%;object-fit:cover}
+.gal .cap{font-size:12px;color:var(--muted)}
+.d-info{display:flex;flex-direction:column;gap:10px}
+.d-info h3{margin:0;font-size:20px;line-height:1.35}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--muted);text-decoration:none}
+a.chip{color:var(--ink);font-weight:700}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+.price{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.price .v{font-family:var(--f-num);font-size:32px;font-weight:600;line-height:1}
+.price small{display:block;color:var(--muted);font-size:12.5px;margin-bottom:4px}
+.cmp{font-size:13px;text-align:right}.cmp b{font-family:var(--f-num)}
+.acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.acts .btn{flex:1}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);margin-top:10px}
+.fld input,.fld textarea{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;min-height:44px;font-size:15px;color:var(--ink)}
+.offrow{display:flex;gap:8px;margin-top:8px}.offrow input{flex:1;min-width:0;font-family:var(--f-num);font-size:18px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0}
+.msg{font-size:13.5px;font-weight:700;margin:8px 0 0}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+.win{background:#eaf7ef;border:1px solid #b7e2c7;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.75}
+.warn{background:#fff1e6;border:1px solid #ffd2a6;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.7}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+.offers{list-style:none;margin:6px 0 0;padding:0}
+.offers li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.offers li:last-child{border-bottom:0}.offers b{font-family:var(--f-num);font-size:16px}.offers small{color:var(--muted)}
+.st-open{color:var(--teal);font-weight:700}.st-accepted{color:var(--good);font-weight:700}.st-declined,.st-expired,.st-withdrawn{color:var(--muted)}
+/* 表單 */
+.f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.f label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);font-weight:500}
+.f .full{grid-column:1/-1}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;min-height:44px;font-size:15px;color:var(--ink)}
+.f textarea{min-height:80px;resize:vertical}
+.ups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.up{border:2px dashed var(--line);border-radius:14px;background:var(--surface);aspect-ratio:1/1;display:grid;place-items:center;cursor:pointer;overflow:hidden;text-align:center;color:var(--muted);font-size:12.5px;position:relative}
+.up img{width:100%;height:100%;object-fit:cover}.up .rm{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:14px;line-height:24px;padding:0}
+.chk{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:8px;font-size:13.5px!important;line-height:1.6;color:var(--ink)!important}
+.chk input{width:20px;height:20px;min-height:0!important;margin-top:2px;flex:none;accent-color:var(--brand)}
+.seg2{display:flex;gap:6px}.seg2 button{flex:1;border:2px solid var(--line);background:#fff;border-radius:12px;min-height:44px;font-weight:700;cursor:pointer}.seg2 button[aria-pressed="true"]{border-color:var(--navy);background:var(--navy);color:var(--brand)}
+.cat{position:relative}
+.cat-list{position:absolute;left:0;right:0;top:100%;z-index:5;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(42,28,23,.15);margin-top:4px;max-height:340px;overflow-y:auto}
+.cat-list[hidden]{display:none}
+.cat-it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--surface-2)}
+.cat-it:hover,.cat-it:focus{background:var(--surface-2);outline:none}
+.cat-it img,.cat-it .ni{width:44px;height:60px;object-fit:contain;border-radius:4px;background:#f4ece2}
+.cat-it b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-it small{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-it em{font-style:normal;font-family:var(--f-num);font-size:13px;color:var(--hot);white-space:nowrap}
+.refbox[hidden]{display:none}.refbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.login-card{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:10px 4px}
+.login-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+.stat{font-size:12.5px;color:var(--muted)}.stat b{color:var(--good)}.stat i{font-style:normal;color:var(--bad)}
+.rate{display:flex;flex-direction:column;gap:10px}.rate .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rate .opts button[aria-pressed="true"]{background:var(--navy);color:var(--brand);border-color:var(--navy)}
+.rate textarea{border:1px solid var(--line);border-radius:12px;padding:10px;min-height:60px;font-size:14px;background:#fff}
+.rlist{list-style:none;margin:6px 0 0;padding:0;font-size:13.5px}.rlist li{padding:6px 0;border-bottom:1px dashed var(--line)}
+.adm{display:flex;flex-direction:column;gap:12px;grid-column:1/-1}.adm .box h3{margin:0 0 8px;font-size:16px}
+.adm-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.adm-row:last-child{border-bottom:0}.adm-row p{margin:2px 0 0;color:var(--muted);font-size:13px;word-break:break-all}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40px;line-height:1.7}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:var(--navy-fg);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;z-index:60;box-shadow:0 8px 20px rgba(0,0,0,.25);max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="auction.html">競標</a><span class="who" id="who"></span></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div><h1>市集</h1><p>玩家之間直接買賣。刊登免費，買家可以直接購買或出價議價，每件都附日本行情給你參考。</p><div class="hero-sp"></div></div>
+  <div class="ipseg" role="group" aria-label="卡牌種類"><button type="button" data-ip="pk" aria-pressed="true">⚡ 寶可夢<small id="n-pk">&nbsp;</small></button><button type="button" data-ip="op" aria-pressed="false">☠️ 海賊王<small id="n-op">&nbsp;</small></button></div>
+</div></section>
+
+<main class="wrap">
+  <div class="tools">
+    <div class="tabs" role="group" aria-label="分類"><button type="button" data-st="live" aria-pressed="true">全部</button><button type="button" data-st="mine" aria-pressed="false">我的<span class="dot" id="pend" hidden></span></button><button type="button" data-st="watch" aria-pressed="false">關注</button><button type="button" data-st="sold" aria-pressed="false">最近成交</button><button type="button" data-st="admin" aria-pressed="false" id="tab-admin" hidden>管理</button></div>
+    <div class="grow"><input type="search" id="q" placeholder="搜尋卡名、卡號、賣家" aria-label="搜尋"></div>
+    <select id="kind" aria-label="種類"><option value="">全部種類</option><option value="card">單卡</option><option value="psa">鑑定卡</option><option value="box">原盒</option><option value="other">其他</option></select>
+    <select id="sort" aria-label="排序"><option value="new">最新</option><option value="cheap">比行情便宜</option><option value="lo">價格低到高</option><option value="hi">價格高到低</option></select>
+    <div class="newbox"><span class="quota" id="quota"></span><button type="button" class="btn main" id="new">＋ 刊登商品</button></div>
+  </div>
+  <div class="grid" id="grid"><div class="empty">載入中…</div></div>
+</main>
+
+<footer>P’CLUB 市集只提供刊登與聯絡，不經手金流、不保證商品真偽與交易，請面交或用有保障的方式交易。<br>發現詐騙或不實商品請按商品頁的「檢舉」。與寶可夢公司、任天堂、集英社、萬代無關。</footer>
+
+<div class="sheet-bg" id="bg" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="sh-head"><h2 id="sh-t"></h2><button type="button" class="x" id="x" aria-label="關閉">×</button></div><div class="sh-body" id="sb"></div></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+const BASE=location.hostname==="localhost"&&new URLSearchParams(location.search).get("api")||"https://ptcg-line-bot.spickertop.workers.dev/api/";
+const API=BASE+"m/",AAPI=BASE+"a/";
+const LINE_ADD="https://line.me/R/ti/p/@916ctmro",LINE_MSG="https://line.me/R/oaMessage/@916ctmro/?"+encodeURIComponent("市集");
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nt=v=>"NT$"+Math.round(v).toLocaleString("en-US");
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const KIND={card:"單卡",psa:"鑑定卡",box:"原盒",other:"其他"};
+const ago=t=>{const s=(Date.now()-t)/1000;return s<3600?Math.max(1,Math.floor(s/60))+" 分鐘前":s<86400?Math.floor(s/3600)+" 小時前":Math.floor(s/86400)+" 天前"};
+const day=t=>new Date(t).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
+
+/* LINE 帶來的 token（和競標共用 atok） */
+(function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){LS.set("atok",m[1]);history.replaceState(null,"",location.pathname+location.search.replace(/[?&]openExternalBrowser=1/,"")+(/admin/.test(location.hash)?"#admin":""))}})();
+let TOK=LS.get("atok",""),ME=null,ST="live",ITEMS=[],CUR=null,SHOP=null,IP=new URLSearchParams(location.search).get("ip")==="op"?"op":LS.get("mip","pk");
+
+async function api(path,body,base){
+  const o={headers:{}};if(TOK)o.headers["x-tok"]=TOK;
+  if(body){o.method="POST";o.headers["content-type"]="application/json";o.body=JSON.stringify(body)}
+  let r;try{r=await fetch((base||API)+path,o)}catch(e){throw new Error("連線失敗，請檢查網路")}
+  const j=await r.json().catch(()=>({err:`系統忙碌，請稍後再試（錯誤 ${r.status}）`}));
+  if(r.status===401&&j.login){TOK="";LS.del("atok");ME=null;drawWho()}
+  if(!r.ok||j.err){const e=new Error(j.err||"發生錯誤");e.j=j;throw e}
+  return j;
+}
+function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2800)}
+const loginHtml=why=>`<div class="login-card"><p>${esc(why)}<br>用 LINE 登入：打開 P’CLUB 官方帳號，傳「<b>市集</b>」，再點機器人回的按鈕就會自動登入。</p><a class="btn line" href="${LINE_MSG}">打開 LINE 傳「市集」</a><a class="note" href="${LINE_ADD}">還沒加好友？先加 P’CLUB 好友</a></div>`;
+function drawWho(){
+  $("tab-admin").hidden=!(ME&&ME.admin);
+  $("who").innerHTML=ME?`<span class="nm">👤 ${esc(ME.name)}</span><button type="button" class="btn sm ghost" id="logout">登出</button>`:`<a class="btn sm line" href="${LINE_MSG}">LINE 登入</a>`;
+  if(ME)$("logout").onclick=()=>{if(confirm("確定登出？之後要再從 LINE 傳「市集」登入。")){TOK="";LS.del("atok");ME=null;drawWho();setTab("live")}};
+  const q=ME&&ME.quota;$("quota").innerHTML=q?`刊登中 <b>${q.used}</b> / ${q.max>=999?"∞":q.max}`:"";
+}
+const photoUrl=(m,n)=>`${API}photo/${m.id}/${n||0}`;
+const thumb=m=>m.nphoto?`<img src="${photoUrl(m,0)}" alt="${esc(m.title)}" loading="lazy">`:m.cimg?`<img class="cat" src="${esc(m.cimg)}" alt="${esc(m.title)}" loading="lazy">`:`<span class="nophoto">${esc(m.title)}<br><small>賣家沒有附照片</small></span>`;
+function refTxt(m){if(!m.ref)return"";const d=(m.price-m.ref)/m.ref;const pct=Math.round(Math.abs(d)*100);
+  return `日本行情 ${nt(m.ref)}${pct>=3?`・<span class="${d<0?"lo":"hi"}">${d<0?"便宜":"高"} ${pct}%</span>`:"・接近行情"}`}
+function statTxt(s,nw){if(!s)return"";return s.pos+s.neg||s.ab?` <span class="stat">・<b>👍${s.pos}</b> <i>👎${s.neg}</i>${s.ab?` <i>未完成 ${s.ab}</i>`:""}</span>`:` <span class="stat">・${nw||"新賣家"}</span>`}
+
+/* 列表 */
+async function load(){
+  if(ST==="admin")return loadAdmin();
+  if(ST==="shop")return loadShop(SHOP);
+  if((ST==="mine"||ST==="watch")&&!TOK){$("grid").innerHTML=`<div class="empty">${loginHtml(ST==="mine"?"登入後可以管理自己的刊登、出價和交易":"登入後可以關注商品，降價時用 LINE 通知你")}</div>`;return}
+  try{const j=await api("list?st="+ST);ME=j.me;ITEMS=j.items;drawWho();
+    const p=$("pend");p.hidden=!j.pending;p.textContent=j.pending||"";draw()}
+  catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}<br><button type="button" class="btn sm" onclick="location.reload()" style="margin-top:10px">重新整理</button></div>`}
+}
+function counts(){const c={pk:0,op:0};ITEMS.forEach(m=>{if(m.status==="live")c[m.ip==="op"?"op":"pk"]++});$("n-pk").textContent=c.pk+" 件刊登";$("n-op").textContent=c.op+" 件刊登"}
+function cardHtml(m){
+  const tags=[m.status==="held"?`<span class="tag hold">保留中</span>`:m.status==="sold"?`<span class="tag">已售出</span>`:m.status==="expired"?`<span class="tag">已過期</span>`:"",
+    m.mine?`<span class="tag me">我的</span>`:"",m.buying?`<span class="tag deal">我買的</span>`:"",m.status==="live"&&m.ref&&m.price<=m.ref*.9?`<span class="tag deal">低於行情</span>`:"",m.status==="live"&&m.nego?`<span class="tag nego">可議價</span>`:"",m.watched?`<span class="tag star">★</span>`:""].join("");
+  return `<article class="card${m.status==="held"||m.status==="sold"?" held":""}" data-id="${m.id}" tabindex="0"><div class="ph">${thumb(m)}<div class="tags">${tags}</div></div><div class="cb"><h3>${esc(m.title)}</h3>
+    <div class="pr"><b>${nt(m.status==="sold"&&m.deal?m.deal:m.price)}</b>${m.status==="sold"&&m.deal&&m.deal!==m.price?`<s>${nt(m.price)}</s>`:""}</div>
+    ${m.ref?`<div class="ref">${refTxt(m)}</div>`:""}
+    <div class="meta"><span>${esc(KIND[m.kind]||"")}${m.cond?"・"+esc(m.cond):""}</span><span>${m.status==="sold"?ago(m.dealt||m.bumped):ago(m.bumped)}</span></div></div></article>`;
+}
+function draw(){
+  counts();
+  const q=$("q").value.trim().toLowerCase(),k=$("kind").value,s=$("sort").value;
+  let a=ITEMS.filter(m=>(ST!=="live"||q||(m.ip==="op")===(IP==="op"))&&(!k||m.kind===k)&&(!q||(m.title+" "+(m.note||"")+" "+m.seller).toLowerCase().includes(q)));
+  const P=m=>m.price,D=m=>m.ref?(m.price-m.ref)/m.ref:9;
+  a.sort(s==="lo"?(x,y)=>P(x)-P(y):s==="hi"?(x,y)=>P(y)-P(x):s==="cheap"?(x,y)=>D(x)-D(y):(x,y)=>(x.status==="held")-(y.status==="held")||y.bumped-x.bumped);
+  if(!a.length){$("grid").innerHTML=`<div class="empty">${q||k?"找不到符合的商品":ST==="live"?`目前還沒有${IP==="op"?"海賊王":"寶可夢"}商品，來當第一個刊登的人吧！`:ST==="mine"?"你還沒有刊登、購買或出價過":ST==="watch"?"還沒有關注的商品。在商品頁按「☆ 關注」，降價時會用 LINE 通知你":"還沒有成交紀錄"}</div>`;return}
+  $("grid").innerHTML=a.map(cardHtml).join("");
+}
+$("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)});
+$("grid").addEventListener("keydown",e=>{if(e.key==="Enter"){const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)}});
+function setTab(st){ST=st;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.st===st));load()}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.st));
+document.querySelectorAll(".ipseg button").forEach(b=>b.onclick=()=>{IP=b.dataset.ip;LS.set("mip",IP);syncIp();if(ST!=="live")setTab("live");else draw()});
+function syncIp(){document.querySelectorAll(".ipseg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ip===IP))}
+$("q").oninput=draw;$("kind").onchange=draw;$("sort").onchange=draw;
+setInterval(()=>{if(!document.hidden&&$("bg").hidden&&ST!=="admin")load()},45000);
+
+/* 賣場 */
+async function loadShop(sid){
+  $("grid").innerHTML=`<div class="empty">載入中…</div>`;
+  let j;try{j=await api("shop/"+encodeURIComponent(sid))}catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+  const s=j.shop,st=s.stats||{};ITEMS=j.items;
+  $("grid").innerHTML=`<div class="shophead"><div><h2>🏪 ${esc(s.name)} 的賣場</h2><p class="note" style="margin-top:4px">評價和成交數包含市集與競標</p></div>
+    <div class="st"><span><b>${st.sold||0}</b>市集成交</span><span><b style="color:var(--good)">${st.pos||0}</b>好評</span><span><b style="color:var(--bad)">${st.neg||0}</b>負評</span>${st.ab?`<span><b style="color:var(--bad)">${st.ab}</b>未完成</span>`:""}</div>
+    <div class="row2"><button type="button" class="btn sm" id="shopshare">分享賣場</button><button type="button" class="btn sm" id="shopback">回市集</button></div></div>
+    ${s.ratings.length?`<div class="box" style="grid-column:1/-1"><b>最近評價</b><ul class="rlist">${s.ratings.slice(0,8).map(r=>`<li>${r.abandon?"⚠️ 未完成交易":r.score>0?"👍 好評":"👎 負評"}${r.note?"｜"+esc(r.note):""} <small class="note">${day(r.at)}</small></li>`).join("")}</ul></div>`:""}
+    ${j.items.length?j.items.map(cardHtml).join(""):`<div class="empty">這個賣場目前沒有商品</div>`}`;
+  $("shopback").onclick=()=>{history.replaceState(null,"",location.pathname);setTab("live")};
+  $("shopshare").onclick=()=>share(`${s.name} 的賣場｜P’CLUB 市集`,location.origin+location.pathname+"#s="+sid);
+}
+function openShop(sid){closeSheet();SHOP=sid;ST="shop";document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed","false"));history.replaceState(null,"","#s="+sid);loadShop(sid);scrollTo({top:0})}
+function share(t,u){if(navigator.share)navigator.share({title:t,url:u}).catch(()=>{});else navigator.clipboard.writeText(t+" "+u).then(()=>toast("已複製連結"),()=>prompt("複製這個連結",u))}
+
+/* 彈出視窗 */
+function sheet(t,html){$("sh-t").textContent=t;$("sb").innerHTML=html;$("bg").hidden=false;document.body.style.overflow="hidden"}
+function closeSheet(){$("bg").hidden=true;document.body.style.overflow="";CUR=null;if(/^#m\d+/.test(location.hash))history.replaceState(null,"",location.pathname)}
+$("x").onclick=closeSheet;$("bg").addEventListener("click",e=>{if(e.target===$("bg"))closeSheet()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("bg").hidden)closeSheet()});
+
+/* 商品頁 */
+async function openItem(id,keep){
+  if(!keep){CUR=id;sheet("商品",`<p class="note">載入中…</p>`);history.replaceState(null,"","#m"+id)}
+  let j;try{j=await api("item/"+id)}catch(e){$("sb").innerHTML=`<p class="msg err">${esc(e.message)}</p>`;return}
+  if(CUR!==id)return;ME=j.me||ME;drawWho();
+  const m=j.item,live=m.status==="live",held=m.status==="held",sold=m.status==="sold";
+  $("sh-t").textContent=live?"刊登中":held?"保留中":sold?"已售出":"已下架";
+  const pics=[];for(let i=0;i<m.nphoto;i++)pics.push(photoUrl(m,i));
+  const gal=pics.length?`<div class="main"><img id="gm" src="${pics[0]}" alt="${esc(m.title)}"></div>${pics.length>1?`<div class="th">${pics.map((u,i)=>`<button type="button" data-u="${u}" aria-pressed="${i===0}"><img src="${u}" alt="照片 ${i+1}"></button>`).join("")}</div>`:""}`
+    :m.cimg?`<div class="main"><img src="${esc(m.cimg)}" alt="${esc(m.title)}" style="padding:16px"></div><span class="cap">示意圖（卡片目錄），賣家沒有附實拍照片</span>`:`<div class="main"><span class="note">賣家沒有附照片</span></div>`;
+  let main="";
+  if(live&&!m.mine) main=TOK?`<div class="acts"><button type="button" class="btn main" id="buy">直接購買 ${nt(m.price)}</button>${m.nego?`<button type="button" class="btn teal" id="off">出價議價</button>`:""}</div>
+      <div id="buyform" hidden><label class="fld">你的聯絡方式（成交後才給賣家看）<input id="bc" maxlength="60" placeholder="例：LINE ID abc123" value="${esc(LS.get("acontact",""))}"></label>
+        <div id="offbox" hidden><label class="fld">出價金額（NT$，最低 ${nt(Math.ceil(m.price*.5))}）<div class="offrow"><input id="oa" type="number" inputmode="numeric" min="${Math.ceil(m.price*.5)}" max="${m.price-1}" placeholder="${Math.round(m.price*.9)}"></div></label><label class="fld">留言給賣家（選填）<input id="om" maxlength="100" placeholder="例：可以台北面交嗎？"></label></div>
+        <div class="acts"><button type="button" class="btn dark" id="go">確認</button><button type="button" class="btn" id="cx">取消</button></div><p class="note" id="gonote"></p></div>
+      ${j.offers.filter(o=>o.status==="open").map(o=>`<p class="msg ok">你出價 ${nt(o.amount)}，等待賣家回覆（48 小時內）<button type="button" class="btn sm" data-wd="${o.id}" style="margin-left:8px">取消出價</button></p>`).join("")}<p class="msg err" id="bm"></p>`
+    :`<div style="margin-top:12px">${loginHtml("購買或出價需要先用 LINE 登入")}</div>`;
+  if(m.mine&&live) main=`<div class="acts"><button type="button" class="btn" id="edit">改價／修改</button><button type="button" class="btn" id="bump">更新（排到最新）</button><button type="button" class="btn" id="cancel">下架</button></div>`;
+  if(m.mine&&m.status==="expired") main=`<p class="note" style="margin-top:10px">刊登 30 天沒更新已過期。</p><div class="acts"><button type="button" class="btn main" id="bump">重新刊登</button><button type="button" class="btn" id="cancel">刪除</button></div>`;
+  const deal=m.contact?`<div class="win">${m.mine?`買家 <b>${esc(m.contact.buyer)}</b>${statTxt(j.buyerStats,"新手")}<br>成交價 <b>${nt(m.deal)}</b>　買家聯絡方式 <b>${esc(m.contact.bcontact)}</b>`:`🎉 已幫你保留！請在 24 小時內聯絡賣家<br>賣家 <b>${esc(m.contact.seller)}</b>　聯絡方式 <b>${esc(m.contact.contact)}</b><br>成交價 <b>${nt(m.deal)}</b>`}
+    ${held?`<div class="acts">${m.mine?`<button type="button" class="btn main" id="done">交易已完成</button>`:""}<button type="button" class="btn" id="rel">取消這筆交易</button></div><p class="note" style="margin-top:6px">${m.mine?"收到款項、寄出或面交完成後按「交易已完成」，雙方就能互相評價。":"付款、取貨完成後，賣家會標記完成，之後可以互相評價。"}</p>`:""}</div>`:"";
+  const offers=m.mine&&j.offers.length?`<div class="box"><b>收到的出價</b>${j.nOpen?` <span class="tag nego">${j.nOpen} 筆待回覆</span>`:""}<ul class="offers">${j.offers.map(o=>`<li><span><b>${nt(o.amount)}</b>　${esc(o.name)}<br><small>${day(o.at)}${o.msg?"｜"+esc(o.msg):""}</small></span>${o.status==="open"&&live?`<span class="row2"><button type="button" class="btn sm main" data-acc="${o.id}">接受</button><button type="button" class="btn sm" data-dec="${o.id}">婉拒</button></span>`:`<span class="st-${o.status}">${{open:"待回覆",accepted:"已接受",declined:"未接受",expired:"已失效",withdrawn:"買家取消"}[o.status]||o.status}</span>`}</li>`).join("")}</ul></div>`:"";
+  const myOff=!m.mine&&j.offers.filter(o=>o.status!=="open").length?`<div class="box"><b>你的出價紀錄</b><ul class="offers">${j.offers.filter(o=>o.status!=="open").map(o=>`<li><span><b>${nt(o.amount)}</b> <small>${day(o.at)}</small></span><span class="st-${o.status}">${{accepted:"已接受",declined:"未接受",expired:"已失效",withdrawn:"已取消"}[o.status]||o.status}</span></li>`).join("")}</ul></div>`:"";
+  $("sb").innerHTML=`<div class="d-top"><div class="gal">${gal}</div><div class="d-info">
+    <h3>${esc(m.title)}</h3>
+    <div class="chips"><span class="chip">${m.ip==="op"?"海賊王":"寶可夢"}・${esc(KIND[m.kind]||"")}</span>${m.cond?`<span class="chip">${esc(m.cond)}</span>`:""}<a class="chip" href="#s=${esc(m.shop)}" id="shopl">🏪 ${esc(m.seller)}${statTxt(j.sellerStats)}</a><span class="chip">${m.views} 次瀏覽</span><span class="chip">${ago(m.bumped)}更新</span></div>
+    <div class="box"><div class="price"><div><small>${sold?"成交價":"售價"}${m.nego&&live?"・可議價":""}</small><span class="v">${nt(sold&&m.deal?m.deal:m.price)}</span></div>${m.ref?`<div class="cmp"><small>日本近期成交</small><b>${nt(m.ref)}</b><br><span class="ref">${refTxt(m).replace(/^日本行情 [^・]+・?/,"")}</span></div>`:""}</div>${main}</div>
+    ${m.note?`<p class="note" style="white-space:pre-wrap;font-size:14px;color:var(--ink)">${esc(m.note)}</p>`:""}
+  </div></div>${deal}${offers}${myOff}${j.rate?rateBox(j.rate):""}
+  <div class="row2">${TOK&&!m.mine&&live?`<button type="button" class="btn sm${m.watched?" dark":""}" id="watch">${m.watched?"★ 已關注":"☆ 關注（降價通知）"}</button>`:""}${TOK&&m.ckey&&!m.mine?`<button type="button" class="btn sm${j.follow?" dark":""}" id="follow">${j.follow?"🔔 到貨提醒中":"🔔 這張卡有人刊登時通知我"}</button>`:""}<button type="button" class="btn sm" id="share">分享</button>${!m.mine?`<button type="button" class="btn sm" id="report">檢舉</button>`:""}</div>`;
+  wireItem(m,j);
+}
+function wireItem(m,j){
+  const id=m.id,reopen=()=>{openItem(id,true);load()};
+  document.querySelectorAll(".gal .th button").forEach(b=>b.onclick=()=>{$("gm").src=b.dataset.u;document.querySelectorAll(".gal .th button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  $("shopl").onclick=e=>{e.preventDefault();openShop(m.shop)};
+  $("share").onclick=()=>share(`${m.title}｜${nt(m.price)}｜P’CLUB 市集`,location.origin+location.pathname+"#m"+id);
+  const on=(i,f)=>{const e=$(i);if(e)e.onclick=f};
+  let mode="";
+  const form=md=>{mode=md;$("buyform").hidden=false;$("offbox").hidden=md!=="offer";$("gonote").textContent=md==="buy"?`按確認就成交，商品會保留給你，雙方會收到彼此的聯絡方式。`:"賣家接受後才成交；48 小時沒回覆會自動失效。";$("go").textContent=md==="buy"?`確認購買 ${nt(m.price)}`:"送出出價";(md==="offer"?$("oa"):$("bc")).focus()};
+  on("buy",()=>form("buy"));on("off",()=>form("offer"));on("cx",()=>{$("buyform").hidden=true});
+  on("go",async()=>{const c=$("bc").value.trim(),bm=$("bm");bm.textContent="";if(!c){bm.textContent="請填你的聯絡方式";return}LS.set("acontact",c);
+    $("go").disabled=true;
+    try{if(mode==="buy"){await api("buy",{id,contact:c});toast("🎉 已保留！請聯絡賣家")}else{const a=Math.round(+$("oa").value);await api("offer",{id,amount:a,msg:$("om").value,contact:c});toast("已送出出價，賣家回覆時會用 LINE 通知你")}reopen()}
+    catch(e){bm.textContent=e.message;$("go").disabled=false}});
+  document.querySelectorAll("[data-wd]").forEach(b=>b.onclick=async()=>{try{await api("offer/act",{oid:+b.dataset.wd,act:"withdraw"});toast("已取消出價");reopen()}catch(e){toast(e.message)}});
+  document.querySelectorAll("[data-acc]").forEach(b=>b.onclick=async()=>{if(!confirm("接受這個出價就成交，商品會保留給這位買家，其他出價自動婉拒。確定？"))return;try{await api("offer/act",{oid:+b.dataset.acc,act:"accept"});toast("已接受，買家的聯絡方式在上面");reopen()}catch(e){toast(e.message)}});
+  document.querySelectorAll("[data-dec]").forEach(b=>b.onclick=async()=>{try{await api("offer/act",{oid:+b.dataset.dec,act:"decline"});toast("已婉拒");reopen()}catch(e){toast(e.message)}});
+  on("edit",()=>editItem(m));
+  on("bump",async()=>{try{await api("bump",{id});toast(m.status==="expired"?"已重新刊登":"已更新，排到最新");reopen()}catch(e){toast(e.message)}});
+  on("cancel",async()=>{if(!confirm(m.status==="expired"?"確定刪除這個商品？":"確定下架？等待中的出價會自動取消。"))return;try{await api("cancel",{id});toast("已下架");closeSheet();load()}catch(e){toast(e.message)}});
+  on("done",async()=>{if(!confirm("確定交易已完成（款項、商品都交付了）？"))return;try{await api("deal",{id,act:"done"});toast("交易完成！記得給買家評價");reopen()}catch(e){toast(e.message)}});
+  on("rel",async()=>{const late=Date.now()-(m.dealt||Date.now())>24*3600e3;const r=prompt("取消原因（會通知對方）"+(late?"\n對方超過 24 小時沒完成交易的話，原因開頭打「未完成」會記一筆未完成交易":""),"");if(r==null)return;
+    try{await api("deal",{id,act:"release",reason:r,abandon:late&&/^未完成/.test(r.trim())?1:0});toast(m.mine?"已取消，商品回到刊登中":"已取消這筆交易");reopen()}catch(e){toast(e.message)}});
+  on("watch",async()=>{try{const r=await api("watch",{id,on:!m.watched});toast(r.on?"已關注，降價時用 LINE 通知你":"已取消關注");openItem(id,true)}catch(e){toast(e.message)}});
+  on("follow",async()=>{try{const r=await api("follow",{ckey:m.ckey,title:m.title,on:!j.follow});toast(r.on?"之後有人刊登這張卡會用 LINE 通知你":"已取消到貨提醒");openItem(id,true)}catch(e){toast(e.message)}});
+  on("report",async()=>{if(!TOK)return sheet("檢舉商品",loginHtml("檢舉需要先登入"));const r=prompt("請簡述檢舉原因（例如：疑似假卡、照片盜用、詐騙）");if(r==null)return;try{await api("report",{id,reason:r});toast("已收到檢舉，謝謝")}catch(e){toast(e.message)}});
+  if(j.rate&&j.rate.can)wireRate(m);
+}
+function rateBox(r){const w=r.role==="seller"?"買家":"賣家";
+  if(!r.can){const m=r.mine;return `<div class="box"><b>交易評價</b><p class="note" style="margin-top:6px">你給${w}的評價：${m.score>0?"👍 好評":"👎 負評"}${m.note?"｜"+esc(m.note):""}</p></div>`}
+  return `<div class="box rate"><b>給${w}評價</b><p class="note">評價會顯示在對方的賣場和名字旁邊，幫其他玩家判斷。</p>
+    <div class="opts"><button type="button" class="btn" data-s="1">👍 好評</button><button type="button" class="btn" data-s="-1">👎 負評</button></div>
+    <textarea id="rnote" maxlength="100" placeholder="簡短說明（選填），例：出貨快、包裝很用心"></textarea><button type="button" class="btn main" id="rgo">送出評價</button><p class="msg err" id="rm"></p></div>`}
+function wireRate(m){let sc=0;document.querySelectorAll(".rate [data-s]").forEach(b=>b.onclick=()=>{sc=+b.dataset.s;document.querySelectorAll(".rate [data-s]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  $("rgo").onclick=async()=>{if(!sc){$("rm").textContent="請選好評或負評";return}if(!confirm("評價送出後不能修改，確定送出？"))return;
+    try{await api("rate",{id:m.id,score:sc,note:$("rnote").value});toast("已送出評價，謝謝");openItem(m.id,true)}catch(e){$("rm").textContent=e.message}}}
+function editItem(m){
+  sheet("修改商品",`<form class="f" id="ef" novalidate><p class="note full">${esc(m.title)}</p>
+    <label>售價（NT$）<input id="ep" type="number" inputmode="numeric" min="1" value="${m.price}"></label>
+    <label>卡況<select id="eco">${["全新未拆","近全新","良好","有瑕疵","鑑定卡"].map(c=>`<option${c===m.cond?" selected":""}>${c}</option>`).join("")}</select></label>
+    <label class="chk full"><input type="checkbox" id="eng"${m.nego?" checked":""}><span>接受出價議價</span></label>
+    <label class="full">說明<textarea id="ent" maxlength="500">${esc(m.note||"")}</textarea></label>
+    <p class="note full">降價時，關注這個商品的人會收到 LINE 通知。</p>
+    <div class="full row2"><button type="submit" class="btn main" style="flex:1">儲存</button></div><p class="msg err full" id="em"></p></form>`);
+  $("ef").onsubmit=async e=>{e.preventDefault();try{await api("edit",{id:m.id,price:+$("ep").value,cond:$("eco").value,nego:$("eng").checked?1:0,note:$("ent").value});toast("已儲存");CUR=m.id;openItem(m.id);load()}catch(er){$("em").textContent=er.message}};
+}
+
+/* 刊登 */
+$("new").onclick=()=>{
+  if(!TOK)return sheet("刊登商品",loginHtml("刊登需要先用 LINE 登入，有人購買或出價時才通知得到你"));
+  const q=ME&&ME.quota;if(q&&q.used>=q.max)return sheet("刊登商品",`<div class="warn">你已經有 <b>${q.used}</b> 件刊登中或保留中的商品，達到免費上限 ${q.max} 件。<br>請先下架不賣的商品、或把完成的交易按「交易已完成」，就能再刊登。需要更多刊登數可以傳訊息給 P’CLUB 官方帳號申請。</div><div class="row2"><button type="button" class="btn" onclick="this.closest('.sheet-bg').querySelector('.x').click()">好</button></div>`);
+  CUR=null;
+  sheet("刊登商品",`<form class="f" id="cf" novalidate>
+    <div class="full"><div class="ups" id="ups"></div><p class="note" style="margin-top:6px">最多 4 張實拍照片，第 1 張是封面。建議附紙條寫日期與暱稱，買家比較放心。</p></div>
+    <div class="full cat"><label>從卡片目錄找（自動帶入名稱、日本行情，選填）<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、OP01-120、噴火龍 PSA10" autocomplete="off"></label><div class="cat-list" id="cl" hidden></div></div>
+    <div class="full refbox" id="rb" hidden></div>
+    <label class="full">商品名稱<input id="ti" maxlength="60" required placeholder="例：噴火龍ex SAR 201/165 日版"></label>
+    <div class="full"><span class="note">卡牌種類</span><div class="seg2" id="ipp" style="margin-top:5px"><button type="button" data-v="pk" aria-pressed="${IP!=="op"}">⚡ 寶可夢</button><button type="button" data-v="op" aria-pressed="${IP==="op"}">☠️ 海賊王</button></div></div>
+    <label>種類<select id="kd"><option value="card">單卡</option><option value="psa">鑑定卡</option><option value="box">原盒</option><option value="other">其他</option></select></label>
+    <label>卡況<select id="co"><option>全新未拆</option><option>近全新</option><option selected>良好</option><option>有瑕疵</option><option>鑑定卡</option></select></label>
+    <label>售價（NT$）<input id="pr" type="number" inputmode="numeric" min="1" required placeholder="例：1200"></label>
+    <label>聯絡方式（有人購買後才給買家看）<input id="ct" maxlength="60" required placeholder="例：LINE ID abc123" value="${esc(LS.get("acontact",""))}"></label>
+    <label class="chk full"><input type="checkbox" id="ng" checked><span>接受出價議價（買家可以出比售價低的價格，你決定接不接受）</span></label>
+    <label class="full">說明（選填）<textarea id="nt" maxlength="500" placeholder="例：只面交台北車站，或 7-11 賣貨便；卡況細節"></textarea></label>
+    <label class="chk full"><input type="checkbox" id="ag"><span>我確認商品為本人所有且照片為實拍，有人購買後會依約交易。不實刊登或惡意取消交易會被下架並停權。</span></label>
+    <div class="full row2"><button type="submit" class="btn main" id="go" style="flex:1">確認刊登</button></div>
+    <p class="note full">${q?`目前刊登 ${q.used} / ${q.max} 件（免費上限）。`:""}刊登 30 天沒更新會自動下架，每天可以按一次「更新」排到最新。</p>
+    <p class="msg err full" id="cm" aria-live="polite"></p></form>`);
+  const PH=[];let REF=null,CKEY=null,CIMG=null,CT=null,CQ=0,IPV=IP;
+  const drawUps=()=>{$("ups").innerHTML=PH.map((p,i)=>`<div class="up"><img src="${p.u}" alt="照片 ${i+1}"><button type="button" class="rm" data-i="${i}" aria-label="移除照片">×</button></div>`).join("")+(PH.length<4?`<label class="up" tabindex="0">📷<br>${PH.length?"再加一張":"上傳照片"}<input type="file" accept="image/*" multiple hidden id="pf"></label>`:"");
+    $("ups").querySelectorAll(".rm").forEach(b=>b.onclick=e=>{e.preventDefault();const p=PH.splice(+b.dataset.i,1)[0];URL.revokeObjectURL(p.u);drawUps()});
+    if($("pf"))$("pf").onchange=async e=>{for(const f of [...e.target.files].slice(0,4-PH.length)){try{const b=await shrink(f);PH.push({b,u:URL.createObjectURL(b)})}catch(er){toast("有一張照片讀不出來，請換一張")}}drawUps()}};
+  drawUps();
+  document.querySelectorAll("#ipp button").forEach(b=>b.onclick=()=>{IPV=b.dataset.v;document.querySelectorAll("#ipp button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  const setIp=v=>{IPV=v;document.querySelectorAll("#ipp button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v))};
+  $("cs").oninput=()=>{clearTimeout(CT);const qq=$("cs").value.trim();if(!qq){$("cl").hidden=true;return}CT=setTimeout(async()=>{const my=++CQ;
+    try{const r=await api("search?q="+encodeURIComponent(qq),null,AAPI);if(my!==CQ)return;
+      $("cl").innerHTML=r.items.length?r.items.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${x.op?"海賊王・":""}${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，直接在下面填商品名稱就好</p>`;
+      $("cl").hidden=false;
+      $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{const x=r.items[+el.dataset.i];$("ti").value=(x.n+(/美版/.test(x.meta)?" 美版":"")).slice(0,60);REF=x.ref||null;CKEY=x.k||x.n;CIMG=x.img||null;
+        setIp(x.op?"op":"pk");$("kd").value=x.b?"box":x.psa?"psa":"card";if(x.psa)$("co").value="鑑定卡";if(x.b)$("co").value="全新未拆";
+        $("rb").hidden=!x.ref;$("rb").innerHTML=x.ref?`<span>${esc(x.src)} 近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(x.ref)}</b>（會顯示給買家參考）</span><button type="button" class="btn sm" id="rbx">不顯示</button>`:"";
+        if(x.ref)$("pr").placeholder="參考行情 "+nt(x.ref);if($("rbx"))$("rbx").onclick=()=>{REF=null;$("rb").hidden=true};$("cl").hidden=true;$("cs").value=""};
+        el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}})}catch(e){}},300)};
+  $("cf").onsubmit=async e=>{e.preventDefault();const msg=$("cm");msg.textContent="";
+    const b={title:$("ti").value,ip:IPV,kind:$("kd").value,cond:$("co").value,price:+$("pr").value,nego:$("ng").checked?1:0,contact:$("ct").value,note:$("nt").value,ref:REF,ckey:CKEY,cimg:PH.length?null:CIMG};
+    if(!b.title.trim())return msg.textContent="請填商品名稱";if(!(b.price>=1))return msg.textContent="請填售價";if(!b.contact.trim())return msg.textContent="請填聯絡方式";
+    if(!$("ag").checked)return msg.textContent="請先勾選同意刊登規則";
+    if(!PH.length&&!confirm("沒有實拍照片的商品比較難賣，確定不附照片？"))return;
+    $("go").disabled=true;$("go").textContent="刊登中…";
+    try{const r=await api("create",b);LS.set("acontact",b.contact.trim());
+      for(let i=0;i<PH.length;i++){$("go").textContent=`上傳照片 ${i+1}/${PH.length}…`;try{const pr=await fetch(API+"photo/"+r.id+"?n="+i,{method:"POST",headers:{"x-tok":TOK,"content-type":"image/jpeg"},body:PH[i].b});const pj=await pr.json().catch(()=>({}));if(!pr.ok)throw new Error(pj.err||"照片上傳失敗")}catch(pe){toast("商品已刊登，但第 "+(i+1)+" 張照片上傳失敗："+pe.message)}}
+      toast("刊登成功！");IP=IPV;LS.set("mip",IP);syncIp();setTab("live");openItem(r.id)}
+    catch(er){msg.textContent=er.message;$("go").disabled=false;$("go").textContent="確認刊登"}};
+};
+/* 照片壓縮：長邊 1200px，JPEG，控制在 400KB 內 */
+function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=async()=>{URL.revokeObjectURL(u);
+  let w=im.naturalWidth,h=im.naturalHeight,s=Math.min(1,1200/Math.max(w,h)),q=.82,out=null;
+  for(let i=0;i<6;i++){const c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    out=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(out&&out.size<350*1024)break;s*=.8;q=Math.max(.6,q-.06)}
+  out&&out.size<550*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+
+/* 管理 */
+async function loadAdmin(){
+  $("grid").innerHTML=`<div class="empty">載入中…</div>`;
+  let j;try{j=await api("admin/reports")}catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+  $("grid").innerHTML=`<div class="adm">
+    <div class="box"><h3>市集檢舉（${j.reports.length}）</h3>${j.reports.length?j.reports.map(r=>`<div class="adm-row"><div style="flex:1;min-width:200px"><a href="#m${r.id}" data-open="${r.id}"><b>${esc(r.title)}</b></a>　<small>${esc(r.status)}・賣家 ${esc(r.sname)}・${r.n} 次・${day(r.last)}</small><p>${esc(r.reasons||"")}</p></div>
+      <span class="row2"><button type="button" class="btn sm" data-act="remove" data-id="${r.id}">下架</button><button type="button" class="btn sm dark" data-act="ban" data-id="${r.id}">停權賣家</button><button type="button" class="btn sm" data-act="dismiss" data-id="${r.id}">忽略</button></span></div>`).join(""):`<p class="note">目前沒有檢舉</p>`}</div>
+    <div class="box"><h3>刊登最多的賣家（免費上限 ${j.free} 件）</h3>${j.top.length?j.top.map(u=>{const qq=j.quotas.find(x=>x.uid===u.uid);return `<div class="adm-row"><span><b>${esc(u.name||"玩家")}</b>　<small>刊登中 ${u.n} 件・上限 ${qq?qq.max:j.free}</small></span><button type="button" class="btn sm" data-act="quota" data-uid="${esc(u.uid)}">調整上限</button></div>`}).join(""):`<p class="note">還沒有人刊登</p>`}</div>
+    <div class="box"><h3>已調整上限的玩家</h3>${j.quotas.length?j.quotas.map(u=>`<div class="adm-row"><span><b>${esc(u.name||"玩家")}</b>　<small>上限 ${u.max}</small></span><button type="button" class="btn sm" data-act="quota" data-uid="${esc(u.uid)}">調整</button></div>`).join(""):`<p class="note">沒有</p>`}<p class="note">競標的檢舉與停權名單在 <a href="auction.html#admin">競標管理</a>，停權兩邊共用。</p></div></div>`;
+  $("grid").querySelectorAll("[data-open]").forEach(x=>x.onclick=e=>{e.preventDefault();openItem(+x.dataset.open)});
+  $("grid").querySelectorAll("[data-act]").forEach(x=>x.onclick=async()=>{const act=x.dataset.act;let max=null,reason="";
+    if(act==="quota"){const v=prompt(`同時刊登上限（免費預設 ${j.free}）`,"30");if(v==null)return;max=+v}
+    else{if(!confirm("確定要"+{remove:"下架這個商品",ban:"停權這個賣家（市集、競標上架中的商品都會下架）",dismiss:"忽略這筆檢舉"}[act]+"？"))return;if(act==="ban")reason=prompt("停權原因（選填）","違反刊登規則")||""}
+    try{await api("admin/act",{action:act,id:+x.dataset.id||0,uid:x.dataset.uid||"",reason,max});toast("已完成");loadAdmin()}catch(e){toast(e.message)}});
+}
+
+/* 開啟 */
+syncIp();drawWho();
+const H=location.hash,WANT_ADMIN=/admin/.test(H);if(WANT_ADMIN)history.replaceState(null,"",location.pathname);
+const SELL=(H.match(/sell=([^&]*)(?:&ref=(\d+))?/)||[]);if(SELL[1])history.replaceState(null,"",location.pathname);
+const SH=H.match(/^#s=([\w-]+)/);
+if(SH){openShop(SH[1]);api("list?st=live").then(j=>{ME=j.me;drawWho()}).catch(()=>{})}
+else load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");
+  if(SELL[1]){$("new").click();if(TOK&&$("ti")){$("ti").value=decodeURIComponent(SELL[1]).slice(0,60);$("cs").value=decodeURIComponent(SELL[1]).slice(0,40);$("cs").dispatchEvent(new Event("input"))}return}
+  const m=H.match(/^#m(\d+)/);if(m)openItem(+m[1])});
+})();
+</script>
+</body>
+</html>

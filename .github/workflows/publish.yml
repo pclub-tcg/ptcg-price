@@ -7,7 +7,7 @@ on:
     - cron: "41 2 * * *"   # 每天台灣時間 10:41
   push:
     branches: [main]
-    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html]
+    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html, tools/market.html, tools/richmenu.py, tools/guide.py]
 permissions:
   contents: write
 concurrency:

@@ -30,6 +30,7 @@ OPM_DATA="$OPDIR/opmerc.json" TJ_DATA="$OPDIR/tcgj_op.json" OP_DATA="$OPDIR/op.j
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 python3 "$HERE/guide.py" "$OUT"
 cp "$HERE/auction.html" "$OUT/auction.html"
+cp "$HERE/market.html" "$OUT/market.html"
 [ -s "$TJ" ] && cp "$TJ" "$OUT/tcgj_op.json"
 [ -s "$OUT/data/d1.sql" ] && cp "$OUT/data/d1.sql" /tmp/d1.sql
 mkdir -p "$OUT/icons" && cp "$HERE"/icons/*.png "$OUT/icons/"
