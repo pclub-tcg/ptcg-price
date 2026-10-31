@@ -1,0 +1,20 @@
+search fail S2a 7 HTTP Error 404: Not Found
+search fail SM1S 15 HTTP Error 404: Not Found
+search fail SM1+ 2 HTTP Error 404: Not Found
+search fail SM2K 7 HTTP Error 404: Not Found
+search fail SM2+ 2 HTTP Error 404: Not Found
+search fail SM3+ 2 HTTP Error 404: Not Found
+search fail SM4+ 2 HTTP Error 404: Not Found
+search fail SM5+ 2 HTTP Error 404: Not Found
+search fail XYB 3 HTTP Error 404: Not Found
+search fail XYE 2 HTTP Error 404: Not Found
+search fail XYF 3 HTTP Error 404: Not Found
+search fail BW3 25 HTTP Error 404: Not Found
+search fail BW6 25 HTTP Error 404: Not Found
+search fail EBB 24 HTTP Error 404: Not Found
+search fail M7 6 HTTP Error 404: Not Found
+search fail M8 4 HTTP Error 404: Not Found
+search fail M9 4 HTTP Error 404: Not Found
+search fail M8a 2 HTTP Error 404: Not Found
+candidate ids 7964 old cards 4464 skip 4011
+cards 4505 with A 3142 with PSA10 4119 {'http 404': 18, 'kept': 3501, 'not jp card': 52, 'updated': 4279, 'no sales': 325, 'common skipped': 281}
