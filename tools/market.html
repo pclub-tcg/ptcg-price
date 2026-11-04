@@ -175,6 +175,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40p
     <select id="sort" aria-label="排序"><option value="new">最新</option><option value="cheap">比行情便宜</option><option value="lo">價格低到高</option><option value="hi">價格高到低</option></select>
     <div class="newbox"><span class="quota" id="quota"></span><button type="button" class="btn teal" id="newwant">＋ 我要收</button><button type="button" class="btn main" id="new">＋ 刊登商品</button></div>
   </div>
+  <div class="wstrip" id="wstrip" hidden></div>
   <div class="grid" id="grid"><div class="empty">載入中…</div></div>
 </main>
 
@@ -219,12 +220,24 @@ function drawWho(){
 }
 const photoUrl=(m,n)=>`${API}photo/${m.id}/${n||0}`;
 const thumb=m=>m.nphoto?`<img src="${photoUrl(m,0)}" alt="${esc(m.title)}" loading="lazy">`:m.cimg?`<img class="cat" src="${esc(m.cimg)}" alt="${esc(m.title)}" loading="lazy">`:`<span class="nophoto">${esc(m.title)}<br><small>賣家沒有附照片</small></span>`;
+function rbar(m,big){if(!m.ref)return"";const d=(m.price-m.ref)/m.ref,pos=Math.max(4,Math.min(96,50+d*100));
+  return `<div class="rbar${big?" big":""}" role="img" aria-label="售價比日本行情${d<0?"低":"高"} ${Math.round(Math.abs(d)*100)}%"><i style="left:${pos.toFixed(1)}%"></i></div>${big?`<div class="rbar-l"><span>便宜</span><span>日本行情 <b>${nt(m.ref)}</b></span><span>偏貴</span></div>`:""}`}
+let WANTS=null;
+async function wstrip(){const box=$("wstrip");if(!box)return;if(ST!=="live"){box.hidden=true;return}
+  if(!WANTS){try{WANTS=(await api("wants")).items||[]}catch(e){WANTS=[]}}
+  const a=WANTS.filter(w=>w.status==="open"&&(w.ip==="op")===(IP==="op")).slice(0,10);
+  if(!a.length){box.hidden=true;return}
+  box.innerHTML=`<div class="wh"><b>有人在收</b><button type="button" class="lk" id="wall">全部求卡 ›</button></div><div class="wrow">${a.map(w=>`<button type="button" class="wi" data-wid="${w.id}">${w.cimg?`<img src="${esc(w.cimg)}" alt="" loading="lazy">`:`<span class="wn">收</span>`}<span><b>${esc(w.title)}</b><small>收 ${nt(w.maxp)}</small></span></button>`).join("")}</div>`;
+  box.hidden=false;
+  box.querySelectorAll("[data-wid]").forEach(b=>b.onclick=()=>openWant(+b.dataset.wid));
+  $("wall").onclick=()=>{const t=document.querySelector('.tabs [data-st="wants"]');if(t)t.click()}}
 function refTxt(m){if(!m.ref)return"";const d=(m.price-m.ref)/m.ref;const pct=Math.round(Math.abs(d)*100);
   return `日本行情 ${nt(m.ref)}${pct>=3?`・<span class="${d<0?"lo":"hi"}">${d<0?"便宜":"高"} ${pct}%</span>`:"・接近行情"}`}
 function statTxt(s,nw){if(!s)return"";return s.pos+s.neg||s.ab?` <span class="stat">・<b>👍${s.pos}</b> <i>👎${s.neg}</i>${s.ab?` <i>未完成 ${s.ab}</i>`:""}</span>`:` <span class="stat">・${nw||"新賣家"}</span>`}
 
 /* 列表 */
 async function load(){
+  if($("wstrip"))$("wstrip").hidden=true;
   if(ST==="admin")return loadAdmin();
   if(ST==="shop")return loadShop(SHOP);
   if(ST==="wants"){try{const j=await api("wants");ME=j.me;ITEMS=j.items;drawWho();draw()}catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}</div>`}return}
@@ -233,13 +246,13 @@ async function load(){
     const p=$("pend");p.hidden=!j.pending;p.textContent=j.pending||"";draw()}
   catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}<br><button type="button" class="btn sm" onclick="location.reload()" style="margin-top:10px">重新整理</button></div>`}
 }
-function counts(){if(ST==="wants")return;const c={pk:0,op:0};ITEMS.forEach(m=>{if(m.status==="live")c[m.ip==="op"?"op":"pk"]++});$("n-pk").textContent=c.pk+" 件刊登";$("n-op").textContent=c.op+" 件刊登"}
+function counts(){if(ST==="wants")return;wstrip();const c={pk:0,op:0};ITEMS.forEach(m=>{if(m.status==="live")c[m.ip==="op"?"op":"pk"]++});$("n-pk").textContent=c.pk+" 件刊登";$("n-op").textContent=c.op+" 件刊登"}
 function cardHtml(m){
   const tags=[m.status==="held"?`<span class="tag hold">保留中</span>`:m.status==="sold"?`<span class="tag">已售出</span>`:m.status==="expired"?`<span class="tag">已過期</span>`:"",
     m.mine?`<span class="tag me">我的</span>`:"",m.buying?`<span class="tag deal">我買的</span>`:"",m.status==="live"&&m.ref&&m.price<=m.ref*.9?`<span class="tag deal">低於行情</span>`:"",m.status==="live"&&m.nego?`<span class="tag nego">可議價</span>`:"",m.watched?`<span class="tag star">★</span>`:""].join("");
   return `<article class="card${m.status==="held"||m.status==="sold"?" held":""}" data-id="${m.id}" tabindex="0"><div class="ph">${thumb(m)}<div class="tags">${tags}</div></div><div class="cb"><h3>${esc(m.title)}</h3>
     <div class="pr"><b>${nt(m.status==="sold"&&m.deal?m.deal:m.price)}</b>${m.status==="sold"&&m.deal&&m.deal!==m.price?`<s>${nt(m.price)}</s>`:""}</div>
-    ${m.ref?`<div class="ref">${refTxt(m)}</div>`:""}
+    ${m.ref?`${m.status==="live"?rbar(m):""}<div class="ref">${refTxt(m)}</div>`:""}
     <div class="meta"><span>${esc(KIND[m.kind]||"")}${m.cond?"・"+esc(m.cond):""}</span><span>${m.status==="sold"?ago(m.dealt||m.bumped):ago(m.bumped)}</span></div></div></article>`;
 }
 function wantCard(w){
@@ -381,7 +394,7 @@ async function openItem(id,keep){
   $("sb").innerHTML=`<div class="d-top"><div class="gal">${gal}</div><div class="d-info">
     <h3>${esc(m.title)}</h3>
     <div class="chips"><span class="chip">${m.ip==="op"?"海賊王":"寶可夢"}・${esc(KIND[m.kind]||"")}</span>${m.cond?`<span class="chip">${esc(m.cond)}</span>`:""}<a class="chip" href="#s=${esc(m.shop)}" id="shopl">🏪 ${esc(m.seller)}${statTxt(j.sellerStats)}</a><span class="chip">${m.views} 次瀏覽</span><span class="chip">${ago(m.bumped)}更新</span></div>
-    <div class="box"><div class="price"><div><small>${sold?"成交價":"售價"}${m.nego&&live?"・可議價":""}</small><span class="v">${nt(sold&&m.deal?m.deal:m.price)}</span></div>${m.ref?`<div class="cmp"><small>日本近期成交</small><b>${nt(m.ref)}</b><br><span class="ref">${refTxt(m).replace(/^日本行情 [^・]+・?/,"")}</span></div>`:""}</div>${main}</div>
+    <div class="box"><div class="price"><div><small>${sold?"成交價":"售價"}${m.nego&&live?"・可議價":""}</small><span class="v">${nt(sold&&m.deal?m.deal:m.price)}</span></div>${m.ref?`<div class="cmp"><small>日本近期成交</small><b>${nt(m.ref)}</b><br><span class="ref">${refTxt(m).replace(/^日本行情 [^・]+・?/,"")}</span></div>`:""}</div>${m.ref&&!sold?`<div class="rbar-box"><small>跟行情比</small>${rbar(m,true)}</div>`:""}${main}</div>
     ${m.note?`<p class="note" style="white-space:pre-wrap;font-size:14px;color:var(--ink)">${esc(m.note)}</p>`:""}
   </div></div>${deal}${offers}${myOff}${j.rate?rateBox(j.rate):""}
   <div class="row2">${TOK&&!m.mine&&live?`<button type="button" class="btn sm${m.watched?" dark":""}" id="watch">${m.watched?"★ 已關注":"☆ 關注（降價通知）"}</button>`:""}${TOK&&m.ckey&&!m.mine?`<button type="button" class="btn sm${j.follow?" dark":""}" id="follow">${j.follow?"🔔 到貨提醒中":"🔔 這張卡有人刊登時通知我"}</button>`:""}<button type="button" class="btn sm" id="share">分享</button>${!m.mine?`<button type="button" class="btn sm" id="report">檢舉</button>`:""}</div>`;

@@ -168,6 +168,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:20px 16px 40p
     <div class="trow"><div class="grow"><input type="search" id="q" placeholder="搜尋卡名、卡號" aria-label="搜尋競標"></div>
     <select id="sort" aria-label="排序"><option value="end">即將結束</option><option value="new">最新上架</option><option value="lo">價格低到高</option><option value="hi">價格高到低</option><option value="bids">出價最多</option></select></div>
   </div>
+  <div class="feat" id="feat" hidden></div>
   <div class="grid" id="grid"><div class="empty">載入中…</div></div>
 </main>
 
@@ -220,17 +221,23 @@ async function load(){
   try{const j=await api("list?st="+ST);ME=j.me;ITEMS=j.items;drawWho();draw()}
   catch(e){$("grid").innerHTML=`<div class="empty">${esc(e.message)}<br><button type="button" class="btn sm" onclick="location.reload()" style="margin-top:10px">重新整理</button></div>`}
 }
+function feat(a){const box=$("feat");if(!box)return;
+  const f=ST==="live"?a.filter(x=>x.status==="live"&&x.ends-now()>0&&x.ends-now()<864e5).sort((x,y)=>x.ends-y.ends)[0]:null;
+  if(!f){box.hidden=true;return}const L=f.ends-now();
+  box.innerHTML=`<button type="button" class="fcard" data-id="${f.id}"><span class="fph">${photo(f)}</span><span class="fin"><span class="live"><i></i>${L<3600e3?"LIVE 即將結標":"今天結標"}</span><b class="ft">${esc(f.title)}</b><small>${f.nbids?"目前出價・"+f.nbids+" 次":"起標價"}</small><span class="fp">${nt(f.nbids?f.price:f.start)}</span>${f.ref?`<small>日本行情約 ${nt(f.ref)}</small>`:""}<span class="cd fcd${L<3600e3?" hot":""}" data-end="${f.ends}" data-st="live">${left(L)}</span></span></button>`;
+  box.hidden=false;box.querySelector(".fcard").onclick=()=>openItem(f.id)}
 function draw(){
   const q=$("q").value.trim().toLowerCase(),s=$("sort").value;
   let a=ITEMS.filter(x=>!q||(x.title+" "+(x.cond||"")+" "+(x.note||"")).toLowerCase().includes(q));
   const P=x=>x.nbids?x.price:x.start;
   a.sort(s==="new"?(x,y)=>y.created-x.created:s==="lo"?(x,y)=>P(x)-P(y):s==="hi"?(x,y)=>P(y)-P(x):s==="bids"?(x,y)=>y.nbids-x.nbids:ST==="live"?(x,y)=>x.ends-y.ends:(x,y)=>y.ends-x.ends);
+  feat(q?[]:a);
   if(!a.length){$("grid").innerHTML=`<div class="empty">${q?"找不到符合的商品":ST==="live"?"目前沒有進行中的競標，來當第一個上架的人吧！":ST==="mine"?"你還沒有上架或出價過":ST==="watch"?"還沒有關注的商品。在商品頁按「☆ 關注」，快結標時會用 LINE 提醒你":"還沒有結束的競標"}</div>`;return}
   $("grid").innerHTML=a.map(x=>{const L=x.ends-now(),live=x.status==="live"&&L>0;
     const tags=[live&&L<3600e3?`<span class="tag hot">即將結標</span>`:"",x.leading?`<span class="tag me">${live?"你出價最高":"你得標"}</span>`:"",x.mine?`<span class="tag">我的商品</span>`:"",x.buynow&&live?`<span class="tag buy">可直購</span>`:"",x.watched?`<span class="tag star">★ 關注</span>`:""].join("");
     return `<article class="card" data-id="${x.id}" tabindex="0"><div class="ph">${photo(x)}<div class="tags">${tags}</div></div><div class="cb"><h3>${esc(x.title)}</h3>
       <div class="pr"><small>${x.nbids?(live?"目前出價":"結標價"):(live?"起標價":"流標")}</small><b>${nt(x.nbids?x.price:x.start)}</b></div>
-      <div class="meta"><span>${x.nbids} 次出價</span><span class="cd${live&&L<3600e3?" hot":""}" data-end="${x.ends}" data-st="${x.status}">${live?left(L):"已結束"}</span></div></div></article>`}).join("");
+      <div class="meta"><span>${x.nbids} 次出價</span><span class="cd${live&&L<3600e3?" hot":""}" data-end="${x.ends}" data-st="${x.status}">${live?left(L):"已結束"}</span></div>${x.ref?`<div class="aref">日本行情 ${nt(x.ref)}</div>`:""}</div></article>`}).join("");
 }
 $("grid").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)});
 $("grid").addEventListener("keydown",e=>{if(e.key==="Enter"){const c=e.target.closest(".card");if(c)openItem(+c.dataset.id)}});
@@ -254,7 +261,7 @@ async function openItem(id,keep){
   if(!keep){CUR=id;sheet("競標商品",`<p class="note">載入中…</p>`);history.replaceState(null,"","#a"+id)}
   let j;try{j=await api("item/"+id)}catch(e){if(!keep)$("sb").innerHTML=`<p class="msg err">${esc(e.message)}</p>`;return}
   if(CUR!==id)return;ME=j.me;drawWho();
-  const a=j.item,L=a.ends-now(),live=a.status==="live"&&L>0,mb=minBid(a);
+  const a=j.item,L=a.ends-now(),live=a.status==="live"&&L>0,mb=minBid(a);a._out=!a.leading&&(j.bids||[]).some(b=>b.me);
   const keepVal=keep&&$("amt")?$("amt").value:"";
   $("sh-t").textContent=live?"競標中":"已結束";
   $("sb").innerHTML=`<div class="d-top"><div class="d-ph${a.photo?"":" np"}">${photo(a)}</div><div class="d-info">
@@ -309,8 +316,8 @@ function bidBox(a,mb){
   if(!TOK)return `<div style="margin-top:12px">${loginHtml("出價需要先用 LINE 登入")}</div>`;
   if(a.mine)return `<p class="note" style="margin-top:12px">這是你的商品。${a.nbids?"已經有人出價，不能下架。":"還沒有人出價前可以下架。"}</p>`;
   if(a.leading)return `<p class="msg ok">你目前出價最高 👍 被超標時會用 LINE 通知你。</p>`;
-  return `<div class="bidrow"><input id="amt" type="number" inputmode="numeric" min="${mb}" step="${a.inc}" value="${mb}" aria-label="出價金額"><button type="button" class="btn main" id="bid">出價</button></div>
-    <div class="quick"><button type="button" class="btn sm" data-k="0">最低 ${nt(mb)}</button><button type="button" class="btn sm" data-k="2">+2 口</button><button type="button" class="btn sm" data-k="5">+5 口</button>${a.buynow?`<button type="button" class="btn sm dark" id="buy">直購 ${nt(a.buynow)}</button>`:""}</div>
+  return `<div class="bidbar">${a._out?`<p class="outbid">你已被超過出價</p>`:""}<div class="bidrow"><input id="amt" type="number" inputmode="numeric" min="${mb}" step="${a.inc}" value="${mb}" aria-label="出價金額"><button type="button" class="btn main" id="bid">出價</button></div>
+    <div class="quick"><button type="button" class="btn sm" data-k="0">最低 ${nt(mb)}</button><button type="button" class="btn sm" data-k="2">+2 口</button><button type="button" class="btn sm" data-k="5">+5 口</button>${a.buynow?`<button type="button" class="btn sm dark" id="buy">直購 ${nt(a.buynow)}</button>`:""}</div></div>
     <p class="note" style="margin-top:8px">每口加價 ${nt(a.inc)}，最低出價 ${nt(mb)}。出價後不能取消，得標請在 24 小時內聯絡賣家，棄標會被記錄。</p><p class="msg" id="bm" aria-live="polite"></p>`;
 }
 function wireBid(a,mb,keepVal){
