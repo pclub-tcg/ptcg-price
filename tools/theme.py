@@ -43,7 +43,7 @@ def apply(h):
     # 手機底部導覽
     tab = ('<nav class="th-tabbar" aria-label="快速選單">'
            '<button type="button" class="on" data-th="top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h5v5"/></svg>行情</button>'
-           '<button type="button" data-th="tcg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="11" height="15" rx="2"/><path d="M9 21h9a2 2 0 0 0 2-2V8"/></svg>卡片目錄</button>'
+           '<a href="auction.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6"/><path d="M11 7l6 6"/><path d="M12.5 5.5l-5 5 6 6 5-5z" fill="none"/><path d="M10 13l-6 6"/><path d="M3 21h9"/></svg>競標</a>'
            '<a class="cam" href="%s" target="_blank" rel="noopener" data-th="cam"><i>%s</i>拍照查價</a>'
            '<a href="market.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v11H4z"/><path d="M10 20v-5h4v5"/></svg>市集</a>'
            '<button type="button" data-th="inv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v13H4z"/><path d="M8 7V4h8v3"/></svg>我的庫存<b id="th-invn"></b></button>'
