@@ -434,5 +434,9 @@ rep('<dl class="nums">\n      <div><dt>${c.na?"日本":SN[c.k]} 成交中位',
 import theme as _theme
 h = _theme.apply(h)
 
+# 19. 載入畫面（tools/boot.py）：深色開場＋進度條，資料到齊後淡出；商品圖載入前顯示流光骨架
+import boot as _boot
+h = _boot.apply(h)
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
