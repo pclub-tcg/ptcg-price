@@ -23,15 +23,24 @@ SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "
         "BW1", "BW2", "BW3", "BW4", "BW5", "BW6", "BW7", "BW8", "BW9", "EBB", "SC",
         # 之後的新系列（還沒出的會自動略過）
         "M7", "M8", "M9", "M7a", "M8a",
+        # 構築デッキ、スターター、スペシャルセット、ハイクラス、プレミアムトレーナーボックスなど（2026-11-04 補）
+        "MF", "MC", "MA", "MEE", "MEM", "MEZ", "MBG", "MBD", "MMB", "MDB", "MP1",
+        "SVG", "SVI", "SVJL", "SVJP", "SVF", "SVK", "SVM", "SVN", "SVOM", "SVHK", "SVHM", "SVC", "SVEM", "SVP1",
+        "SVAW", "SVAM", "SVAL", "SVB", "SVD", "SVEL", "SVLN", "SVLS", "SVOD",
+        "SO", "SGG", "SGI", "SPD", "SPZ", "SP4", "SP5", "SH", "SK", "SN", "SF", "SB", "SD", "SI", "SA", "SA-L", "SC2",
+        "SEF", "SEK", "SLL", "SLD", "S8a-G",
+        "SML", "SMJ", "SMM", "SMF", "SMD", "SMB", "SMP1",
+        "CLL", "CLK", "CLF", "X30",
+        "ADV", "ADV1-M", "ADV1-K", "ADV1-A", "PCGS-si", "PCGS-bl",
         # 特典卡
-        "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P"]
+        "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8a-P", "ADV-P", "DPt-P"]
 RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
 SETS_U = {x.upper() for x in SETS}
 COMMON = {"C", "U", "R"}
-PROMO = {"S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P"}
+PROMO = {"S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8A-P", "ADV-P", "DPT-P"}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
 # 「ピカチュウex SAR [SV8 132/106](…)」「ピカチュウ C :マスターボールミラー [SV2a 025/165](…)」「ピカチュウ [S-P 143]」
-TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}))?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
+TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4})(?:仕様)?)?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
 STAT = collections.Counter()
 SKIP_VER = 3  # 標題格式或系列清單改過：舊的「不是日版卡」名單作廢重查
 
