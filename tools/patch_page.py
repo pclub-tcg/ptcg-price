@@ -419,6 +419,13 @@ rep('imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?s
     'imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?sprBox(o.spr,84):o.tj&&o.tj.img?`<img src="${esc(o.tj.img)}" alt="" style="background:#fff">`:"";}')
 rep('if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}', 'if(o.tj)links.push([TJU(o.tj.u),"TCG Japan 商品頁"]);else if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}')
 
+# 17b. 卡片目錄大字價格改用 SNKRDUNK 最新成交日均價（klast.json，和商品詳情 K 線上方的價格一致）；沒有成交紀錄才用 Mercari／SNKRDUNK 中位數
+rep('let KD=null,KP=null;', 'let KD=null,KP=null,KL=null;fetch("klast.json").then(r=>r.ok?r.json():null).then(j=>{if(j){KL=j;try{render(false)}catch(e){}}}).catch(()=>{});\n'
+    'function klast(o){try{const k=KL&&kKeyRow(o);return k&&KL[k]||null}catch(e){return null}}\n'
+    'function kday(d){return new Date(d*864e5).toISOString().slice(5,10).replace("-","/")}')
+rep('<div class="cprice">${c&&c.m?`<span class="pbig">${Y(c.m)}<small>${ALT(c.m)}</small></span>`:""}',
+    '<div class="cprice">${(()=>{const L=klast(o);if(L)return `<span class="pbig">${Y(L[1])}<small>${ALT(L[1])}</small></span><span class="lbl">SNKRDUNK 最新成交（${kday(L[0])}）${L[2]?chgHtml(pct(L[1],L[2])):""}</span>`;return c&&c.m?`<span class="pbig">${Y(c.m)}<small>${ALT(c.m)}</small></span>`:""})()}')
+
 # 18. 2026-11 改版（A 深色收藏館）：頁首、主視覺排版、漲幅排行板、手機底部導覽（tools/theme.py／theme.css／theme.js）
 import theme as _theme
 h = _theme.apply(h)

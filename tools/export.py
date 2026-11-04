@@ -452,7 +452,14 @@ for p in prods:
 kd = json.load(open(kline, encoding="utf-8"))
 kd["d"] = KL_OUT
 json.dump(kd, open(os.path.join(out, "kline.json"), "w", encoding="utf-8"), separators=(",", ":"))
-print("charts", nch)
+# 卡片目錄的大字價格用「SNKRDUNK 最新成交日均價」：只放每個 key 的 [最後日序, 最新價, 前一筆價]（kline.json 太大，清單頁不載）
+KLAST = {}
+for kk, a in KL_OUT.items():
+    if not a or len(a) < 2:
+        continue
+    KLAST[kk] = [a[0] + sum(a[2::2]), a[-1], a[-3] if len(a) >= 4 else None]
+json.dump(KLAST, open(os.path.join(out, "klast.json"), "w", encoding="utf-8"), separators=(",", ":"))
+print("charts", nch, "klast", len(KLAST))
 
 # 6. 網站設定（以圖搜尋的 Worker 網址）
 cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site-config.json")
