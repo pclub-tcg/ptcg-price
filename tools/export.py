@@ -424,6 +424,7 @@ def encode(pts):
 
 
 KL_OUT = dict(KL)
+SP30 = {}
 nch = 0
 for p in prods:
     kk = p.get("kk") or ""
@@ -444,6 +445,7 @@ for p in prods:
     old = [v for d, v in pts if d <= last - 30]
     if old:
         p["c30"] = round((pts[-1][1] - old[-1]) / old[-1] * 100, 1)
+        SP30[p["k"]] = [old[-1]] + [v for d, v in pts if d > last - 30]  # 首頁走勢小圖（30 天前那一點＋最近 30 天）
     p["ch"] = chart([q for q in pts if q[0] >= last - 120] or pts[-2:], "k%s.png" % re.sub(r"[^0-9a-z]", "_", kk))
     nch += 1
 # 網站的 K 線也用清理過的資料
@@ -554,7 +556,7 @@ try:
     tc = [p for p in prods if p["k"][:2] in ("i:", "r:", "j:", "x:") and p.get("c30") is not None and (p.get("kn") or 0) >= 8 and (p.get("k1") or 0) >= 3000 and _ti(p)]
     def _tr(p):
         return {"k": p["k"], "n": p["n"], "set": p.get("set", ""), "rar": "PSA10" if p.get("p") else p.get("rar", ""), "num": p.get("num", ""),
-                "img": _ti(p), "y": (p.get("s") or [p.get("k1")])[0], "c": p["c30"], "b": 1 if p.get("b") else 0}
+                "img": _ti(p), "y": (p.get("s") or [p.get("k1")])[0], "c": p["c30"], "b": 1 if p.get("b") else 0, "sp": [round(v) for v in SP30.get(p["k"], [])[-31:]]}
     json.dump({"rate": rate, "up": [_tr(p) for p in sorted(tc, key=lambda p: -p["c30"])[:10] if p["c30"] > 0],
                "down": [_tr(p) for p in sorted(tc, key=lambda p: p["c30"])[:10] if p["c30"] < 0]},
               open(os.path.join(out, "trend.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))

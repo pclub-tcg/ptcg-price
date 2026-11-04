@@ -419,5 +419,9 @@ rep('imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?s
     'imgHtml=hs?`<img src="${hs}" alt="" style="background:#fff">`:o.spr!=null?sprBox(o.spr,84):o.tj&&o.tj.img?`<img src="${esc(o.tj.img)}" alt="" style="background:#fff">`:"";}')
 rep('if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}', 'if(o.tj)links.push([TJU(o.tj.u),"TCG Japan 商品頁"]);else if(!o.extra)links.push([o.store,"TCG Japan 商品頁"]);}')
 
+# 18. 2026-11 改版（A 深色收藏館）：頁首、主視覺排版、漲幅排行板、手機底部導覽（tools/theme.py／theme.css／theme.js）
+import theme as _theme
+h = _theme.apply(h)
+
 open(dst, "w", encoding="utf-8").write(h)
 print("page patched")
