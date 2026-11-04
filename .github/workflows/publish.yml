@@ -7,7 +7,7 @@ on:
     - cron: "41 2 * * *"   # 每天台灣時間 10:41
   push:
     branches: [main]
-    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html, tools/market.html, tools/richmenu.py, tools/guide.py, tools/guide_market.py, tools/announce/**]
+    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html, tools/market.html, tools/richmenu.py, tools/guide.py, tools/guide_market.py, tools/announce/**, tools/refresh_snkr.py]
 permissions:
   contents: write
 concurrency:
@@ -34,6 +34,14 @@ jobs:
           git --work-tree=/tmp/tpl checkout FETCH_HEAD -- .
           git reset -q
           ls /tmp/tpl /tmp/tpl/sprites | head
+      # 卡片目錄、比價商品、原盒的 SNKRDUNK 成交價與 K 線：直接在這裡抓（不再靠電腦上的瀏覽器排程）
+      - name: 更新 SNKRDUNK 成交價（目錄卡、比價商品、原盒）
+        timeout-minutes: 40
+        env:
+          BUDGET_MIN: "30"
+        run: |
+          git fetch -q --depth 1 origin jpdata && git show FETCH_HEAD:jp.json > /tmp/jp.json || echo "{}" > /tmp/jp.json
+          python3 tools/refresh_snkr.py /tmp/tpl/index.html /tmp/tpl/kline.json /tmp/jp.json || echo "SNKRDUNK 更新失敗，沿用舊資料"
       - name: 產生網站並推到 site 分支
         env:
           PUSH_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
