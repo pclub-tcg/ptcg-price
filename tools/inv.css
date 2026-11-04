@@ -79,3 +79,19 @@
 .inv-fab.bump{animation:invbump .6s ease}
 @keyframes invbump{0%{transform:scale(1)}30%{transform:scale(1.18)}60%{transform:scale(.95)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.inv-toast{transition:opacity .2s}.inv-fab.bump{animation:none}}
+
+/* 2026-11 手機 App 第 4 批：深色卡圖底、出售清單的「產生圖片」固定在底部、一鍵開價可左右滑動 */
+.inv-im{background:radial-gradient(120% 90% at 50% 12%,#3a2a1f 0%,#1d1612 72%);color:var(--muted)}
+@media (max-width:640px){
+  .inv{overflow:clip;min-height:calc(100dvh - 20px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0}
+  .inv-body{padding:14px 14px 0}
+  .inv-tools:has([data-r]){flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-14px;padding-inline:14px}
+  .inv-tools:has([data-r])::-webkit-scrollbar{display:none}
+  .inv-tools:has([data-r])>*{flex:none;white-space:nowrap}
+  .inv-tools:has(#inv-make),.inv-outbtns{position:sticky;bottom:0;z-index:3;flex-wrap:nowrap;margin:0 -14px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 94%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+  .inv-tools:has(#inv-make) .inv-btn,.inv-outbtns .inv-btn{flex:1;min-height:48px;justify-content:center}
+  .inv-tools:has(#inv-make) .inv-msg:empty{display:none}
+  .inv-tools:has(#inv-make) .inv-msg{position:absolute;left:14px;right:14px;top:-26px;font-size:12.5px;text-align:center}
+  .inv-grid .inv-im{max-height:170px}
+  .inv-sell label{font-size:11.5px}
+}

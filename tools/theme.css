@@ -226,7 +226,7 @@ h2.sec::before{width:4px}
 
   /* 商品頁（K 線）：從下面滑上來的全螢幕頁面，關閉鍵和「加入庫存」固定 */
   .sheet-bg{padding-top:calc(8px + env(safe-area-inset-top,0px));z-index:40}
-  .sheet{min-height:calc(100dvh - 8px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .sheet{overflow:clip;min-height:calc(100dvh - 8px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
   .sheet::before{content:"";position:absolute;top:6px;left:50%;width:38px;height:4px;margin-left:-19px;border-radius:2px;background:rgba(255,255,255,.25);z-index:2}
   .sh-head{grid-template-columns:76px minmax(0,1fr);gap:12px;padding:20px 50px 14px 14px}
   .sh-img{width:76px;height:100px}
