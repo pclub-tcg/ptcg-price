@@ -1,0 +1,26 @@
+/* 競標、市集：跟首頁一樣的深色噴火龍主題（pwa.py 注入），只改顏色和手機排版，不動任何功能 */
+:root{--bg:#110D0B;--surface:#1D1612;--surface-2:#251C17;--line:#2F241D;--ink:#F6EDE3;--muted:#A8988A;--navy:#110D0B;--navy-fg:#F6EDE3;--brand:#FF8A2B;--brand-ink:#1D130E;--good:#2FC59A;--bad:#FF5A5F;--hot:#FF6B3D;--teal:#2BB3A6;--rev:#FF9A45;color-scheme:dark}
+body{font-feature-settings:"tnum"}
+.bar{background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.logo svg{width:28px;height:28px;padding:4px;border-radius:8px;background:var(--brand);color:var(--brand-ink)}
+.logo{color:var(--ink)}
+.hero{background:radial-gradient(640px 280px at 100% -30%,rgba(255,138,43,.24),transparent 70%),var(--bg)}
+.bidrow input,.f input,.f select,.f textarea,.fld input,.fld textarea,.rate textarea,.seg2 button,.cat-list,select,input[type=search],#q{background:var(--surface-2)!important;color:var(--ink);border-color:var(--line)}
+.ph,.gal .main,.gal .th button,.cat-it img,.cat-it .ni{background:radial-gradient(120% 90% at 50% 12%,#3a2a1f 0%,#1d1612 72%)}
+.win{background:rgba(47,197,154,.12);border-color:rgba(47,197,154,.35)}
+.warn{background:rgba(255,138,43,.12);border-color:rgba(255,138,43,.35)}
+.cat-list{box-shadow:0 18px 40px -12px rgba(0,0,0,.7)}
+.card{border:1px solid var(--line);box-shadow:none}
+.sheet-bg{background:rgba(0,0,0,.6)}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ipseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);border-color:var(--brand)}
+@media (max-width:640px){
+  .hero{padding:14px 0 16px}
+  .hero h1{font-size:24px;margin:0 0 4px}
+  .hero p{font-size:12.5px;margin:0;color:var(--muted)}
+  .trow,.tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:none;white-space:nowrap}
+  .sheet{min-height:calc(100dvh - 8px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0}
+  .sheet-bg{padding:calc(8px + env(safe-area-inset-top,0px)) 0 0!important;z-index:40}
+}

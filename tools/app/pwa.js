@@ -26,7 +26,7 @@ function show(txt,btn){if(document.getElementById("pwa-tip"))return;
 addEventListener("beforeinstallprompt",e=>{e.preventDefault();ev=e;setTimeout(()=>show("像 App 一樣全螢幕開啟，查價更快",true),4000)});
 if(ios)setTimeout(()=>show("點下方的 <i>分享</i> 按鈕，再選「加入主畫面」",false),5000);
 const s=document.createElement("style");
-s.textContent='#pwa-tip{position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:16px;background:var(--surface,#1D1612);color:var(--ink,#F6EDE3);border:1px solid var(--line,#2F241D);box-shadow:0 18px 40px -12px rgba(0,0,0,.55);font-size:13px;animation:pwa-in .3s ease-out}'+
+s.textContent='#pwa-tip{position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:35;display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:16px;background:var(--surface,#1D1612);color:var(--ink,#F6EDE3);border:1px solid var(--line,#2F241D);box-shadow:0 18px 40px -12px rgba(0,0,0,.55);font-size:13px;animation:pwa-in .3s ease-out}'+
 '#pwa-tip img{width:42px;height:42px;border-radius:10px;flex:none}#pwa-tip div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}#pwa-tip span{color:var(--muted,#A8988A);font-size:12px}#pwa-tip i{font-style:normal;font-weight:700;color:var(--brand,#FF8A2B)}'+
 '#pwa-tip .go{border:0;border-radius:10px;background:var(--brand,#FF8A2B);color:var(--brand-ink,#1D130E);font-weight:800;padding:8px 14px;cursor:pointer}#pwa-tip .x{border:0;background:none;color:var(--muted,#A8988A);font-size:15px;padding:4px 6px;cursor:pointer}'+
 '@keyframes pwa-in{from{transform:translateY(20px);opacity:0}}@media (prefers-reduced-motion:reduce){#pwa-tip{animation:none}}';

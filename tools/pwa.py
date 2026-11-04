@@ -63,6 +63,10 @@ def patch(name, on=None):
     tail = '<script src="app/pwa.js" defer></script>\n'
     if on:
         tail = TABCSS + tabbar(on) + "\n" + tail
+        dark = open(os.path.join(APP, "dark.css"), encoding="utf-8").read()
+        j = h.find("</head>")
+        h = h[:j] + '<style id="app-dark">\n' + dark + "</style>\n" + h[j:]
+        h = h.replace('<meta name="theme-color" content="#110D0B">', '<meta name="theme-color" content="#110D0B"><meta name="color-scheme" content="dark">', 1)
     i = h.rfind("</body>")
     h = h[:i] + tail + h[i:]
     open(p, "w", encoding="utf-8").write(h)
