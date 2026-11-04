@@ -426,6 +426,10 @@ rep('let KD=null,KP=null;', 'let KD=null,KP=null,KL=null;fetch("klast.json").the
 rep('<div class="cprice">${c&&c.m?`<span class="pbig">${Y(c.m)}<small>${ALT(c.m)}</small></span>`:""}',
     '<div class="cprice">${(()=>{const L=klast(o);if(L)return `<span class="pbig">${Y(L[1])}<small>${ALT(L[1])}</small></span><span class="lbl">SNKRDUNK 最新成交（${kday(L[0])}）${L[2]?chgHtml(pct(L[1],L[2])):""}</span>`;return c&&c.m?`<span class="pbig">${Y(c.m)}<small>${ALT(c.m)}</small></span>`:""})()}')
 
+# 17c. 比價結果卡片也在最上面列出 SNKRDUNK 最新成交日均價
+rep('<dl class="nums">\n      <div><dt>${c.na?"日本":SN[c.k]} 成交中位',
+    '<dl class="nums">${(()=>{const k=KL&&kKeyItem(it),L=k&&KL[k];return L?`<div class="klast"><dt>SNKRDUNK 最新成交（${kday(L[0])}）</dt><dd><b style="font-size:1.25em">${Y(L[1])}</b> ${L[2]?chgHtml(pct(L[1],L[2])):""}</dd></div>`:""})()}\n      <div><dt>${c.na?"日本":SN[c.k]} 成交中位')
+
 # 18. 2026-11 改版（A 深色收藏館）：頁首、主視覺排版、漲幅排行板、手機底部導覽（tools/theme.py／theme.css／theme.js）
 import theme as _theme
 h = _theme.apply(h)
