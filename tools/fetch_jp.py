@@ -33,16 +33,26 @@ SETS = ["SV1S", "SV1V", "SV1a", "SV2P", "SV2D", "SV2a", "SV3", "SV3a", "SV4K", "
         "CLL", "CLK", "CLF", "X30",
         "ADV", "ADV1-M", "ADV1-K", "ADV1-A", "PCGS-si", "PCGS-bl",
         # 特典卡
-        "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8a-P", "ADV-P", "DPt-P"]
+        "S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8a-P", "ADV-P", "DPt-P",
+        # 老卡（2026-11-06 補）：旧裏、neo、web、VS、e／PCG／DP／LEGEND 時期的プロモ與構築デッキ
+        "PMCG-P", "PMCG-G1", "PMCG-G2", "PMCG-GYM1", "PMCG-GYM2", "PMCG-GYM3", "PMCG-Red", "PMCG-Blue", "PMCG-Green", "PMCG-QS",
+        "neo-P", "neoP2", "PRMF-1", "PRMF-2", "PRMF-3", "web", "VS", "e-P", "eP",
+        "PCG", "PCG-P", "DP", "DP1", "DP2", "DP3", "DP4", "DP5", "DP-P", "Dpt-P", "PPP", "L-P", "L1", "L2", "L3", "WCS23"]
+# 老卡系列：C／U／R 不跳過，改成成交價 ¥3,000 以上才收
+OLD_SETS = {"PMCG-P", "PMCG-G1", "PMCG-G2", "PMCG-GYM1", "PMCG-GYM2", "PMCG-GYM3", "PMCG-RED", "PMCG-BLUE", "PMCG-GREEN", "PMCG-QS",
+            "NEO-P", "NEOP2", "PRMF-1", "PRMF-2", "PRMF-3", "WEB", "VS", "E-P", "EP", "PCG", "PCG-P", "DP", "DP1", "DP2", "DP3", "DP4", "DP5",
+            "DP-P", "DPT-P", "PPP", "L-P", "L1", "L2", "L3", "ADV", "ADV-P", "ADV1-M", "ADV1-K", "ADV1-A", "PCGS-SI", "PCGS-BL"}
+OLD_MIN = 3000
 RARE = {"SAR", "SR", "AR", "UR", "HR", "MUR", "MA", "CHR", "CSR", "SSR", "ACE", "BWR", "S", "K", "RRR", "PR", "TR", "P"}
 SETS_U = {x.upper() for x in SETS}
 COMMON = {"C", "U", "R"}
-PROMO = {"S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8A-P", "ADV-P", "DPT-P"}
+PROMO = {"S-P", "SV-P", "SM-P", "M-P", "XY-P", "BW-P", "S8A-P", "ADV-P", "DPT-P", "PMCG-P", "NEO-P", "E-P", "EP", "PCG-P", "DP-P", "PPP", "L-P"}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36", "Accept": "*/*"}
 # 「ピカチュウex SAR [SV8 132/106](…)」「ピカチュウ C :マスターボールミラー [SV2a 025/165](…)」「ピカチュウ [S-P 143]」
-TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4})(?:仕様)?)?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
+# 老卡：「R団のミュウツー R: 旧裏[PMCG-G2 No.150](…)」「なみのりピカチュウ ◆ [web 025/048](…)」「ピカチュウ :1ED [DP2 #026](…)」
+TITLE = re.compile(r"^(.*?)(?:\s+([A-Z]{1,4}|[◆●★☆])(?:仕様)?)?\s*(?::\s*([^\[]*?))?\s*\[([A-Za-z0-9+-]+)\s+(?:No\.\s*|#)?(\d{1,3}(?:/[\w-]{1,6})?)\]\s*(?:\((.*?)\))?")
 STAT = collections.Counter()
-SKIP_VER = 3  # 標題格式或系列清單改過：舊的「不是日版卡」名單作廢重查
+SKIP_VER = 4  # 2026-11-06 加老卡系列與老卡標題格式  # 標題格式或系列清單改過：舊的「不是日版卡」名單作廢重查
 
 
 def get(url, js=True, tries=5):
@@ -136,11 +146,14 @@ def one(sid):
                 SKIP[sid] = TODAY; STAT["not jp card"] += 1
                 return None
             # v：鏡面等版本
-            c = {"sid": int(sid), "b": m.group(1).strip(), "v": (m.group(3) or "").strip(), "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
+            v = re.sub(r"旧裏面?(?:/プロモ)?|^プロモ$", "", (m.group(3) or "")).strip(" /:")
+            b = re.sub(r"(?<=[^\s])プレミアムファイル\d?$", "", m.group(1).strip())
+            c = {"sid": int(sid), "b": b, "v": v, "r": m.group(2) or "", "set": m.group(4), "num": m.group(5), "pk": m.group(6) or "",
                  "en": (a.get("name") or "").split(" [")[0], "img": ((a.get("primaryMedia") or {}).get("imageUrl")) or "",
                  "pid": a["productCatalogId"]}
         # 很普通的卡（C／U／R）不抓；特典卡、鏡面等特殊版本照抓
-        if c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"):
+        old_set = c.get("set", "").upper() in OLD_SETS
+        if not old_set and c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"):
             SKIP[sid] = TODAY; STAT["common skipped"] += 1
             return None
         c["a"] = hist(c["pid"], "trading_card_single_nearly_unused", "A")
@@ -148,6 +161,9 @@ def one(sid):
         time.sleep(0.2)
         if not (c["a"].get("s") or c["p"].get("s")):
             SKIP[sid] = TODAY; STAT["no sales"] += 1
+            return None
+        if old_set and max((c["a"].get("s") or [0])[0], (c["p"].get("s") or [0])[0]) < OLD_MIN:
+            SKIP[sid] = TODAY; STAT["old low value"] += 1
             return None
         SKIP.pop(sid, None); STAT["updated"] += 1
         return c
@@ -158,7 +174,7 @@ def one(sid):
 
 with ThreadPoolExecutor(4) as ex:
     cards = [c for c in ex.map(one, sorted(ids | set(OLD))) if c]
-cards = [c for c in cards if not (c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"))]  # 沿用的舊資料也拿掉普通卡
+cards = [c for c in cards if c.get("set", "").upper() in OLD_SETS or not (c.get("r") in COMMON and c.get("set", "").upper() not in PROMO and not c.get("v"))]  # 沿用的舊資料也拿掉普通卡
 json.dump({"updated": time.strftime("%Y-%m-%d %H:%M", time.gmtime(time.time() + 8 * 3600)), "cards": cards, "skip": {str(k): v for k, v in SKIP.items()}, "skip_ver": SKIP_VER},
           open(sys.argv[1], "w"), ensure_ascii=False, separators=(",", ":"))
 print("cards", len(cards), "with A", sum(1 for c in cards if c["a"].get("s")), "with PSA10", sum(1 for c in cards if c["p"].get("s")), dict(STAT))
