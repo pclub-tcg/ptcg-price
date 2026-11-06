@@ -196,13 +196,13 @@ if jp_path and os.path.exists(jp_path):
             if kk in have_kk or not d.get("s"):
                 continue
             psa = kind == "p"
-            prods.append({"k": "j:%d%s" % (c["sid"], "p" if psa else ""), "n": "%s %s %s%s" % (name, c["r"], c["num"], " PSA10" if psa else ""),
-                          "j": "%s %s [%s %s]" % (c["b"], c["r"], c["set"], c["num"]),
+            prods.append({"k": "j:%d%s" % (c["sid"], "p" if psa else ""), "n": re.sub(r"\s+", " ", "%s %s %s%s" % (name, c["r"], c["num"], " PSA10" if psa else "")),
+                          "j": re.sub(r"\s+", " ", "%s %s [%s %s]" % (c["b"], c["r"], c["set"], c["num"])),
                           "kw": " ".join(x for x in [c["b"], c.get("en", ""), c["set"], c["r"], "psa10 鑑定" if psa else ""] if x),
                           "num": c["num"], "set": c["set"], "rar": c["r"], "p": 1 if psa else 0, "b": 0, "img": None, "m": None,
                           "s": d["s"], "sid": c["sid"], "kk": kk, "tw": None, "tt": "", "note": "",
                           "mq": "%s %s%s" % (c["num"], c["r"], " PSA10" if psa else ""), "cn": None, "sold": 0,
-                          "cat": "%s【%s】{%s} [%s]%s" % (name, c["r"], c["num"], c["set"], "_PSA10" if psa else ""), "jn": c["b"]})
+                          "cat": "%s【%s】{%s} [%s]%s" % (name, c["r"] or "-", c["num"], c["set"], "_PSA10" if psa else ""), "jn": c["b"]})
             if d.get("k"):
                 EXTRA_K[kk] = d["k"]
             nj += 1
