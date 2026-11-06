@@ -264,13 +264,20 @@ const numHead = n => { const m = String(n || "").match(/^0*(\d{1,3})\//); return
 async function dbImage(r, env) {
   if (r.box) return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 1").all());
   const raw = norm(r.number).replace(/\s/g, ""), num = fixNum(r.number), zh = String(r.name_zh || "").trim(), ja = norm(r.name_ja || "").replace(/\s/g, "");
-  const conds = [], args = [];
-  if (num) { conds.push("numn IN (?, ?)"); args.push(num, raw); }
-  if (numHead(num)) { conds.push("n0 = ?"); args.push(numHead(num)); } // 分母讀錯時，用分子＋卡名／系列再比一次
-  if (zh) { conds.push("h LIKE ? ESCAPE '\\'"); args.push("%" + esc(norm(zh)) + "%"); }
-  if (ja.length >= 2) { conds.push("h LIKE ? ESCAPE '\\'"); args.push("%" + esc(ja) + "%"); }
-  if (!conds.length) return [];
-  return rowsTo(await env.DB.prepare(`SELECT j FROM products WHERE us = 0 AND b = 0 AND (${conds.join(" OR ")}) LIMIT 500`).bind(...args).all());
+  // 分開查再合併：以前全部 OR 在一起只取 500 筆，卡片目錄變大後「皮卡丘」這種名字就把正確卡號擠出去了
+  const q = async (where, args, lim) => rowsTo(await env.DB.prepare(`SELECT j FROM products WHERE us = 0 AND b = 0 AND (${where}) ORDER BY (s IS NULL), kn DESC LIMIT ${lim}`).bind(...args).all());
+  const nameW = [], nameA = [];
+  if (zh) { nameW.push("h LIKE ? ESCAPE '\\'"); nameA.push("%" + esc(norm(zh)) + "%"); }
+  if (ja.length >= 2) { nameW.push("h LIKE ? ESCAPE '\\'"); nameA.push("%" + esc(ja) + "%"); }
+  const head = numHead(num), jobs = [];
+  if (num) jobs.push(q("numn IN (?, ?, ?)", [num, raw, num.replace(/^0+(?=\d)/, "")], 300));           // 卡號完全相同
+  if (head && nameW.length) jobs.push(q(`n0 = ? AND (${nameW.join(" OR ")})`, [head, ...nameA], 200)); // 分母讀錯：分子＋卡名
+  else if (head) jobs.push(q("n0 = ?", [head], 300));
+  if (nameW.length) jobs.push(q(nameW.join(" OR "), nameA, 300));                                       // 卡號讀不到：只靠卡名
+  if (!jobs.length) return [];
+  const seen = new Set(), out = [];
+  for (const list of await Promise.all(jobs)) for (const p of list) if (!seen.has(p.k)) { seen.add(p.k); out.push(p); }
+  return out;
 }
 async function data(env) {
   if (DATA && Date.now() - DATA_AT < CACHE_MS) return DATA;
@@ -357,6 +364,7 @@ function matchImage(r, D) {
     if (rar && String(p.rar || "").toUpperCase() === rar) s += 1;
     if (zh && p.h.includes(norm(zh))) s += 3;
     if (wantPsa === !!p.p) s += 2;
+    if (p.s || p.m) s += 0.5; // 同分時優先有成交價的
     return [p, s];
   });
   const exact = num ? sc.filter(x => !x[0].b && fixNum(x[0].num) === num && x[1] >= 6) : [];
