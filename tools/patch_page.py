@@ -430,6 +430,11 @@ rep('<div class="cprice">${c&&c.m?`<span class="pbig">${Y(c.m)}<small>${ALT(c.m)
 rep('<dl class="nums">\n      <div><dt>${c.na?"日本":SN[c.k]} 成交中位',
     '<dl class="nums">${(()=>{const k=KL&&kKeyItem(it),L=k&&KL[k];return L?`<div class="klast"><dt>SNKRDUNK 最新成交（${kday(L[0])}）</dt><dd><b style="font-size:1.25em">${Y(L[1])}</b> ${L[2]?chgHtml(pct(L[1],L[2])):""}</dd></div>`:""})()}\n      <div><dt>${c.na?"日本":SN[c.k]} 成交中位')
 
+# 17d. Mercari 價格旁標出資料日期（Mercari 要電腦開著才更新，可能比 SNKRDUNK 舊），超過 3 天註明「較舊」
+rep('function kday(d){', 'function mday(t){if(!t)return"";const s=String(t).slice(0,10),old=(Date.now()-Date.parse(s))/864e5>3.5;return `・${s.slice(5).replace("-","/")}${old?" 較舊":""}`}\nfunction kday(d){')
+rep('${SN[c.src]} ${Y(c.m)}（${c.k} 筆）', '${SN[c.src]} ${Y(c.m)}（${c.k} 筆${c.src==="m"?mday(it2?DATA.updated:(MERC.cards[o.n]||{}).t):""}）')
+rep('<div><dt>${c.na?"日本":SN[c.k]} 成交中位<span class="srcbadge">${c.na?"":c.n+" 筆"}</span>', '<div><dt>${c.na?"日本":SN[c.k]} 成交中位<span class="srcbadge">${c.na?"":c.n+" 筆"+(c.k==="m"?mday(DATA.updated):"")}</span>')
+
 # 18. 2026-11 改版（A 深色收藏館）：頁首、主視覺排版、漲幅排行板、手機底部導覽（tools/theme.py／theme.css／theme.js）
 import theme as _theme
 h = _theme.apply(h)
