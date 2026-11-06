@@ -159,8 +159,18 @@ async function handle(ev, env) {
     let r;
     try { r = await identify(buf, img.headers.get("content-type") || "image/jpeg", env); }
     catch (e) { console.error(e); return reply(env, ev.replyToken, [text("辨識失敗，請再試一次，或改用文字查詢。")]); }
-    const label = [r.name_zh || r.name_ja, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
-    const hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
+    let hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
+    // 找不到、或卡號沒有完全對上：換另一個模型再看一次，取比對得到的那個（只在失敗時多呼叫一次，維持免費額度）
+    if ((!hits.length || !hits.some(x => fixNum(x.num) === fixNum(r.number))) && !env.ANTHROPIC_API_KEY && r._model) {
+      try {
+        const r2 = await identify(buf, img.headers.get("content-type") || "image/jpeg", env, [r._model]);
+        const h2 = matchImage(r2, D.db ? { ...D, products: await dbImage(r2, env) } : D);
+        const exact2 = h2.some(x => fixNum(x.num) === fixNum(r2.number));
+        if (h2.length && (!hits.length || exact2)) { r = { ...r2, name_ja: r2.name_ja || r.name_ja, name_en: r2.name_en || r.name_en, name_zh: r2.name_zh || r.name_zh }; hits = h2; }
+        else if (!hits.length) { const r3 = { ...r, name_ja: r.name_ja || r2.name_ja, name_en: r.name_en || r2.name_en, name_zh: r.name_zh || r2.name_zh }; const h3 = matchImage(r3, D.db ? { ...D, products: await dbImage(r3, env) } : D); if (h3.length) { r = r3; hits = h3; } }
+      } catch (e) { console.error("second look", e && e.message); }
+    }
+    const label = [r.name_zh || r.name_ja || r.name_en, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     const card = await oneCard(hits, label, false, D, env);
@@ -261,6 +271,10 @@ function fixNum(s) {
   return n;
 }
 const numHead = n => { const m = String(n || "").match(/^0*(\d{1,3})\//); return m ? m[1] : ""; };
+// 英文名只取主要的字（「Lugia V」→「lugia」，「Pikachu ex」→「pikachu」），用來對 SNKRDUNK 英文名
+const enKey = s => { const t = norm(s).replace(/\(.*?\)|japanese|psa\s*\d+/g, " ").trim().split(/\s+/)[0] || ""; return /^[a-z][a-z'.-]{2,}$/.test(t) ? t : ""; };
+// 卡號差一兩個字（照片小、反光常把 110/098 讀成 112/099）
+const numNear = (a, b) => { const x = String(a || "").match(/^(\d{1,3})\/(\d{1,3})$/), y = String(b || "").match(/^(\d{1,3})\/(\d{1,3})$/); return !!(x && y && Math.abs(x[1] - y[1]) <= 3 && Math.abs(x[2] - y[2]) <= 2); };
 async function dbImage(r, env) {
   if (r.box) return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 1").all());
   const raw = norm(r.number).replace(/\s/g, ""), num = fixNum(r.number), zh = String(r.name_zh || "").trim(), ja = norm(r.name_ja || "").replace(/\s/g, "");
@@ -269,6 +283,8 @@ async function dbImage(r, env) {
   const nameW = [], nameA = [];
   if (zh) { nameW.push("h LIKE ? ESCAPE '\\'"); nameA.push("%" + esc(norm(zh)) + "%"); }
   if (ja.length >= 2) { nameW.push("h LIKE ? ESCAPE '\\'"); nameA.push("%" + esc(ja) + "%"); }
+  const en = enKey(r.name_en);
+  if (en) { nameW.push("h LIKE ? ESCAPE '\\'"); nameA.push("%" + esc(en) + "%"); }
   const head = numHead(num), jobs = [];
   if (num) jobs.push(q("numn IN (?, ?, ?)", [num, raw, num.replace(/^0+(?=\d)/, "")], 300));           // 卡號完全相同
   if (head && nameW.length) jobs.push(q(`n0 = ? AND (${nameW.join(" OR ")})`, [head, ...nameA], 200)); // 分母讀錯：分子＋卡名
@@ -351,18 +367,20 @@ function search(q, D) {
 }
 
 function matchImage(r, D) {
-  const nz = norm, num = fixNum(r.number), head = numHead(num), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
+  const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
   const wantPsa = /PSA\s*10/i.test(r.grade || "");
   const sc = D.products.map(p => {
     let s = 0;
     if (r.box) { if (!p.b) return [p, -1]; const bn = nz(r.box_name_ja).replace(/box$/, ""); if (zh && p.n.includes(zh)) s += 6; if (bn && p.h.includes(bn)) s += 6; return [p, s]; }
     if (p.b) return [p, -1];
     const pn = fixNum(p.num);
-    if (num && pn === num) s += 6; else if (head && numHead(pn) === head) s += 2; else if (num) s -= 3;
-    if (ja.length >= 2 && p.h.includes(ja)) s += 3;
+    let named = false;
+    if (ja.length >= 2 && p.h.includes(ja)) { s += 3; named = true; }
+    if (en && p.h.includes(en)) { s += 3; named = true; }
+    if (zh && p.h.includes(norm(zh))) { s += 3; named = true; }
+    if (num && pn === num) s += 6; else if (head && numHead(pn) === head) s += 2; else if (named && numNear(pn, num)) s += 2; else if (num) s -= 3;
     if (set && nz(p.set) === set) s += 3;
     if (rar && String(p.rar || "").toUpperCase() === rar) s += 1;
-    if (zh && p.h.includes(norm(zh))) s += 3;
     if (wantPsa === !!p.p) s += 2;
     if (p.s || p.m) s += 0.5; // 同分時優先有成交價的
     return [p, s];
@@ -375,15 +393,17 @@ function matchImage(r, D) {
 const PROMPT = `You are identifying a Japanese trading card product from a photo: either a Pokémon Card Game card or a ONE PIECE Card Game card (it may be a raw card, a graded slab such as PSA, or a sealed booster box).
 Pokémon: read the card number printed at the bottom left (e.g. "132/106", "143/S-P", "020/M-P"), the set code next to it (e.g. "SV8", "SV2a", "M2a", "s8b"), the rarity mark (e.g. SAR, SR, AR, UR, HR, MUR, MA, CHR, CSR, RR, C, U, R, P) and the Pokémon or trainer name.
 ONE PIECE: the card code is printed at the bottom right, like "OP01-120", "EB01-003", "ST10-006", "PRB01-001" or "P-001" — put the whole code in "number" and the prefix (e.g. "OP01") in "set"; rarity is L, SEC, SR, R, UC, C, SP or P; the character name is in katakana at the bottom.
-Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label.
+Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label (the PSA label also prints the card name, set and number).
+The photo may be a screenshot of a shop or online-lottery app with the card shown small: also use any caption or title text around the card (e.g. "(Japanese) Lugia V (PSA10)", "ルギアV SR") to identify it.
+ALWAYS fill name_ja and name_en when you can recognise the Pokémon or character, even if the number is unreadable; if you are unsure of a digit, give your best reading and lower the confidence.
 Reply with only one JSON object and nothing else:
-{"game": "pokemon/onepiece", "name_ja": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
+{"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
 
 // Cloudflare Workers AI（免費額度）能看圖的模型，依序嘗試
 const CF_MODELS = ["@cf/meta/llama-4-scout-17b-16e-instruct", "@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/google/gemma-3-12b-it"];
-async function identifyCF(b64, mediaType, env) {
+async function identifyCF(b64, mediaType, env, skip = []) {
   let last;
-  for (const model of CF_MODELS) {
+  for (const model of CF_MODELS.filter(m => !skip.includes(m))) {
     try {
       const r = await env.AI.run(model, { max_tokens: 400, temperature: 0, messages: [{ role: "user", content: [
         { type: "text", text: PROMPT },
@@ -398,9 +418,9 @@ async function identifyCF(b64, mediaType, env) {
   throw last || new Error("workers ai failed");
 }
 
-async function identify(buf, mediaType, env) {
+async function identify(buf, mediaType, env, skip = []) {
   let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  if (!env.ANTHROPIC_API_KEY) return identifyCF(btoa(bin), mediaType, env);
+  if (!env.ANTHROPIC_API_KEY) return identifyCF(btoa(bin), mediaType, env, skip);
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
