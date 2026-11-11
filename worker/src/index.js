@@ -130,12 +130,8 @@ async function handle(ev, env) {
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
     const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(點|pt)?$/i); // 抽卡助手：回收 卡名 點數 → 換點數還是出貨賣
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
-      const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", rc[1]); u.searchParams.set("pts", pts); u.searchParams.set("openExternalBrowser", "1");
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：回收 201/165 3000`)]);
-      const pv = pts * D.rate, op = [p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
-      const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
-      const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "兩邊差不多" : d > 0 ? `出貨賣多拿 ${nt(d)}` : `換點數多拿 ${nt(-d)}`;
-      return reply(env, ev.replyToken, [text(`${p.n}\n回收 ${pts.toLocaleString("en-US")} 點\n\n👉 ${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；DOPA、CLOVE 1 點＝1 日圓，只寄日本國內；點數只能在原平台使用。調整點數比例或運費：${u.href}`)]); }
+      return reply(env, ev.replyToken, [text(`${p.n}\n` + drawVerdict(p, pts, D, env))]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
@@ -181,6 +177,8 @@ async function handle(ev, env) {
     const label = [r.name_zh || r.name_ja || r.name_en, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
+    const pts = Math.round(+String(r.points || "").replace(/[^\d.]/g, "")) || 0, pf = /dopa/i.test(r.platform || "") ? "DOPA" : /clove/i.test(r.platform || "") ? "CLOVE" : /トレカセンター|ジャパントレカ|japan ?toreca/i.test(r.platform || "") ? "日本卡牌中心" : "";
+    if (pts > 0 && !hits[0].us && !hits[0].b) { const v = drawVerdict(hits[0], pts, D, env, pf); head.text = `辨識結果：${hits[0].n}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "，不是這張請改傳「回收 卡號 點數」）" : ""}\n` + v; }
     const card = await oneCard(hits, label, false, D, env);
     // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
     const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
@@ -375,6 +373,15 @@ function search(q, D) {
   return scored.sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
 }
 
+// 抽卡助手：回收點數 vs 出貨賣（1 點＝1 日圓；轉運每張 NT$150、Mercari 手續費 10%、鞋店約 8%、日本國內運費 ¥200）
+function drawVerdict(p, pts, D, env, pf) {
+  const pv = pts * D.rate, op = [p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
+  const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
+  const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "⚖️ 兩邊差不多" : d > 0 ? `📦 建議出貨賣，多拿 ${nt(d)}` : `🔄 建議換點數，多拿 ${nt(-d)}`;
+  const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", (p.num || baseName(p.n) || "").trim()); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); u.searchParams.set("openExternalBrowser", "1");
+  return `${pf ? pf + "・" : ""}回收 ${pts.toLocaleString("en-US")} 點\n\n${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；點數只能在原平台使用。調整運費或點數比例：${u.href}`;
+}
+
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
   const wantPsa = /PSA\s*10/i.test(r.grade || "");
@@ -404,9 +411,10 @@ Pokémon: read the card number printed at the bottom left (e.g. "132/106", "143/
 ONE PIECE: the card code is printed at the bottom right, like "OP01-120", "EB01-003", "ST10-006", "PRB01-001" or "P-001" — put the whole code in "number" and the prefix (e.g. "OP01") in "set"; rarity is L, SEC, SR, R, UC, C, SP or P; the character name is in katakana at the bottom.
 Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label (the PSA label also prints the card name, set and number).
 The photo may be a screenshot of a shop or online-lottery app with the card shown small: also use any caption or title text around the card (e.g. "(Japanese) Lugia V (PSA10)", "ルギアV SR") to identify it.
+If it is an online-lottery (オリパ) result screen such as DOPA, CLOVE or 日本トレカセンター/ジャパントレカ: put the platform in "platform" (look for watermarks/logos like "DOPA!" or "clove") and put the buyback value shown next to the coin/point icon (e.g. "105,000", "27,000") as a plain integer in "points". Never use tracking numbers (追蹤號), dates, card numbers or prices in yen for "points"; use 0 when there is no coin/point value.
 ALWAYS fill name_ja and name_en when you can recognise the Pokémon or character, even if the number is unreadable; if you are unsure of a digit, give your best reading and lower the confidence.
 Reply with only one JSON object and nothing else:
-{"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
+{"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "platform": "DOPA/CLOVE/日本トレカセンター/other/empty", "points": 0, "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
 
 // Cloudflare Workers AI（免費額度）能看圖的模型，依序嘗試
 const CF_MODELS = ["@cf/meta/llama-4-scout-17b-16e-instruct", "@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/google/gemma-3-12b-it"];

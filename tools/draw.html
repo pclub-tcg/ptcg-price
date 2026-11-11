@@ -185,7 +185,7 @@ function calc(){
 drawPf();pfNote();
 $("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;
 ["pts","pr","sh","mf","sf","js","rt","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
-const q0=new URLSearchParams(location.search);if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");
+const q0=new URLSearchParams(location.search);if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");
 </script>
 </body>
 </html>
