@@ -373,9 +373,9 @@ function search(q, D) {
   return scored.sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
 }
 
-// 抽卡助手：回收點數 vs 出貨賣（1 點＝1 日圓；轉運每張 NT$150、Mercari 手續費 10%、鞋店約 8%、日本國內運費 ¥200）
+// 抽卡助手：回收點數 vs 出貨賣（台灣賣價＝鞋店成交價 × 匯率 × 85 折，沒有鞋店價才用社團價；1 點＝1 日圓；轉運每張 NT$150、Mercari 手續費 10%、鞋店約 8%、日本國內運費 ¥200）
 function drawVerdict(p, pts, D, env, pf) {
-  const pv = pts * D.rate, op = [p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
+  const pv = pts * D.rate, op = [p.s ? ["轉運回台灣賣（鞋店價 85 折）", p.s[0] * D.rate * 0.85 - 150] : p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
   const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
   const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "⚖️ 兩邊差不多" : d > 0 ? `📦 建議出貨賣，多拿 ${nt(d)}` : `🔄 建議換點數，多拿 ${nt(-d)}`;
   const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", (p.num || baseName(p.n) || "").trim()); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); u.searchParams.set("openExternalBrowser", "1");

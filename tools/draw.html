@@ -100,11 +100,12 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
     <label>轉運回台灣運費（這張分攤，台幣）<input id="sh" type="number" inputmode="numeric" min="0"></label>
   </div>
   <p class="note" id="pfn"></p>
-  <details><summary>日本賣出的手續費與運費</summary>
+  <details><summary>台灣賣價折數、日本手續費與運費</summary>
     <div class="grid" style="margin-top:10px">
       <label>Mercari 手續費 %<input id="mf" type="number" inputmode="decimal" min="0" step="0.1"></label>
       <label>鞋店手續費 %<input id="sf" type="number" inputmode="decimal" min="0" step="0.1"></label>
       <label>日本國內寄出運費（日圓）<input id="js" type="number" inputmode="numeric" min="0"></label>
+      <label>台灣賣價＝鞋店成交價打幾折 %<input id="tf" type="number" inputmode="numeric" min="0" max="150"></label>
       <label>匯率（1 日圓 = 台幣）<input id="rt" type="number" inputmode="decimal" min="0" step="0.0001"></label>
     </div>
     <p class="note">鞋店手續費是預設估計，請依鞋店最新公告調整。這些設定和平台點數比例會記在你的瀏覽器。</p>
@@ -125,7 +126,7 @@ const LS={get(k,d){try{const v=localStorage.getItem("draw_"+k);return v==null?d:
 const PF=["DOPA","CLOVE","日本卡牌中心","其他"];
 const DEF={pr:1,sh:150};
 const PFN={"DOPA":"1 點＝1 日圓；抽到的卡 3 天內沒選擇會自動換成點數，點數 6 個月到期。只寄日本國內，寄台灣要用轉運（如 Buy&Ship），日本國內寄送免運。","CLOVE":"1 點＝1 日圓；日本國內寄送免運。是否能寄海外請看官網，一般要用轉運。","日本卡牌中心":"幣值網路上沒有明確公告，預設先當 1 枚＝1 日圓，請依你看到的購買價格調整；每個獎品有發送期限，超過會換成幣或失去權利，幣 6 個月到期。日本國內寄送免運。","其他":"請自己填點數比例與運費。"};
-let S=Object.assign({pf:"DOPA",mf:10,sf:8,js:200,rt:0.21},LS.get("set",{}));
+let S=Object.assign({pf:"DOPA",mf:10,sf:8,js:200,rt:0.21,tf:85},LS.get("set",{}));
 let PFS=LS.get("pfs",{});let CARD=null;
 
 function pfNote(){$("pfn").textContent=PFN[S.pf]||""}
@@ -134,7 +135,7 @@ function drawPf(){
   $("pf").innerHTML=PF.map(p=>`<button type="button" data-p="${esc(p)}" aria-pressed="${p===S.pf}">${esc(p)}</button>`).join("");
   $("pf").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.pf=b.dataset.p;save();drawPf();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");pfNote();calc()});
 }
-function save(){LS.set("set",{pf:S.pf,mf:S.mf,sf:S.sf,js:S.js,rt:S.rt});LS.set("pfs",PFS)}
+function save(){LS.set("set",{pf:S.pf,mf:S.mf,sf:S.sf,js:S.js,rt:S.rt,tf:S.tf});LS.set("pfs",PFS)}
 function num(id){const v=parseFloat($(id).value);return isFinite(v)&&v>=0?v:null}
 
 /* 卡片目錄搜尋（共用 LINE 機器人的目錄 API） */
@@ -157,13 +158,13 @@ function drawCard(){
 
 function calc(){
   const pts=num("pts"),pr=num("pr")??DEF.pr,sh=num("sh")??DEF.sh;
-  S.mf=num("mf")??10;S.sf=num("sf")??8;S.js=num("js")??200;S.rt=num("rt")||0.21;
+  S.mf=num("mf")??10;S.sf=num("sf")??8;S.js=num("js")??200;S.rt=num("rt")||0.21;S.tf=num("tf")??85;
   PFS[S.pf]=Object.assign({},PFS[S.pf],{pr,sh});save();
   const R=S.rt,x=CARD||{};
   const mj=x.mj||num("mj"),sj=x.sj||null,tw=x.tw||num("mtw");
   const O=[];
   O.push({k:"pt",t:"換點數",v:pts!=null?pts*pr*R:null,d:pts!=null?`${pts.toLocaleString("en-US")} 點 × ${pr} 日圓 × 匯率 ${R}（點數只能在 ${S.pf} 繼續用）`:"先在上面填回收點數"});
-  O.push({k:"tw",t:"轉運回台灣，在社團賣",v:tw?tw-sh:null,d:tw?`台灣行情 ${nt(tw)} − 轉運運費 ${nt(sh)}`:"這張還沒有台灣社團價格"});
+  O.push(sj?{k:"tw",t:"轉運回台灣賣",v:sj*R*S.tf/100-sh,d:`鞋店成交 ${yen(sj)} × 匯率 × ${S.tf} 折 − 轉運運費 ${nt(sh)}${tw?`（台灣社團參考 ${nt(tw)}）`:""}`}:{k:"tw",t:"轉運回台灣賣",v:tw?tw-sh:mj?mj*R*S.tf/100-sh:null,d:tw?`台灣行情 ${nt(tw)} − 轉運運費 ${nt(sh)}`:mj?`沒有鞋店價，用 ${x.n?"Mercari":"你填的日本行情"} ${yen(mj)} × 匯率 × ${S.tf} 折 − 轉運運費 ${nt(sh)}`:"沒有鞋店成交價"});
   O.push({k:"mc",t:"出貨到日本地址，在 Mercari 賣",v:mj?(mj*(1-S.mf/100)-S.js)*R:null,d:mj?`${yen(mj)} × (1 − ${S.mf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有 Mercari 成交價"});
   O.push({k:"sn",t:"出貨到日本地址，在鞋店賣",v:sj?(sj*(1-S.sf/100)-S.js)*R:null,d:sj?`${yen(sj)} × (1 − ${S.sf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有鞋店成交價"});
   const ok=O.filter(o=>o.v!=null);
@@ -183,8 +184,8 @@ function calc(){
 
 /* 初始化 */
 drawPf();pfNote();
-$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;
-["pts","pr","sh","mf","sf","js","rt","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
+$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;$("tf").value=S.tf;
+["pts","pr","sh","mf","sf","js","rt","tf","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
 const q0=new URLSearchParams(location.search);if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");
 </script>
 </body>
