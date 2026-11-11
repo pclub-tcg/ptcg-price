@@ -30,6 +30,7 @@ OPM_DATA="$OPDIR/opmerc.json" TJ_DATA="$OPDIR/tcgj_op.json" OP_DATA="$OPDIR/op.j
 python3 "$HERE/richmenu.py" "$OUT/richmenu.jpg"
 python3 "$HERE/guide.py" "$OUT"
 python3 "$HERE/guide_market.py" "$OUT"
+python3 "$HERE/guide_draw.py" "$OUT"
 cp "$HERE/auction.html" "$OUT/auction.html"
 cp "$HERE/market.html" "$OUT/market.html"
 cp "$HERE/draw.html" "$OUT/draw.html"

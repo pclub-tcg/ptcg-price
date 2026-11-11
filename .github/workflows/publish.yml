@@ -7,7 +7,7 @@ on:
     - cron: "41 2 * * *"   # 每天台灣時間 10:41
   push:
     branches: [main]
-    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html, tools/market.html, tools/draw.html, tools/richmenu.py, tools/guide.py, tools/guide_market.py, tools/announce/**, tools/refresh_snkr.py, tools/theme.py, tools/theme.css, tools/theme.js, tools/boot.py, tools/publish_trigger.txt, tools/pwa.py, tools/slim.py, tools/app/**]   # publish_trigger.txt 由每日合併排程在同步 tpl 後更新，用來立刻發布網站＋LINE
+    paths: [.github/workflows/publish.yml, tools/publish.sh, tools/fetch_tcgj_op.py, tools/export.py, tools/patch_page.py, tools/inv.js, tools/inv.css, tools/auction.html, tools/market.html, tools/draw.html, tools/richmenu.py, tools/guide.py, tools/guide_market.py, tools/guide_draw.py, tools/announce/**, tools/refresh_snkr.py, tools/theme.py, tools/theme.css, tools/theme.js, tools/boot.py, tools/publish_trigger.txt, tools/pwa.py, tools/slim.py, tools/app/**]   # publish_trigger.txt 由每日合併排程在同步 tpl 後更新，用來立刻發布網站＋LINE
 permissions:
   contents: write
 concurrency:

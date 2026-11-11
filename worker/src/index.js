@@ -138,7 +138,8 @@ async function handle(ev, env) {
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
-    if (/^(抽卡|抽卡助手|回收|換點數|回收點數|點數)$/.test(q)) return reply(env, ev.replyToken, [text(DRAW_HELP)]);
+    if (/^(抽卡|抽卡助手|抽卡教學|回收|換點數|回收點數|點數)$/.test(q)) { const u = x => new URL(x, env.SITE_URL).href;
+      return reply(env, ev.replyToken, [{ type: "image", originalContentUrl: u("guide_draw.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_draw_s.jpg?v=" + RICHMENU_V) }, { ...text(DRAW_HELP), quickReply: { items: ["201/165 3000點", "201/165 3000點 花5000"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]); }
     const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p)?)?$/i) || q.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：卡號 點數點（花 xxx）
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us && !h.b);
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：201/165 3000點`)]);
@@ -227,6 +228,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價、貼出求卡；傳「市集教學」看圖解
 🔔 到價提醒：查價後按卡片下方「🔔 到價提醒」，跌到你要的價格時通知你；傳「我的提醒」管理
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
+🎴 抽卡助手：抽卡結果截圖傳給我，告訴你換點數還是出貨、這抽賺還是虧；傳「抽卡」看教學
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
 點卡片上的「看 K 線」可以看日 K、週 K 走勢。
