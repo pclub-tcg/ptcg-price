@@ -97,8 +97,9 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
   <div class="grid">
     <label>回收點數<input id="pts" type="number" inputmode="numeric" min="0" placeholder="例：3000"></label>
     <label>1 點 = 幾日圓<input id="pr" type="number" inputmode="decimal" min="0" step="0.01"></label>
-    <label>出貨到台灣運費（這張分攤，台幣）<input id="sh" type="number" inputmode="numeric" min="0"></label>
+    <label>轉運回台灣運費（這張分攤，台幣）<input id="sh" type="number" inputmode="numeric" min="0"></label>
   </div>
+  <p class="note" id="pfn"></p>
   <details><summary>日本賣出的手續費與運費</summary>
     <div class="grid" style="margin-top:10px">
       <label>Mercari 手續費 %<input id="mf" type="number" inputmode="decimal" min="0" step="0.1"></label>
@@ -123,13 +124,15 @@ const yen=v=>"¥"+Math.round(v).toLocaleString("en-US");
 const LS={get(k,d){try{const v=localStorage.getItem("draw_"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("draw_"+k,JSON.stringify(v))}catch(e){}}};
 const PF=["DOPA","CLOVE","日本卡牌中心","其他"];
 const DEF={pr:1,sh:150};
+const PFN={"DOPA":"1 點＝1 日圓；抽到的卡 3 天內沒選擇會自動換成點數，點數 6 個月到期。只寄日本國內，寄台灣要用轉運（如 Buy&Ship），日本國內寄送免運。","CLOVE":"1 點＝1 日圓；日本國內寄送免運。是否能寄海外請看官網，一般要用轉運。","日本卡牌中心":"幣值網路上沒有明確公告，預設先當 1 枚＝1 日圓，請依你看到的購買價格調整；每個獎品有發送期限，超過會換成幣或失去權利，幣 6 個月到期。日本國內寄送免運。","其他":"請自己填點數比例與運費。"};
 let S=Object.assign({pf:"DOPA",mf:10,sf:8,js:200,rt:0.21},LS.get("set",{}));
 let PFS=LS.get("pfs",{});let CARD=null;
 
+function pfNote(){$("pfn").textContent=PFN[S.pf]||""}
 function pfVal(k){return (PFS[S.pf]||{})[k]??DEF[k]}
 function drawPf(){
   $("pf").innerHTML=PF.map(p=>`<button type="button" data-p="${esc(p)}" aria-pressed="${p===S.pf}">${esc(p)}</button>`).join("");
-  $("pf").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.pf=b.dataset.p;save();drawPf();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");calc()});
+  $("pf").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.pf=b.dataset.p;save();drawPf();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");pfNote();calc()});
 }
 function save(){LS.set("set",{pf:S.pf,mf:S.mf,sf:S.sf,js:S.js,rt:S.rt});LS.set("pfs",PFS)}
 function num(id){const v=parseFloat($(id).value);return isFinite(v)&&v>=0?v:null}
@@ -160,7 +163,7 @@ function calc(){
   const mj=x.mj||num("mj"),sj=x.sj||null,tw=x.tw||num("mtw");
   const O=[];
   O.push({k:"pt",t:"換點數",v:pts!=null?pts*pr*R:null,d:pts!=null?`${pts.toLocaleString("en-US")} 點 × ${pr} 日圓 × 匯率 ${R}（點數只能在 ${S.pf} 繼續用）`:"先在上面填回收點數"});
-  O.push({k:"tw",t:"出貨回台灣，在社團賣",v:tw?tw-sh:null,d:tw?`台灣行情 ${nt(tw)} − 運費 ${nt(sh)}`:"這張還沒有台灣社團價格"});
+  O.push({k:"tw",t:"轉運回台灣，在社團賣",v:tw?tw-sh:null,d:tw?`台灣行情 ${nt(tw)} − 轉運運費 ${nt(sh)}`:"這張還沒有台灣社團價格"});
   O.push({k:"mc",t:"出貨到日本地址，在 Mercari 賣",v:mj?(mj*(1-S.mf/100)-S.js)*R:null,d:mj?`${yen(mj)} × (1 − ${S.mf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有 Mercari 成交價"});
   O.push({k:"sn",t:"出貨到日本地址，在鞋店賣",v:sj?(sj*(1-S.sf/100)-S.js)*R:null,d:sj?`${yen(sj)} × (1 − ${S.sf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有鞋店成交價"});
   const ok=O.filter(o=>o.v!=null);
@@ -179,7 +182,7 @@ function calc(){
 }
 
 /* 初始化 */
-drawPf();
+drawPf();pfNote();
 $("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;
 ["pts","pr","sh","mf","sf","js","rt","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
 const q0=new URLSearchParams(location.search);if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");

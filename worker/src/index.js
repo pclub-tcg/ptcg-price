@@ -132,10 +132,10 @@ async function handle(ev, env) {
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
       const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", rc[1]); u.searchParams.set("pts", pts); u.searchParams.set("openExternalBrowser", "1");
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：回收 201/165 3000`)]);
-      const pv = pts * D.rate, op = [p.tw ? ["出貨回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
+      const pv = pts * D.rate, op = [p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
       const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
       const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "兩邊差不多" : d > 0 ? `出貨賣多拿 ${nt(d)}` : `換點數多拿 ${nt(-d)}`;
-      return reply(env, ev.replyToken, [text(`${p.n}\n回收 ${pts.toLocaleString("en-US")} 點\n\n👉 ${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、運費估計值；點數只能在原平台使用。調整點數比例或運費：${u.href}`)]); }
+      return reply(env, ev.replyToken, [text(`${p.n}\n回收 ${pts.toLocaleString("en-US")} 點\n\n👉 ${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；DOPA、CLOVE 1 點＝1 日圓，只寄日本國內；點數只能在原平台使用。調整點數比例或運費：${u.href}`)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
