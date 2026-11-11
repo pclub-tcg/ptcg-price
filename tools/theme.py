@@ -26,7 +26,7 @@ def apply(h):
         raise SystemExit("theme.py：找不到頁首")
     head = ('<header class="bar"><div class="wrap">\n  ' + m.group(1) +
             '\n  <nav class="th-nav" aria-label="主選單"><a href="./" class="on">行情</a><a href="#tab-tcg" data-th="tcg">卡片目錄</a>'
-            '<a href="auction.html">競標</a><a href="market.html">市集<sup>NEW</sup></a></nav>\n  <div class="th-sp"></div>\n'
+            '<a href="auction.html">競標</a><a href="market.html">市集</a><a href="draw.html">抽卡助手<sup>NEW</sup></a></nav>\n  <div class="th-sp"></div>\n'
             '  <div class="th-right">' + m.group(2) +
             '<a class="th-line" href="%s" target="_blank" rel="noopener">%s<span>加入 LINE 查價</span></a><small id="stamp"></small></div>\n'
             '</div><div class="th-status"><div class="wrap" id="th-status"></div></div></header>' % (LINE, LINEIC))
@@ -37,6 +37,7 @@ def apply(h):
     h = re.sub(r'(<h1>傳個卡號，<mark>秒查日本行情</mark></h1>\s*)<p>.*?</p>',
                r'\1<p>SNKRDUNK、Mercari、TCG Japan 的實際成交價，一次換算成台幣，和台灣社團價格一起比較。卡名、卡號、系列代號都能查。</p>', h, count=1, flags=re.S)
     h = _rep(h, '<span>以圖搜尋</span></button>', '<span>拍照查價</span></button>')
+    h = _rep(h, '  <div class="ticker" id="ticker"', '  <a href="draw.html" class="th-draw" style="display:inline-flex;align-items:center;gap:6px;margin:10px 0 0;padding:8px 14px;border-radius:999px;background:#6b4bd6;color:#fff;font-weight:900;font-size:14px;text-decoration:none">🎴 線上抽卡抽到的卡，換點數還是出貨賣？<span style="opacity:.8">→</span></a>\n  <div class="ticker" id="ticker"')
     h = _rep(h, '  <div class="ticker" id="ticker"',
              '  </div>\n  <div class="th-board" id="th-board" hidden><h3>近 30 天漲幅 TOP<small>SNKRDUNK 日本成交</small></h3><div id="th-rows"></div></div>\n  <div class="ticker" id="ticker"')
 
