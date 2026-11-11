@@ -20,12 +20,18 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     if (url.pathname === "/identify") return identifyRoute(req, env);
+    if (url.pathname === "/api/draw") { // 抽卡助手網頁：用商品 key 取行情
+      const k = (url.searchParams.get("k") || "").slice(0, 200), D = await base(env);
+      const p = k ? (D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE k = ?").bind(k).all())[0] : (D.products || []).find(x => x.k === k)) : null;
+      return new Response(JSON.stringify(p ? { item: catItem(p, D, env) } : { err: "not found" }), { status: p ? 200 : 404, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
+    }
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
     if (url.pathname.startsWith("/api/m/")) return marketApi(req, env, url);
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
-      const msg = hits.length ? await oneCard(hits, q, false, D, env) : { type: "text", text: "no hits" };
+      const dp = +url.searchParams.get("draw") || 0, dh = hits.find(h => !h.us && !h.b);
+      const msg = dp && dh ? drawFlex(dh, dp, "DOPA", +url.searchParams.get("cost") || 0, D, env) : hits.length ? await oneCard(hits, q, false, D, env) : { type: "text", text: "no hits" };
       const r = await fetch("https://api.line.me/v2/bot/message/validate/reply", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ messages: [msg] }) });
       return new Response(JSON.stringify({ status: r.status, line: await r.text(), main: msg.altText, bytes: JSON.stringify(msg).length, rel: JSON.stringify(msg).match(/"text":"(這張・)?(PSA10|裸卡|原盒)"/g) }), { headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
     }
@@ -103,6 +109,10 @@ const RANK = {
 async function handle(ev, env) {
   if (ev.type === "follow") return reply(env, ev.replyToken, guide(env));
   if (ev.type === "postback" && ev.replyToken && ev.source && ev.source.userId) {
+    const pd = String((ev.postback && ev.postback.data) || "");
+    if (pd.startsWith("dr|")) { const [, pts, cost, pf, ...kk] = pd.split("|"), k = kk.join("|"), D = await base(env);
+      const p = D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE k = ?").bind(k).all())[0] : (D.products || []).find(x => x.k === k);
+      return reply(env, ev.replyToken, [p ? drawFlex(p, +pts || 0, pf, +cost || 0, D, env) : text("找不到這張卡，請重新傳截圖或打「卡號 點數點」。")]); }
     const ab = await announcePostback(env, ev.source.userId, ev.postback && ev.postback.data);
     if (ab) return reply(env, ev.replyToken, ab);
     const D = await base(env), r = D.db ? await alertPostback(env, ev.source.userId, ev.postback && ev.postback.data, D, rowsTo) : null;
@@ -128,10 +138,11 @@ async function handle(ev, env) {
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
-    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：回收 卡名 點數 → 換點數還是出貨賣
-    if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
-      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：回收 201/165 3000`)]);
-      return reply(env, ev.replyToken, [text(`${p.n}\n` + drawVerdict(p, pts, D, env, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0))]); }
+    if (/^(抽卡|抽卡助手|回收|換點數|回收點數|點數)$/.test(q)) return reply(env, ev.replyToken, [text(DRAW_HELP)]);
+    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p)?)?$/i) || q.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：卡號 點數點（花 xxx）
+    if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us && !h.b);
+      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：201/165 3000點`)]);
+      return reply(env, ev.replyToken, [drawFlex(p, pts, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
@@ -178,7 +189,7 @@ async function handle(ev, env) {
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     const pts = Math.round(+String(r.points || "").replace(/[^\d.]/g, "")) || 0, pf = /dopa/i.test(r.platform || "") ? "DOPA" : /clove/i.test(r.platform || "") ? "CLOVE" : /トレカセンター|ジャパントレカ|japan ?toreca/i.test(r.platform || "") ? "日本卡牌中心" : "";
-    if (pts > 0 && !hits[0].us && !hits[0].b) { const v = drawVerdict(hits[0], pts, D, env, pf); head.text = `辨識結果：${hits[0].n}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "，不是這張請改傳「回收 卡號 點數」）" : ""}\n` + v; }
+    if (pts > 0 && !hits[0].us && !hits[0].b) { const ms = [drawFlex(hits[0], pts, pf, 0, D, env)]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
     const card = await oneCard(hits, label, false, D, env);
     // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
     const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
@@ -328,14 +339,17 @@ const norm = s => String(s || "").normalize("NFKC").toLowerCase();
 setCatalog(async (q, env) => {
   const D = await base(env);
   const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
+  return hits.slice(0, 8).map(p => catItem(p, D, env));
+});
+function catItem(p, D, env) {
   const site = env.SITE_URL;
-  return hits.slice(0, 8).map(p => {
+  {
     const ref = p.us ? (p.um ? p.um * (D.usd || 32) : null) : p.s ? p.s[0] * D.rate : p.m ? p.m[0] * D.rate : null;
     return { n: p.n, meta: [p.us ? "美版" : "日版", p.num, p.set, p.b ? "原盒" : p.rar, p.p ? "PSA10" : ""].filter(x => x && x !== "-").join("・"),
       img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "", op: p.op ? 1 : 0, k: p.k, b: p.b ? 1 : 0, psa: p.p ? 1 : 0,
       ...(p.us ? {} : (c => ({ sj: p.s ? p.s[0] : null, mj: p.m ? p.m[0] : null, tw: p.tw || null, rate: D.rate, cost: c ? Math.round(c.cost) : null, csrc: c ? c.src : null }))(calc(p, D))) }; // 抽卡助手（draw.html）用
-  });
-});
+  }
+}
 
 function calc(p, D) {
   if (p.us) return p.um ? { src: "TCGplayer", med: p.um, n: 0, cost: p.um * (D.usd || 32), gap: null } : null;
@@ -373,15 +387,57 @@ function search(q, D) {
   return scored.sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
 }
 
-// 抽卡助手：回收點數 vs 出貨賣（台灣賣價＝鞋店成交價 × 匯率 × 85 折，沒有鞋店價才用社團價；1 點＝1 日圓；轉運每張 NT$150、Mercari 手續費 10%、鞋店約 8%、日本國內運費 ¥200）
-function drawVerdict(p, pts, D, env, pf, cost = 0) {
-  const pv = pts * D.rate, op = [p.s ? ["轉運回台灣賣（鞋店價 85 折）", p.s[0] * D.rate * 0.85 - 150] : p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
-  const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
-  const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "⚖️ 兩邊差不多" : d > 0 ? `📦 建議出貨賣，多拿 ${nt(d)}` : `🔄 建議換點數，多拿 ${nt(-d)}`;
-  const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", (p.num || baseName(p.n) || "").trim()); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); if (cost) u.searchParams.set("cost", cost); u.searchParams.set("openExternalBrowser", "1");
-  const cn = cost * D.rate, pl = v => { const g = v - cn; return `（${g >= 0 ? "賺" : "虧"} ${nt(Math.abs(g))}）`; };
-  return `${pf ? pf + "・" : ""}回收 ${pts.toLocaleString("en-US")} 點\n\n${head}\n\n${cost ? `抽卡花費：${cost.toLocaleString("en-US")} 點（約 ${nt(cn)}）\n` : ""}換點數：約 ${nt(pv)}${cost ? pl(pv) : "（1 點＝1 日圓）"}\n${op.map(o => `${o[0]}：約 ${nt(o[1])}${cost ? pl(o[1]) : ""}`).join("\n")}${cost ? "" : "\n\n想算盈虧：回收 卡號 點數 花 抽卡花費，例如：回收 201/165 3000 花5000"}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；點數只能在原平台使用。調整運費或點數比例：${u.href}`;
+// 抽卡助手：換點數 vs 出貨回台灣賣（台灣賣價＝鞋店成交 × 匯率 × 85 折 − 轉運 NT$150；沒有鞋店價用台灣社團價，再沒有用 Mercari）；1 點＝1 日圓
+function drawCalc(p, pts, D, cost = 0) {
+  const pv = pts * D.rate, cn = cost * D.rate;
+  const sv = p.s ? { v: p.s[0] * D.rate * 0.85 - 150, how: `鞋店成交 ¥${Math.round(p.s[0]).toLocaleString("en-US")} × 85 折・扣轉運` }
+    : p.tw ? { v: p.tw - 150, how: `台灣行情 ${nt(p.tw)}・扣轉運` }
+    : p.m ? { v: p.m[0] * D.rate * 0.85 - 150, how: `Mercari ¥${Math.round(p.m[0]).toLocaleString("en-US")} × 85 折・扣轉運` } : null;
+  const d = sv ? sv.v - pv : 0, tie = sv && Math.abs(d) < Math.max(30, pv * .03), ship = sv && !tie && d > 0;
+  return { pv, cn, sv, d, tie, ship, best: ship ? sv.v : pv };
 }
+const drawUrl = (env, p, pts, pf, cost, share) => { const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("k", p.k); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); if (cost) u.searchParams.set("cost", cost); if (share) u.searchParams.set("share", "1"); u.searchParams.set("openExternalBrowser", "1"); return u.href; };
+const COSTS = [500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000];
+function drawFlex(p, pts, pf, cost, D, env) {
+  const c = drawCalc(p, pts, D, cost), img = p.img ? new URL(p.img, env.SITE_URL).href : null;
+  const T = (t, o = {}) => ({ type: "text", text: String(t ?? "") || " ", wrap: true, ...o });
+  const BG = "#1c0a06", INK = "#fff4e6", MUT = "#c9a98e", GOLD = "#ffd166", WIN = "#ff9a3c", GOOD = "#4fe39a", BAD = "#ff6b6b";
+  const sgn = v => (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("en-US");
+  const rec = !c.sv ? "這張還沒有成交價" : c.tie ? "⚖️ 兩邊差不多" : c.ship ? "📦 出貨回台灣賣" : "🔄 換點數";
+  const why = !c.sv ? "可以到網站自己填行情再算" : c.tie ? `差距不到 ${nt(Math.abs(c.d))}` : c.ship ? `比換點數多拿 ${nt(c.d)}` : `比出貨多拿 ${nt(-c.d)}`;
+  const g = c.best - c.cn, res = cost
+    ? { type: "box", layout: "vertical", backgroundColor: g >= 0 ? "#123b28" : "#4a1515", cornerRadius: "16px", paddingAll: "16px", borderWidth: "2px", borderColor: g >= 0 ? GOOD : BAD, contents: [
+        T(`這抽花 ${cost.toLocaleString("en-US")} 點（約 ${nt(c.cn)}）`, { size: "xs", color: MUT }),
+        T(`${g >= 0 ? "賺" : "虧"} ${nt(Math.abs(g))}`, { size: "3xl", weight: "bold", color: g >= 0 ? GOOD : BAD }),
+        T(`照建議做：${rec}，${why}`, { size: "xs", color: INK, margin: "sm" })] }
+    : { type: "box", layout: "vertical", backgroundColor: "#3a1d0b", cornerRadius: "16px", paddingAll: "16px", borderWidth: "2px", borderColor: WIN, contents: [
+        T("建議", { size: "xs", color: MUT }), T(rec, { size: "xxl", weight: "bold", color: WIN }), T(why, { size: "sm", color: INK, margin: "xs" }),
+        T("👇 按下面告訴我這抽花多少點，幫你算賺虧", { size: "xxs", color: MUT, margin: "md" })] };
+  const opt = (name, sub, v, win) => ({ type: "box", layout: "vertical", flex: 1, cornerRadius: "14px", paddingAll: "12px", backgroundColor: win ? "#3a1d0b" : "#2a1510", borderWidth: win ? "2px" : "1px", borderColor: win ? WIN : "#4a2e22", contents: [
+    T((win ? "✅ " : "") + name, { size: "sm", weight: "bold", color: win ? INK : MUT }), T(sub, { size: "xxs", color: MUT, margin: "xs" }),
+    T(v == null ? "—" : nt(v), { size: "lg", weight: "bold", color: win ? INK : MUT, margin: "md" }),
+    ...(cost && v != null ? [T(sgn(v - c.cn), { size: "md", weight: "bold", color: v - c.cn >= 0 ? GOOD : BAD })] : [])] });
+  return { type: "flex", altText: `${p.n}：${rec}${cost ? `，這抽${g >= 0 ? "賺" : "虧"} ${nt(Math.abs(g))}` : ""}`.slice(0, 300), contents: { type: "bubble", size: "mega",
+    styles: { body: { backgroundColor: BG }, footer: { backgroundColor: BG } },
+    body: { type: "box", layout: "vertical", spacing: "md", paddingAll: "16px", contents: [
+      { type: "box", layout: "horizontal", contents: [T("P’CLUB 抽卡助手", { size: "sm", weight: "bold", color: WIN, flex: 1 }), T(pf || "", { size: "xs", color: GOLD, align: "end", flex: 0 })] },
+      { type: "box", layout: "horizontal", spacing: "md", contents: [
+        ...(img ? [{ type: "image", url: img, size: "full", aspectRatio: "5:7", aspectMode: "fit", flex: 2 }] : []),
+        { type: "box", layout: "vertical", flex: 3, contents: [
+          T(p.n, { size: "sm", weight: "bold", color: INK, maxLines: 3 }),
+          T([p.num, p.set].filter(x => x && x !== "-").join("・"), { size: "xxs", color: MUT, margin: "xs" }),
+          T("平台回收", { size: "xxs", color: MUT, margin: "lg" }),
+          T(pts.toLocaleString("en-US") + " 點", { size: "xl", weight: "bold", color: GOLD }),
+          T("≈ " + nt(c.pv), { size: "xs", color: MUT })] }] },
+      res,
+      { type: "box", layout: "horizontal", spacing: "sm", contents: [opt("換點數", `只能在${pf || "原平台"}用`, c.pv, c.sv && !c.ship), opt("出貨回台灣賣", c.sv ? c.sv.how : "沒有成交價", c.sv ? c.sv.v : null, c.ship)] },
+      T(`僅供試算・匯率 ${D.rate}・1 點＝1 日圓`, { size: "xxs", color: "#8f735f", align: "center" })] },
+    footer: { type: "box", layout: "horizontal", spacing: "sm", paddingAll: "12px", contents: [
+      { type: "button", style: "primary", color: WIN, height: "sm", action: { type: "uri", label: "存成分享圖", uri: drawUrl(env, p, pts, pf, cost, true) } },
+      { type: "button", style: "secondary", height: "sm", action: { type: "uri", label: "調整運費", uri: drawUrl(env, p, pts, pf, cost, false) } }] } },
+    quickReply: { items: COSTS.map(v => ({ type: "action", action: { type: "postback", label: `花 ${v.toLocaleString("en-US")} 點`, data: `dr|${pts}|${v}|${pf || ""}|${p.k}`.slice(0, 300), displayText: `這抽花 ${v.toLocaleString("en-US")} 點` } })) } };
+}
+const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我\n方法 2：打「卡號 點數點」，例如\n201/165 3000點\nルギアV SR 20000點\n\n要算賺虧就在後面加花多少，例如：201/165 3000點 花5000";
 
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
