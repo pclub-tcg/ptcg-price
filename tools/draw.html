@@ -96,6 +96,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
   <div class="seg" id="pf" role="group" aria-label="抽卡平台"></div>
   <div class="grid">
     <label>回收點數<input id="pts" type="number" inputmode="numeric" min="0" placeholder="例：3000"></label>
+    <label>抽這張花了多少點（選填）<input id="cost" type="number" inputmode="numeric" min="0" placeholder="例：5000"></label>
     <label>1 點 = 幾日圓<input id="pr" type="number" inputmode="decimal" min="0" step="0.01"></label>
     <label>轉運回台灣運費（這張分攤，台幣）<input id="sh" type="number" inputmode="numeric" min="0"></label>
   </div>
@@ -160,7 +161,7 @@ function calc(){
   const pts=num("pts"),pr=num("pr")??DEF.pr,sh=num("sh")??DEF.sh;
   S.mf=num("mf")??10;S.sf=num("sf")??8;S.js=num("js")??200;S.rt=num("rt")||0.21;S.tf=num("tf")??85;
   PFS[S.pf]=Object.assign({},PFS[S.pf],{pr,sh});save();
-  const R=S.rt,x=CARD||{};
+  const R=S.rt,x=CARD||{},cost=num("cost"),cn=cost?cost*pr*R:0,pl=v=>cost&&v!=null?`<span style="display:block;font-size:12px;color:${v-cn>=0?"var(--good)":"var(--bad)"}">${v-cn>=0?"賺":"虧"} ${nt(Math.abs(v-cn))}</span>`:"";
   const mj=x.mj||num("mj"),sj=x.sj||null,tw=x.tw||num("mtw");
   const O=[];
   O.push({k:"pt",t:"換點數",v:pts!=null?pts*pr*R:null,d:pts!=null?`${pts.toLocaleString("en-US")} 點 × ${pr} 日圓 × 匯率 ${R}（點數只能在 ${S.pf} 繼續用）`:"先在上面填回收點數"});
@@ -179,14 +180,15 @@ function calc(){
   else if(bestSell)head=`<small>這張卡大約值</small><div class="big"><mark>${nt(bestSell.v)}</mark></div><small>${esc(bestSell.t)}。填入回收點數就能比較要不要換點數。</small>`;
   else head=`<small>結論</small><div class="big">還不能比較</div><small>這張卡目前沒有成交價，請展開「自己填行情」。</small>`;
   const keep=x.cost?`<p class="note">想留著這張卡？現在從日本買一張到手約 <b>${nt(x.cost)}</b>（${esc(x.csrc||"")}，含運費與 Mercari 優惠券）。</p>`:"";
-  $("out").innerHTML=`<div class="verdict">${head}</div>`+O.map(o=>`<div class="opt${o.v==null?" na":""}${best&&o===best&&ok.length>1?" best":""}"><b>${esc(o.t)}${best&&o===best&&ok.length>1?`<span class="tag">最多</span>`:""}</b><span class="v">${o.v==null?"—":nt(o.v)}</span><small>${o.d}</small></div>`).join("")+keep;
+  if(cost&&best)head+=`<br><small>抽卡花費 ${cost.toLocaleString("en-US")} 點（約 ${nt(cn)}），照建議做 <b style="color:${best.v-cn>=0?"#7ee2a8":"#ff9b9b"}">${best.v-cn>=0?"賺":"虧"} ${nt(Math.abs(best.v-cn))}</b>。已經花掉的錢不影響要選哪個，選拿最多的就對了。</small>`;
+  $("out").innerHTML=`<div class="verdict">${head}</div>`+O.map(o=>`<div class="opt${o.v==null?" na":""}${best&&o===best&&ok.length>1?" best":""}"><b>${esc(o.t)}${best&&o===best&&ok.length>1?`<span class="tag">最多</span>`:""}</b><span class="v">${o.v==null?"—":nt(o.v)}${pl(o.v)}</span><small>${o.d}</small></div>`).join("")+keep;
 }
 
 /* 初始化 */
 drawPf();pfNote();
 $("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;$("tf").value=S.tf;
-["pts","pr","sh","mf","sf","js","rt","tf","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
-const q0=new URLSearchParams(location.search);if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");
+["pts","cost","pr","sh","mf","sf","js","rt","tf","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
+const q0=new URLSearchParams(location.search);if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");if(q0.get("cost"))$("cost").value=q0.get("cost");
 </script>
 </body>
 </html>

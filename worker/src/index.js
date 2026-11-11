@@ -128,10 +128,10 @@ async function handle(ev, env) {
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
-    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(點|pt)?$/i); // 抽卡助手：回收 卡名 點數 → 換點數還是出貨賣
+    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：回收 卡名 點數 → 換點數還是出貨賣
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：回收 201/165 3000`)]);
-      return reply(env, ev.replyToken, [text(`${p.n}\n` + drawVerdict(p, pts, D, env))]); }
+      return reply(env, ev.replyToken, [text(`${p.n}\n` + drawVerdict(p, pts, D, env, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0))]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
@@ -374,12 +374,13 @@ function search(q, D) {
 }
 
 // 抽卡助手：回收點數 vs 出貨賣（台灣賣價＝鞋店成交價 × 匯率 × 85 折，沒有鞋店價才用社團價；1 點＝1 日圓；轉運每張 NT$150、Mercari 手續費 10%、鞋店約 8%、日本國內運費 ¥200）
-function drawVerdict(p, pts, D, env, pf) {
+function drawVerdict(p, pts, D, env, pf, cost = 0) {
   const pv = pts * D.rate, op = [p.s ? ["轉運回台灣賣（鞋店價 85 折）", p.s[0] * D.rate * 0.85 - 150] : p.tw ? ["轉運回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
   const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
   const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "⚖️ 兩邊差不多" : d > 0 ? `📦 建議出貨賣，多拿 ${nt(d)}` : `🔄 建議換點數，多拿 ${nt(-d)}`;
-  const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", (p.num || baseName(p.n) || "").trim()); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); u.searchParams.set("openExternalBrowser", "1");
-  return `${pf ? pf + "・" : ""}回收 ${pts.toLocaleString("en-US")} 點\n\n${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；點數只能在原平台使用。調整運費或點數比例：${u.href}`;
+  const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", (p.num || baseName(p.n) || "").trim()); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); if (cost) u.searchParams.set("cost", cost); u.searchParams.set("openExternalBrowser", "1");
+  const cn = cost * D.rate, pl = v => { const g = v - cn; return `（${g >= 0 ? "賺" : "虧"} ${nt(Math.abs(g))}）`; };
+  return `${pf ? pf + "・" : ""}回收 ${pts.toLocaleString("en-US")} 點\n\n${head}\n\n${cost ? `抽卡花費：${cost.toLocaleString("en-US")} 點（約 ${nt(cn)}）\n` : ""}換點數：約 ${nt(pv)}${cost ? pl(pv) : "（1 點＝1 日圓）"}\n${op.map(o => `${o[0]}：約 ${nt(o[1])}${cost ? pl(o[1]) : ""}`).join("\n")}${cost ? "" : "\n\n想算盈虧：回收 卡號 點數 花 抽卡花費，例如：回收 201/165 3000 花5000"}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、轉運運費估計值；點數只能在原平台使用。調整運費或點數比例：${u.href}`;
 }
 
 function matchImage(r, D) {
