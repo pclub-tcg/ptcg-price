@@ -32,6 +32,7 @@ python3 "$HERE/guide.py" "$OUT"
 python3 "$HERE/guide_market.py" "$OUT"
 cp "$HERE/auction.html" "$OUT/auction.html"
 cp "$HERE/market.html" "$OUT/market.html"
+cp "$HERE/draw.html" "$OUT/draw.html"
 python3 "$HERE/pwa.py" "$OUT"
 python3 "$HERE/slim.py" "$OUT"   # 網站瘦身：商品照片拆檔、美版資料延後載入
 [ -s "$TJ" ] && cp "$TJ" "$OUT/tcgj_op.json"

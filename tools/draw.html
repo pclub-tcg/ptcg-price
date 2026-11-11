@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P’CLUB 抽卡助手</title>
+<meta name="description" content="P’CLUB 抽卡助手：線上抽卡抽到的卡，換點數還是出貨賣比較划算？用日本 Mercari、SNKRDUNK 與台灣社團行情一次試算。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6ea;--surface:#fff;--surface-2:#fff3e6;--line:#f3dcc0;--ink:#2a1c17;--muted:#7a6656;--navy:#2a1c17;--navy-fg:#ffe0b8;--brand:#ff8a2b;--brand-ink:#2a1c17;--good:#1f8a5b;--bad:#c2333a;--hot:#e5482b;--teal:#0f7c74;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;--f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;--logo:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.bar{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;font-size:18px;color:var(--brand)}
+.logo b{font-family:var(--logo);letter-spacing:.02em}.logo svg{width:24px;height:24px}
+.nav{display:flex;align-items:center;gap:6px;font-size:13px}
+.nav a.lk{color:var(--navy-fg);text-decoration:none;padding:6px 8px;border-radius:8px;font-weight:700}.nav a.lk:hover{background:rgba(255,255,255,.08)}
+.who{display:flex;align-items:center;gap:8px}.who .nm{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3e4;font-weight:700}
+@media (max-width:520px){.nav a.lk{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;min-height:42px;text-decoration:none;white-space:nowrap;background:var(--surface-2);color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:999px}
+.btn.ghost{background:transparent;border-color:rgba(255,224,184,.35);color:var(--navy-fg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hero{background:radial-gradient(700px 280px at 0% 120%,rgba(15,124,116,.45),transparent 70%),radial-gradient(700px 300px at 100% -40%,rgba(255,138,43,.35),transparent 70%),var(--navy);color:var(--navy-fg);padding:22px 0 0}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:900;color:#fff3e4;letter-spacing:.04em}
+.hero p{margin:6px 0 0;font-size:14px;color:#d9bfa6;max-width:520px;line-height:1.6}.hero-sp{height:22px}
+main{padding:18px 16px 60px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.panel h2{margin:0 0 10px;font-size:17px;font-weight:900}
+.step{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font-size:13px;font-weight:900;margin-right:6px}
+label{display:block;font-size:13px;font-weight:700;color:var(--muted)}
+input,select{width:100%;margin-top:4px;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface-2);font-size:16px;min-height:44px}
+input:focus,select:focus{outline:none;border-color:var(--brand)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.seg button{border:2px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 14px;font-weight:700;font-size:14px;cursor:pointer;min-height:38px}
+.seg button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.cat-list{border:1px solid var(--line);border-radius:12px;margin-top:6px;max-height:340px;overflow:auto;background:var(--surface)}
+.cat-it{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
+.cat-it:last-child{border-bottom:0}.cat-it:hover,.cat-it:focus{background:var(--surface-2);outline:none}
+.cat-it img,.cat-it .ni{width:40px;height:56px;object-fit:contain;border-radius:4px;background:var(--surface-2);flex:none}
+.cat-it span{flex:1;min-width:0}.cat-it b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-it small{color:var(--muted);font-size:12px}.cat-it em{font-style:normal;font-family:var(--f-num);font-weight:600;color:var(--hot);font-size:13px}
+.picked{display:flex;gap:12px;align-items:center;margin-top:10px;padding:10px;border-radius:14px;background:var(--surface-2)}
+.picked img{width:64px;height:90px;object-fit:contain;border-radius:6px;background:#fff;flex:none}
+.picked b{display:block;font-size:15px}.picked small{color:var(--muted);font-size:12px;line-height:1.6}
+.verdict{border-radius:18px;padding:18px;background:var(--navy);color:var(--navy-fg);margin-bottom:12px}
+.verdict small{color:#d9bfa6;font-size:13px}
+.verdict .big{font-size:clamp(22px,5.5vw,30px);font-weight:900;color:#fff3e4;margin:4px 0}
+.verdict .big mark{background:none;color:var(--brand)}
+.opt{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:12px 14px;border:2px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--surface)}
+.opt.best{border-color:var(--good);background:#effaf4}
+.opt b{font-size:15px}.opt .v{font-family:var(--f-num);font-weight:600;font-size:18px;text-align:right}
+.opt small{grid-column:1/-1;color:var(--muted);font-size:12px;line-height:1.6}
+.opt .tag{display:inline-block;background:var(--good);color:#fff;border-radius:999px;font-size:11px;padding:1px 8px;margin-left:6px;vertical-align:2px}
+.opt.na{opacity:.55}
+.note{color:var(--muted);font-size:12px;line-height:1.7;margin:8px 0 0}
+details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--teal)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="market.html">市集</a><a class="lk" href="auction.html">競標</a></nav>
+</div></header>
+
+<section class="hero"><div class="wrap">
+  <div><h1>抽卡助手</h1><p>線上抽卡抽到的卡，要換點數還是出貨賣？輸入回收點數，用日本與台灣最新行情幫你算哪個拿得多。</p><div class="hero-sp"></div></div>
+</div></section>
+
+<main class="wrap">
+<section class="panel">
+  <h2><span class="step">1</span>抽到哪張卡</h2>
+  <label>從卡片目錄找<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、ルギアV SR、噴火龍 PSA10" autocomplete="off"></label>
+  <div class="cat-list" id="cl" hidden></div>
+  <div id="pk"></div>
+  <details id="man"><summary>目錄找不到？自己填行情</summary>
+    <div class="row2"><label>日本行情（日圓）<input id="mj" type="number" inputmode="numeric" min="0" placeholder="例：12000"></label><label>台灣行情（台幣，選填）<input id="mtw" type="number" inputmode="numeric" min="0" placeholder="例：2500"></label></div>
+  </details>
+</section>
+
+<section class="panel">
+  <h2><span class="step">2</span>平台回收多少</h2>
+  <div class="seg" id="pf" role="group" aria-label="抽卡平台"></div>
+  <div class="grid">
+    <label>回收點數<input id="pts" type="number" inputmode="numeric" min="0" placeholder="例：3000"></label>
+    <label>1 點 = 幾日圓<input id="pr" type="number" inputmode="decimal" min="0" step="0.01"></label>
+    <label>出貨到台灣運費（這張分攤，台幣）<input id="sh" type="number" inputmode="numeric" min="0"></label>
+  </div>
+  <details><summary>日本賣出的手續費與運費</summary>
+    <div class="grid" style="margin-top:10px">
+      <label>Mercari 手續費 %<input id="mf" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>鞋店手續費 %<input id="sf" type="number" inputmode="decimal" min="0" step="0.1"></label>
+      <label>日本國內寄出運費（日圓）<input id="js" type="number" inputmode="numeric" min="0"></label>
+      <label>匯率（1 日圓 = 台幣）<input id="rt" type="number" inputmode="decimal" min="0" step="0.0001"></label>
+    </div>
+    <p class="note">鞋店手續費是預設估計，請依鞋店最新公告調整。這些設定和平台點數比例會記在你的瀏覽器。</p>
+  </details>
+</section>
+
+<section id="out" aria-live="polite"></section>
+<p class="note">僅供試算，不代表實際能賣到的價格。行情取自 P’CLUB 每日更新的 SNKRDUNK（鞋店）、日本 Mercari 成交與台灣社團價格；點數多半只能在原平台繼續抽，不等於現金。P’CLUB 與任何抽卡平台都沒有合作或抽成。</p>
+</main>
+
+<script>
+const BASE=location.hostname==="localhost"&&new URLSearchParams(location.search).get("api")||"https://ptcg-line-bot.spickertop.workers.dev/api/";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nt=v=>"NT$"+Math.round(v).toLocaleString("en-US");
+const yen=v=>"¥"+Math.round(v).toLocaleString("en-US");
+const LS={get(k,d){try{const v=localStorage.getItem("draw_"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("draw_"+k,JSON.stringify(v))}catch(e){}}};
+const PF=["DOPA","CLOVE","日本卡牌中心","其他"];
+const DEF={pr:1,sh:150};
+let S=Object.assign({pf:"DOPA",mf:10,sf:8,js:200,rt:0.21},LS.get("set",{}));
+let PFS=LS.get("pfs",{});let CARD=null;
+
+function pfVal(k){return (PFS[S.pf]||{})[k]??DEF[k]}
+function drawPf(){
+  $("pf").innerHTML=PF.map(p=>`<button type="button" data-p="${esc(p)}" aria-pressed="${p===S.pf}">${esc(p)}</button>`).join("");
+  $("pf").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.pf=b.dataset.p;save();drawPf();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");calc()});
+}
+function save(){LS.set("set",{pf:S.pf,mf:S.mf,sf:S.sf,js:S.js,rt:S.rt});LS.set("pfs",PFS)}
+function num(id){const v=parseFloat($(id).value);return isFinite(v)&&v>=0?v:null}
+
+/* 卡片目錄搜尋（共用 LINE 機器人的目錄 API） */
+let CT=null,CQ=0,HITS=[];
+$("cs").oninput=()=>{clearTimeout(CT);const q=$("cs").value.trim();if(!q){$("cl").hidden=true;return}
+  CT=setTimeout(async()=>{const my=++CQ;let r;
+    try{r=await (await fetch(BASE+"a/search?q="+encodeURIComponent(q))).json()}catch(e){r={items:[]}}
+    if(my!==CQ)return;HITS=r.items||[];
+    $("cl").innerHTML=HITS.length?HITS.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${x.op?"海賊王・":""}${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，可以展開下面「自己填行情」</p>`;
+    $("cl").hidden=false;
+    $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{CARD=HITS[+el.dataset.i];if(CARD.rate){S.rt=CARD.rate;$("rt").value=CARD.rate;save()}$("cl").hidden=true;$("cs").value="";drawCard();calc()};el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}});
+  },300)};
+
+function drawCard(){
+  if(!CARD){$("pk").innerHTML="";return}
+  const x=CARD,bits=[x.sj?`鞋店中位數 ${yen(x.sj)}`:"",x.mj?`Mercari 中位數 ${yen(x.mj)}`:"",x.tw?`台灣 ${nt(x.tw)}`:""].filter(Boolean).join("・")||"目錄裡還沒有成交價，可以自己填行情";
+  $("pk").innerHTML=`<div class="picked">${x.img?`<img src="${esc(x.img)}" alt="">`:""}<div><b>${esc(x.n)}</b><small>${esc(x.meta)}<br>${bits}</small><br><button type="button" class="btn sm" id="pkx" style="margin-top:6px">換一張</button></div></div>`;
+  $("pkx").onclick=()=>{CARD=null;drawCard();calc();$("cs").focus()};
+}
+
+function calc(){
+  const pts=num("pts"),pr=num("pr")??DEF.pr,sh=num("sh")??DEF.sh;
+  S.mf=num("mf")??10;S.sf=num("sf")??8;S.js=num("js")??200;S.rt=num("rt")||0.21;
+  PFS[S.pf]=Object.assign({},PFS[S.pf],{pr,sh});save();
+  const R=S.rt,x=CARD||{};
+  const mj=x.mj||num("mj"),sj=x.sj||null,tw=x.tw||num("mtw");
+  const O=[];
+  O.push({k:"pt",t:"換點數",v:pts!=null?pts*pr*R:null,d:pts!=null?`${pts.toLocaleString("en-US")} 點 × ${pr} 日圓 × 匯率 ${R}（點數只能在 ${S.pf} 繼續用）`:"先在上面填回收點數"});
+  O.push({k:"tw",t:"出貨回台灣，在社團賣",v:tw?tw-sh:null,d:tw?`台灣行情 ${nt(tw)} − 運費 ${nt(sh)}`:"這張還沒有台灣社團價格"});
+  O.push({k:"mc",t:"出貨到日本地址，在 Mercari 賣",v:mj?(mj*(1-S.mf/100)-S.js)*R:null,d:mj?`${yen(mj)} × (1 − ${S.mf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有 Mercari 成交價"});
+  O.push({k:"sn",t:"出貨到日本地址，在鞋店賣",v:sj?(sj*(1-S.sf/100)-S.js)*R:null,d:sj?`${yen(sj)} × (1 − ${S.sf}%) − 運費 ${yen(S.js)}，需要日本地址或代購`:"這張還沒有鞋店成交價"});
+  const ok=O.filter(o=>o.v!=null);
+  if(!CARD&&!mj&&!tw){$("out").innerHTML="";return}
+  const best=ok.length?ok.reduce((a,b)=>b.v>a.v?b:a):null;
+  const ptO=O[0],sell=ok.filter(o=>o.k!=="pt"),bestSell=sell.length?sell.reduce((a,b)=>b.v>a.v?b:a):null;
+  let head="";
+  if(ptO.v!=null&&bestSell){const d=bestSell.v-ptO.v;
+    head=Math.abs(d)<Math.max(30,ptO.v*.03)?`<small>結論</small><div class="big">兩邊<mark>差不多</mark></div><small>差距在 ${nt(Math.abs(d))} 以內，看你想不想等出貨、自己賣。</small>`
+      :d>0?`<small>結論</small><div class="big"><mark>出貨賣</mark>多拿 ${nt(d)}</div><small>最划算：${esc(bestSell.t)}（約 ${nt(bestSell.v)}），換點數約 ${nt(ptO.v)}</small>`
+      :`<small>結論</small><div class="big"><mark>換點數</mark>多拿 ${nt(-d)}</div><small>換點數約 ${nt(ptO.v)}，出貨賣最多約 ${nt(bestSell.v)}（${esc(bestSell.t)}）</small>`}
+  else if(bestSell)head=`<small>這張卡大約值</small><div class="big"><mark>${nt(bestSell.v)}</mark></div><small>${esc(bestSell.t)}。填入回收點數就能比較要不要換點數。</small>`;
+  else head=`<small>結論</small><div class="big">還不能比較</div><small>這張卡目前沒有成交價，請展開「自己填行情」。</small>`;
+  const keep=x.cost?`<p class="note">想留著這張卡？現在從日本買一張到手約 <b>${nt(x.cost)}</b>（${esc(x.csrc||"")}，含運費與 Mercari 優惠券）。</p>`:"";
+  $("out").innerHTML=`<div class="verdict">${head}</div>`+O.map(o=>`<div class="opt${o.v==null?" na":""}${best&&o===best&&ok.length>1?" best":""}"><b>${esc(o.t)}${best&&o===best&&ok.length>1?`<span class="tag">最多</span>`:""}</b><span class="v">${o.v==null?"—":nt(o.v)}</span><small>${o.d}</small></div>`).join("")+keep;
+}
+
+/* 初始化 */
+drawPf();
+$("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("mf").value=S.mf;$("sf").value=S.sf;$("js").value=S.js;$("rt").value=S.rt;
+["pts","pr","sh","mf","sf","js","rt","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
+const q0=new URLSearchParams(location.search);if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");
+</script>
+</body>
+</html>

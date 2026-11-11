@@ -128,6 +128,14 @@ async function handle(ev, env) {
     if (/^(查價|卡片搜尋|搜尋|查卡價)$/.test(q)) return reply(env, ev.replyToken, [{ ...text("直接輸入卡號、卡名或系列就能查價 👇\n例：201/165、SV8 132/106、噴火龍 PSA10、純白閃焰 BOX\n也可以按下面的「拍照查價」直接拍卡片。"),
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
+    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(點|pt)?$/i); // 抽卡助手：回收 卡名 點數 → 換點數還是出貨賣
+    if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
+      const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("q", rc[1]); u.searchParams.set("pts", pts); u.searchParams.set("openExternalBrowser", "1");
+      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：回收 201/165 3000`)]);
+      const pv = pts * D.rate, op = [p.tw ? ["出貨回台灣在社團賣", p.tw - 150] : null, p.m ? ["出貨在 Mercari 賣", (p.m[0] * 0.9 - 200) * D.rate] : null, p.s ? ["出貨在鞋店賣", (p.s[0] * 0.92 - 200) * D.rate] : null].filter(Boolean);
+      const best = op.length ? op.reduce((a, b) => b[1] > a[1] ? b : a) : null, d = best ? best[1] - pv : 0;
+      const head = !best ? "這張還沒有成交價，無法比較" : Math.abs(d) < Math.max(30, pv * .03) ? "兩邊差不多" : d > 0 ? `出貨賣多拿 ${nt(d)}` : `換點數多拿 ${nt(-d)}`;
+      return reply(env, ev.replyToken, [text(`${p.n}\n回收 ${pts.toLocaleString("en-US")} 點\n\n👉 ${head}\n\n換點數：約 ${nt(pv)}（1 點＝1 日圓）\n${op.map(o => `${o[0]}：約 ${nt(o[1])}`).join("\n")}\n\n已扣 Mercari 手續費 10%、鞋店約 8%、運費估計值；點數只能在原平台使用。調整點數比例或運費：${u.href}`)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
@@ -326,7 +334,8 @@ setCatalog(async (q, env) => {
   return hits.slice(0, 8).map(p => {
     const ref = p.us ? (p.um ? p.um * (D.usd || 32) : null) : p.s ? p.s[0] * D.rate : p.m ? p.m[0] * D.rate : null;
     return { n: p.n, meta: [p.us ? "美版" : "日版", p.num, p.set, p.b ? "原盒" : p.rar, p.p ? "PSA10" : ""].filter(x => x && x !== "-").join("・"),
-      img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "", op: p.op ? 1 : 0, k: p.k, b: p.b ? 1 : 0, psa: p.p ? 1 : 0 };
+      img: p.img ? new URL(p.img, site).href : null, ref: ref ? Math.round(ref / 10) * 10 : null, src: p.us ? "TCGplayer" : p.s ? "SNKRDUNK" : p.m ? "Mercari" : "", op: p.op ? 1 : 0, k: p.k, b: p.b ? 1 : 0, psa: p.p ? 1 : 0,
+      ...(p.us ? {} : (c => ({ sj: p.s ? p.s[0] : null, mj: p.m ? p.m[0] : null, tw: p.tw || null, rate: D.rate, cost: c ? Math.round(c.cost) : null, csrc: c ? c.src : null }))(calc(p, D))) }; // 抽卡助手（draw.html）用
   });
 });
 
