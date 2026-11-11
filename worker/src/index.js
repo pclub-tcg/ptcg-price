@@ -139,10 +139,10 @@ async function handle(ev, env) {
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
     if (/^(抽卡|抽卡助手|抽卡教學|回收|換點數|回收點數|點數)$/.test(q)) { const u = x => new URL(x, env.SITE_URL).href;
-      return reply(env, ev.replyToken, [{ type: "image", originalContentUrl: u("guide_draw.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_draw_s.jpg?v=" + RICHMENU_V) }, { ...text(DRAW_HELP), quickReply: { items: ["201/165 3000點", "201/165 3000點 花5000"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]); }
+      return reply(env, ev.replyToken, [{ type: "image", originalContentUrl: u("guide_draw.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_draw_s.jpg?v=" + RICHMENU_V) }, { ...text(DRAW_HELP), quickReply: { items: ["100/078 PSA10 27000點", "100/078 PSA10 27000點 花30000"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]); }
     const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p)?)?$/i) || q.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：卡號 點數點（花 xxx）
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us && !h.b);
-      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：201/165 3000點`)]);
+      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：100/078 PSA10 27000點（點數是平台畫面上的回收點數）`)]);
       return reply(env, ev.replyToken, [drawFlex(p, pts, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
@@ -439,7 +439,7 @@ function drawFlex(p, pts, pf, cost, D, env) {
       { type: "button", style: "secondary", height: "sm", action: { type: "uri", label: "調整運費", uri: drawUrl(env, p, pts, pf, cost, false) } }] } },
     quickReply: { items: COSTS.map(v => ({ type: "action", action: { type: "postback", label: `花 ${v.toLocaleString("en-US")} 點`, data: `dr|${pts}|${v}|${pf || ""}|${p.k}`.slice(0, 300), displayText: `這抽花 ${v.toLocaleString("en-US")} 點` } })) } };
 }
-const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我\n方法 2：打「卡號 點數點」，例如\n201/165 3000點\nルギアV SR 20000點\n\n要算賺虧就在後面加花多少，例如：201/165 3000點 花5000";
+const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1（最準）：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我，我會讀出卡片和平台給的回收點數\n\n方法 2：打「卡號 回收點數點」，回收點數是平台結果畫面上金幣旁邊的數字，例如\n100/078 PSA10 27000點\n\n要算賺虧就在後面加這抽花多少，例如：100/078 PSA10 27000點 花30000";
 
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
