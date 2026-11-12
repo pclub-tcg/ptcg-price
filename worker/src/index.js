@@ -13,6 +13,9 @@ import { marketApi, marketCron, marketToken } from "./market.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
 import { bbRecord, bbLookup, bbDate } from "./buyback.js";
+import SETS_TW from "./setnames_tw.json"; // 日文系列名 → 台灣中文名（tools/setnames_tw.json 的副本）
+const SET_KEYS = Object.keys(SETS_TW).sort((a, b) => b.length - a.length);
+const jaSet = q => { let o = String(q || ""); for (const k of SET_KEYS) if (o.includes(k)) o = o.split(k).join(SETS_TW[k]); return o; }; // 「メガブレイブ BOX」→「超級勇氣 BOX」
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -262,6 +265,7 @@ const rowsTo = res => { const list = (res.results || []).map(r => JSON.parse(r.j
 const esc = t => t.replace(/[\\%_]/g, m => "\\" + m);
 const USW = us => us === 1 ? " AND us = 1" : us === 0 ? " AND us = 0" : "";
 async function dbSearch(q, us, env, D) {
+  q = jaSet(q);
   const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
   if (!toks.length) return [];
   const opt = t => /^[a-z]{1,3}-?\d{0,2}[a-z]?$/.test(t); // 系列代號、psa10、box 等：不一定寫在名稱裡，只拿來排序
@@ -374,6 +378,7 @@ const bigrams = t => { const a = [...t]; return a.length < 2 ? a : a.slice(1).ma
 const strictTok = t => /\d/.test(t) || /^[a-z.\-&']{1,4}$/.test(t);
 function fuzzy(h, t) { if (strictTok(t)) return 0; const a = [...t], bs = bigrams(t); let k = 0; for (const b of bs) if (h.includes(b)) k++; return (k / bs.length + a.filter(c => h.includes(c)).length / a.length) / 2; } // 兩字組比例與單字比例的平均
 function search(q, D) {
+  q = jaSet(q);
   const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
   const wantPsa = toks.some(t => t.includes("psa"));
   const scored = [];
@@ -459,7 +464,7 @@ function matchImage(r, D) {
   const wantPsa = /PSA\s*10/i.test(r.grade || "");
   const sc = D.products.map(p => {
     let s = 0;
-    if (r.box) { if (!p.b) return [p, -1]; const bn = nz(r.box_name_ja).replace(/box$/, ""); if (zh && p.n.includes(zh)) s += 6; if (bn && p.h.includes(bn)) s += 6; return [p, s]; }
+    if (r.box) { if (!p.b) return [p, -1]; const bn = nz(r.box_name_ja).replace(/box$/, ""), bz = jaSet(String(r.box_name_ja || "").replace(/\s*box$/i, "")).trim(); if (zh && p.n.includes(zh)) s += 6; if (bn && p.h.includes(bn)) s += 6; if (bz && bz !== String(r.box_name_ja || "").trim() && p.n.includes(bz)) s += 10; return [p, s]; }
     if (p.b) return [p, -1];
     const pn = fixNum(p.num);
     let named = false;
