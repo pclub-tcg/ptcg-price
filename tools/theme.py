@@ -26,7 +26,7 @@ def apply(h):
         raise SystemExit("theme.py：找不到頁首")
     head = ('<header class="bar"><div class="wrap">\n  ' + m.group(1) +
             '\n  <nav class="th-nav" aria-label="主選單"><a href="./" class="on">行情</a><a href="#tab-tcg" data-th="tcg">卡片目錄</a>'
-            '<a href="auction.html">競標</a><a href="market.html">市集</a><a href="draw.html">抽卡助手<sup>NEW</sup></a></nav>\n  <div class="th-sp"></div>\n'
+            '<a href="auction.html">競標</a><a href="market.html">市集</a><a href="dex.html">圖鑑・卡冊<sup>NEW</sup></a><a href="draw.html">抽卡助手</a></nav>\n  <div class="th-sp"></div>\n'
             '  <div class="th-right">' + m.group(2) +
             '<a class="th-line" href="%s" target="_blank" rel="noopener">%s<span>加入 LINE 查價</span></a><small id="stamp"></small></div>\n'
             '</div><div class="th-status"><div class="wrap" id="th-status"></div></div></header>' % (LINE, LINEIC))

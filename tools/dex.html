@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P’CLUB 圖鑑・卡冊</title>
+<meta name="description" content="P’CLUB 卡牌圖鑑與卡冊：依系列瀏覽日版寶可夢卡與 SNKRDUNK 行情，記錄收集進度、整套市值與想要清單。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&family=Barlow+Condensed:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6ea;--surface:#fff;--surface-2:#fff3e6;--line:#f3dcc0;--ink:#2a1c17;--muted:#7a6656;--navy:#2a1c17;--navy-fg:#ffe0b8;--brand:#ff8a2b;--brand-ink:#2a1c17;--good:#1f8a5b;--bad:#c2333a;--hot:#e5482b;--teal:#0f7c74;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;--f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;--logo:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.bar{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;font-size:18px;color:var(--brand)}
+.logo b{font-family:var(--logo);letter-spacing:.02em}.logo svg{width:24px;height:24px}
+.nav{display:flex;align-items:center;gap:6px;font-size:13px}
+.nav a.lk{color:var(--navy-fg);text-decoration:none;padding:6px 8px;border-radius:8px;font-weight:700}.nav a.lk:hover{background:rgba(255,255,255,.08)}
+.who{display:flex;align-items:center;gap:8px}.who .nm{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3e4;font-weight:700}
+@media (max-width:520px){.nav a.lk{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;min-height:42px;text-decoration:none;white-space:nowrap;background:var(--surface-2);color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:999px}
+.btn.ghost{background:transparent;border-color:rgba(255,224,184,.35);color:var(--navy-fg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hero{background:radial-gradient(700px 280px at 0% 120%,rgba(15,124,116,.45),transparent 70%),radial-gradient(700px 300px at 100% -40%,rgba(255,138,43,.35),transparent 70%),var(--navy);color:var(--navy-fg);padding:22px 0 0}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:900;color:#fff3e4;letter-spacing:.04em}
+.hero p{margin:6px 0 0;font-size:14px;color:#d9bfa6;max-width:520px;line-height:1.6}main{padding:16px 16px 80px}
+.tabs{display:flex;gap:6px;margin:14px 0 12px;overflow-x:auto}
+.tabs button{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:900;font-size:14px;cursor:pointer;min-height:42px}
+.tabs button[aria-selected=true]{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.tabs button .ct{font-family:var(--f-num);font-weight:600;font-size:12px;margin-left:4px;opacity:.8}
+.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.tool input[type=search]{flex:1;min-width:180px;padding:10px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px;min-height:44px}
+.tool input:focus{outline:none;border-color:var(--brand)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.set{display:flex;flex-direction:column;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:10px;cursor:pointer;gap:6px;min-height:44px}
+.set:hover,.set:focus-visible{border-color:var(--brand);outline:none}
+.set .cv{display:flex;height:96px;justify-content:center;align-items:flex-end;gap:0}
+.set .cv img{width:58px;height:81px;object-fit:cover;border-radius:5px;box-shadow:0 3px 8px rgba(0,0,0,.18);background:var(--surface-2)}
+.set .cv img+img{margin-left:-22px}.set .cv img:nth-child(2){transform:translateY(-8px);z-index:1}
+.set b{font-size:14px;line-height:1.3}.set small{color:var(--muted);font-size:12px}
+.bar2{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}.bar2 i{display:block;height:100%;background:var(--good);border-radius:3px}
+.shead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.shead button{border:0;background:var(--surface-2);border-radius:999px;width:42px;height:42px;font-size:20px;cursor:pointer;flex:none}
+.shead h2{margin:0;font-size:20px;font-weight:900;line-height:1.25}.shead small{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--navy);color:var(--navy-fg);border-radius:14px;padding:10px 12px}
+.stat small{display:block;font-size:11px;color:#d9bfa6}.stat b{font-family:var(--f-num);font-weight:600;font-size:clamp(14px,4vw,19px);color:#fff3e4}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chips button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer;min-height:36px}
+.chips button[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.cd{position:relative;border:0;background:none;padding:0;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.cd img{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:7px;background:var(--surface-2);box-shadow:0 2px 6px rgba(0,0,0,.12);transition:filter .2s,opacity .2s}
+.cd.no img{filter:grayscale(.85);opacity:.45}
+.cd .nm{font-size:12px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd .mt{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:4px}.cd .mt b{font-family:var(--f-num);color:var(--ink);font-weight:600}
+.cd .bd{position:absolute;top:6px;right:6px;min-width:24px;height:24px;border-radius:12px;background:var(--good);color:#fff;font-size:12px;font-weight:900;display:grid;place-items:center;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.cd .wt{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:12px;background:#fff;color:#e2a400;font-size:14px;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7;background:var(--surface);border:1px dashed var(--line);border-radius:16px}
+.row{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 10px;margin-bottom:8px}
+.row img{width:46px;height:64px;object-fit:cover;border-radius:5px;flex:none;background:var(--surface-2)}
+.row .tx{flex:1;min-width:0}.row b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row small{color:var(--muted);font-size:12px}
+.row .pr{font-family:var(--f-num);font-weight:600;font-size:15px;text-align:right}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 14px;font-weight:900;font-size:14px;cursor:pointer;text-decoration:none;min-height:42px}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.note{color:var(--muted);font-size:12px;line-height:1.7}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(20,10,6,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.sheet .pn{background:var(--bg);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto}
+.sheet .top{display:flex;gap:14px}
+.sheet .top img{width:132px;aspect-ratio:5/7;object-fit:cover;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.25);flex:none}
+.sheet h3{margin:0;font-size:18px;font-weight:900;line-height:1.3}
+.pz{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.pz div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px}.pz small{display:block;font-size:11px;color:var(--muted)}.pz b{font-family:var(--f-num);font-weight:600;font-size:16px}
+.qty{display:flex;align-items:center;gap:10px;margin:14px 0 10px}
+.qty button{width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:var(--surface);font-size:22px;font-weight:900;cursor:pointer}
+.qty b{font-family:var(--f-num);font-size:22px;min-width:30px;text-align:center}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.stat b{font-size:20px}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="market.html">市集</a><a class="lk" href="draw.html">抽卡</a></nav>
+</div></header>
+<section class="hero"><div class="wrap"><div>
+  <h1>圖鑑・卡冊</h1>
+  <p>依系列看每張卡的行情，標記你有哪些卡、還缺哪些，算出整套市值和補齊要花多少。</p>
+  <div style="height:20px"></div>
+</div></div></section>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-t="dex" aria-selected="true">📚 圖鑑</button>
+    <button type="button" role="tab" data-t="album" aria-selected="false">🗂️ 我的卡冊<span class="ct" id="ctA"></span></button>
+    <button type="button" role="tab" data-t="want" aria-selected="false">☆ 想要清單<span class="ct" id="ctW"></span></button>
+  </div>
+  <div id="view"><p class="empty">載入圖鑑中…</p></div>
+  <p class="note">圖鑑只列 SNKRDUNK 上有成交的日版卡（大多不含 C／U／R 普通卡），收集進度以這些卡計算。行情為鞋店（SNKRDUNK）成交中位數 × 匯率，僅供參考。卡冊資料只存在這台裝置的瀏覽器；「我的庫存」裡的卡也會自動算進卡冊。</p>
+</main>
+
+<div class="sheet" id="sh" hidden><div class="pn" role="dialog" aria-modal="true" aria-labelledby="shT" id="shp"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const nt=v=>v==null?"—":"NT$"+Math.round(v).toLocaleString("en-US");
+let D=null,RATE=0.21,BYSID={},HAVE=LS.get("dex_have",{}),WANT=LS.get("dex_want",[]),INV={},TAB="dex",CUR=null,FIL={r:"",s:"all"},SMALL=false,SQ="";
+if(!HAVE||typeof HAVE!=="object")HAVE={};if(!Array.isArray(WANT))WANT=[];
+const save=()=>{LS.set("dex_have",HAVE);LS.set("dex_want",WANT);counts()};
+const img=c=>c[6]===1?"hi/"+c[0]+".jpg":(c[6]||"");
+const yen=c=>c[4]!=null?c[4]:null;
+const ntOf=c=>yen(c)!=null?yen(c)*RATE:null;
+const RAR=["MUR","UR","SAR","SSR","CSR","CHR","HR","SR","AR","MA","BWR","ACE","K","PR","RRR","TR","S","A","H","RR","R","U","C"];
+/* 「我的庫存」的卡也算：從庫存名稱裡的 {卡號} [系列] 對回圖鑑 */
+function readInv(){INV={};const L=LS.get("inv",[]);if(!Array.isArray(L))return;
+  for(const e of L){const m=String(e.k||"").match(/\{(.+?)\}\s*\[(.+?)\]/);if(!m)continue;const key=m[2].toUpperCase()+"|"+m[1];INV[key]=(INV[key]||0)+(+e.qty||1)}}
+const invQty=(s,c)=>INV[s.c.toUpperCase()+"|"+c[1]]||0;
+const qty=(s,c)=>(HAVE[c[0]]||0)+invQty(s,c);
+function setStat(s){let have=0,val=0,miss=0,tot=0;for(const c of s.cards){const v=ntOf(c)||0;tot+=v;if(qty(s,c)>0){have++;val+=v}else miss+=v}return{have,n:s.cards.length,val,miss,tot}}
+function counts(){let a=0;if(D)for(const s of D.sets)for(const c of s.cards)if(qty(s,c)>0)a++;$("ctA").textContent=a||"";$("ctW").textContent=WANT.length||""}
+
+function cover(s){return s.cards.filter(c=>yen(c)!=null).sort((a,b)=>yen(b)-yen(a)).slice(0,3)}
+function setName(s){return s.z||s.j||s.c}
+function drawDex(){
+  const q=SQ.trim().toLowerCase();
+  let L=D.sets.filter(s=>(SMALL||s.cards.length>=8)&&(!q||(s.z+" "+s.j+" "+s.c).toLowerCase().includes(q)));
+  $("view").innerHTML=`<div class="tool"><input type="search" id="sq" placeholder="找系列：超級勇氣、151、SV8、テラスタル" value="${esc(SQ)}" aria-label="搜尋系列"><label class="chk"><input type="checkbox" id="sm" ${SMALL?"checked":""}> 顯示構築・promo 等小系列</label></div>`
+    +(L.length?`<div class="sets">${L.map(s=>{const st=setStat(s),cv=cover(s);return `<button type="button" class="set" data-c="${esc(s.c)}"><div class="cv">${cv.map(c=>`<img src="${esc(img(c))}" alt="" loading="lazy">`).join("")}</div><b>${esc(setName(s))}</b><small>${esc(s.c)}・${st.n} 張${st.have?`・已有 ${st.have}`:""}</small>${st.have?`<div class="bar2"><i style="width:${Math.round(st.have/st.n*100)}%"></i></div>`:""}</button>`}).join("")}</div>`:`<p class="empty">找不到「${esc(SQ)}」這個系列</p>`);
+  $("sq").oninput=e=>{SQ=e.target.value;const p=e.target.selectionStart;drawDex();$("sq").focus();try{$("sq").setSelectionRange(p,p)}catch(_){}};
+  $("sm").onchange=e=>{SMALL=e.target.checked;drawDex()};
+  document.querySelectorAll(".set").forEach(b=>b.onclick=()=>openSet(b.dataset.c));
+}
+function openSet(c,push=true){CUR=D.sets.find(s=>s.c===c);if(!CUR)return;FIL={r:"",s:"all"};if(push)try{history.pushState({c},"","#"+encodeURIComponent(c))}catch(e){}drawSet();scrollTo(0,0)}
+function drawSet(){const s=CUR,st=setStat(s);
+  const rs=RAR.filter(r=>s.cards.some(c=>c[2]===r));
+  let L=s.cards.filter(c=>(!FIL.r||c[2]===FIL.r)&&(FIL.s==="all"||(FIL.s==="have"?qty(s,c)>0:FIL.s==="miss"?qty(s,c)===0:WANT.includes(c[0]))));
+  $("view").innerHTML=`<div class="shead"><button type="button" id="bk" aria-label="回系列列表">←</button><h2>${esc(setName(s))}<small>${esc(s.c)}${s.z&&s.j?"・"+esc(s.j):""}</small></h2></div>
+    <div class="stats"><div class="stat"><small>已收集</small><b>${st.have} / ${st.n}</b></div><div class="stat"><small>已收集市值</small><b>${nt(st.val)}</b></div><div class="stat"><small>補齊還要</small><b>${nt(st.miss)}</b></div></div>
+    <div class="bar2" style="margin:-4px 0 12px"><i style="width:${Math.round(st.have/st.n*100)}%"></i></div>
+    <div class="chips" role="group" aria-label="篩選">${[["all","全部"],["have","已有"],["miss","缺的"],["want","想要"]].map(([k,t])=>`<button type="button" data-s="${k}" aria-pressed="${FIL.s===k}">${t}</button>`).join("")}</div>
+    ${rs.length>1?`<div class="chips" role="group" aria-label="稀有度"><button type="button" data-r="" aria-pressed="${!FIL.r}">全部稀有度</button>${rs.map(r=>`<button type="button" data-r="${r}" aria-pressed="${FIL.r===r}">${r}</button>`).join("")}</div>`:""}
+    ${L.length?`<div class="grid">${L.map(c=>{const q=qty(s,c);return `<button type="button" class="cd${q?"":" no"}" data-sid="${c[0]}"><img src="${esc(img(c))}" alt="${esc(c[3])}" loading="lazy">${q?`<span class="bd">${q>1?"×"+q:"✓"}</span>`:""}${WANT.includes(c[0])?`<span class="wt">★</span>`:""}<span class="nm">${esc(c[3])}</span><span class="mt"><span>${esc(c[1])} ${esc(c[2])}</span><b>${nt(ntOf(c))}</b></span></button>`}).join("")}</div>`:`<p class="empty">這個篩選沒有卡</p>`}
+    <p class="note" style="margin-top:12px">點卡片可以標記「我有」或「想要」。</p>`;
+  $("bk").onclick=()=>history.length>1&&location.hash?history.back():back();
+  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{FIL.s=b.dataset.s;drawSet()});
+  document.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{FIL.r=b.dataset.r;drawSet()});
+  document.querySelectorAll(".cd").forEach(b=>b.onclick=()=>openCard(+b.dataset.sid));
+}
+function back(){CUR=null;draw()}
+function openCard(sid){const x=BYSID[sid];if(!x)return;const [s,c]=x,iq=invQty(s,c);
+  const draw1=()=>{const h=HAVE[sid]||0,w=WANT.includes(sid);
+    $("shp").innerHTML=`<div class="top"><img src="${esc(img(c))}" alt=""><div style="min-width:0;flex:1"><h3 id="shT">${esc(c[3])}</h3><p class="note" style="margin:4px 0 0">${esc(setName(s))}・${esc(c[1])} ${esc(c[2])}</p>
+      <div class="pz"><div><small>裸卡</small><b>${nt(ntOf(c))}</b></div><div><small>PSA10</small><b>${c[5]!=null?nt(c[5]*RATE):"—"}</b></div></div></div></div>
+      <div class="qty"><span style="font-weight:900;flex:1">我有幾張</span><button type="button" id="qm" aria-label="減少">−</button><b id="qv">${h}</b><button type="button" id="qp" aria-label="增加">＋</button></div>
+      ${iq?`<p class="note" style="margin:-4px 0 10px">另外「我的庫存」裡有 ${iq} 張，也算進卡冊。</p>`:""}
+      <div class="acts"><button type="button" class="btn${w?" main":""}" id="wt">${w?"★ 已在想要清單":"☆ 加入想要"}</button><a class="btn" href="./?q=${encodeURIComponent(c[1]+" "+s.c)}">查行情・K 線</a></div>
+      <button type="button" class="btn" id="shx" style="width:100%;margin-top:10px">完成</button>`;
+    $("qm").onclick=()=>{if(HAVE[sid]>0){HAVE[sid]--;if(!HAVE[sid])delete HAVE[sid];save();draw1()}};
+    $("qp").onclick=()=>{HAVE[sid]=(HAVE[sid]||0)+1;if(WANT.includes(sid))WANT=WANT.filter(x=>x!==sid);save();draw1()};
+    $("wt").onclick=()=>{WANT=w?WANT.filter(x=>x!==sid):[...WANT,sid];save();draw1()};
+    $("shx").onclick=close};
+  const close=()=>{$("sh").hidden=true;draw()};
+  $("sh").onclick=e=>{if(e.target.id==="sh")close()};
+  draw1();$("sh").hidden=false;$("shx").focus();
+}
+function drawAlbum(){
+  const L=D.sets.map(s=>({s,st:setStat(s)})).filter(x=>x.st.have>0).sort((a,b)=>b.st.have/b.st.n-a.st.have/a.st.n);
+  const tv=L.reduce((a,x)=>a+x.st.val,0),tc=L.reduce((a,x)=>a+x.st.have,0);
+  $("view").innerHTML=L.length?`<div class="stats"><div class="stat"><small>收集中的系列</small><b>${L.length}</b></div><div class="stat"><small>收集的卡</small><b>${tc} 種</b></div><div class="stat"><small>卡冊市值</small><b>${nt(tv)}</b></div></div>`
+    +L.map(({s,st})=>`<button type="button" class="row" data-c="${esc(s.c)}" style="width:100%;text-align:left;cursor:pointer">${cover(s).slice(0,1).map(c=>`<img src="${esc(img(c))}" alt="" loading="lazy">`).join("")}<span class="tx"><b>${esc(setName(s))}</b><small>${st.have} / ${st.n}・${Math.round(st.have/st.n*100)}%・補齊還要 ${nt(st.miss)}</small><span class="bar2" style="display:block;margin-top:6px"><i style="width:${Math.round(st.have/st.n*100)}%"></i></span></span><span class="pr">${nt(st.val)}</span></button>`).join("")
+    :`<p class="empty">卡冊還是空的。<br>到「📚 圖鑑」點進系列，點卡片標記「我有」；「我的庫存」裡的卡也會自動出現在這裡。</p>`;
+  document.querySelectorAll(".row[data-c]").forEach(b=>b.onclick=()=>{TAB="dex";tabs();openSet(b.dataset.c)});
+}
+function drawWant(){
+  const L=WANT.map(sid=>BYSID[sid]).filter(Boolean);
+  const tot=L.reduce((a,[s,c])=>a+(ntOf(c)||0),0);
+  $("view").innerHTML=L.length?`<div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat"><small>想要</small><b>${L.length} 張</b></div><div class="stat"><small>全部買齊約</small><b>${nt(tot)}</b></div></div>
+    <div class="tool"><button type="button" class="btn main" id="cp">📋 複製求卡清單（貼到社團）</button><a class="btn" href="market.html">到市集找</a></div>`
+    +L.map(([s,c])=>`<button type="button" class="row" data-sid="${c[0]}" style="width:100%;text-align:left;cursor:pointer"><img src="${esc(img(c))}" alt="" loading="lazy"><span class="tx"><b>${esc(c[3])}</b><small>${esc(setName(s))}・${esc(c[1])} ${esc(c[2])}</small></span><span class="pr">${nt(ntOf(c))}</span></button>`).join("")
+    :`<p class="empty">還沒有想要的卡。<br>在圖鑑點卡片，按「☆ 加入想要」。</p>`;
+  document.querySelectorAll(".row[data-sid]").forEach(b=>b.onclick=()=>openCard(+b.dataset.sid));
+  if($("cp"))$("cp").onclick=async()=>{const t="【收】日版\n"+L.map(([s,c])=>`・${c[3]} ${c[1]} ${c[2]}（${s.c}）`).join("\n")+"\n\n行情參考：P’CLUB pclub-tcg.github.io/ptcg-price";
+    try{await navigator.clipboard.writeText(t);$("cp").textContent="✓ 已複製"}catch(e){prompt("複製這段文字",t)}};
+}
+function tabs(){document.querySelectorAll("[role=tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===TAB))}
+function draw(){readInv();counts();if(TAB==="dex")CUR?drawSet():drawDex();else if(TAB==="album")drawAlbum();else drawWant()}
+document.querySelectorAll("[role=tab]").forEach(b=>b.onclick=()=>{TAB=b.dataset.t;CUR=null;tabs();if(location.hash)try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}draw()});
+addEventListener("popstate",()=>{const c=decodeURIComponent(location.hash.slice(1));if(c&&D&&D.sets.some(s=>s.c===c)){TAB="dex";tabs();openSet(c,false)}else{CUR=null;draw()}});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sh").hidden){$("sh").hidden=true;draw()}});
+addEventListener("storage",e=>{if(e.key==="inv"||e.key==="dex_have"||e.key==="dex_want"){HAVE=LS.get("dex_have",{});WANT=LS.get("dex_want",[]);draw()}});
+fetch("dex.json").then(r=>r.json()).then(j=>{D=j;RATE=j.rate||RATE;for(const s of D.sets)for(const c of s.cards)BYSID[c[0]]=[s,c];
+  const c=decodeURIComponent(location.hash.slice(1));if(c&&D.sets.some(s=>s.c===c))openSet(c,false);else draw()})
+  .catch(()=>{$("view").innerHTML=`<p class="empty">圖鑑載入失敗，請重新整理。</p>`});
+</script>
+</body>
+</html>
