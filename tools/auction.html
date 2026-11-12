@@ -391,6 +391,7 @@ drawWho();load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");
   if(SELL[1]){$("new").click();if(TOK&&$("ti")){$("ti").value=decodeURIComponent(SELL[1]).slice(0,60);if(SELL[2]){const v=+SELL[2];$("rb").hidden=false;$("rb").innerHTML=`<span>日本近期成交約 <b style="font-family:var(--f-num);color:var(--hot)">${nt(v)}</b>（會顯示給買家參考）</span><button type="button" class="btn sm" id="rbx">不顯示</button>`;window.__REF=v;$("rbx").onclick=()=>{window.__REF=null;$("rb").hidden=true};$("st").placeholder="參考：行情 "+nt(v)}}return}const m=location.hash.match(/^#a(\d+)/);if(m)openItem(+m[1])});
 })();
 </script>
+<script>if(/[?&]new=1/.test(location.search)){history.replaceState(null,"",location.pathname+location.hash);addEventListener("load",function(){setTimeout(function(){var b=document.getElementById("new");if(b)b.click()},700)})}</script>
 <script src="bell.js" defer></script>
 </body>
 </html>

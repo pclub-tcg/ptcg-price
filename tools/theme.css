@@ -236,3 +236,43 @@ h2.sec::before{width:4px}
   .sh-body{padding:14px 14px 20px}
   .sh-links{position:sticky;bottom:0;margin:0 -14px -20px;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--surface) 94%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
 }
+
+/* ---------- 首頁功能宮格（2026-11-12） ---------- */
+.th-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:22px 0 0}
+.th-grid a{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;color:var(--ink);font-size:12.5px;font-weight:700;padding:8px 2px;border-radius:14px;transition:background .15s}
+.th-grid a:hover{background:var(--surface)}
+.th-grid i{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;font-style:normal;font-size:24px;box-shadow:0 10px 22px -10px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.25)}
+.th-grid span{white-space:nowrap}
+@media (max-width:640px){.th-grid{grid-template-columns:repeat(4,1fr);gap:4px 0;margin-top:18px}.th-grid i{width:50px;height:50px;font-size:25px}}
+
+/* ---------- 首頁動態（雙欄瀑布流） ---------- */
+.th-feed{padding:8px 0 40px}
+.th-feed h2{font-size:20px;font-weight:900;margin:0 0 4px;display:flex;align-items:baseline;gap:10px}
+.th-feed h2 small{font-size:12.5px;font-weight:500;color:var(--muted)}
+.th-fchips{display:flex;gap:6px;overflow-x:auto;margin:10px 0 14px;padding-bottom:2px}
+.th-fchips button{flex:none;border:1px solid var(--line-2);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;min-height:36px}
+.th-fchips button[aria-pressed=true]{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
+.th-mas{column-count:4;column-gap:12px}
+@media (max-width:900px){.th-mas{column-count:3}}
+@media (max-width:640px){.th-mas{column-count:2;column-gap:8px}}
+.fc{break-inside:avoid;display:block;margin:0 0 12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--ink);cursor:pointer;transition:transform .15s,border-color .15s}
+@media (max-width:640px){.fc{margin-bottom:8px;border-radius:14px}}
+.fc:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.fc .pic{position:relative;background:var(--thumb);display:block}
+.fc .pic img{width:100%;display:block;max-height:340px;object-fit:cover}
+.fc .pic.card img{object-fit:contain;padding:14px 18% 6px;max-height:260px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.6))}
+.fc .bd{padding:10px 11px 11px}
+.fc .t{font-size:13.5px;font-weight:700;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fc .m{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;font-size:12px;color:var(--muted)}
+.fc .m b{font-family:var(--f-num);color:var(--ink);font-size:14px}
+.fc .who{display:flex;align-items:center;gap:6px;min-width:0}.fc .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc .av{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:900;color:#fff;flex:none}
+.fc .tg{position:absolute;top:8px;left:8px;font-size:11px;font-weight:900;padding:3px 8px;border-radius:999px;background:rgba(17,13,11,.82);color:var(--ink);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.fc .tg.mk{color:#2FC59A}.fc .tg.au{color:var(--gold)}.fc .tg.tr{color:var(--up)}.fc .tg.dn{color:var(--down)}.fc .tg.cm{color:#ff9a7a}.fc .tg.in{color:#a78bfa}
+.fc .up{color:var(--up);font-weight:800}.fc .dn{color:var(--down);font-weight:800}
+.fc.txt .bd{padding:14px 13px}.fc.txt .t{-webkit-line-clamp:5;font-size:14.5px;font-weight:600}
+.fc .ins{padding:16px 14px;background:linear-gradient(160deg,#2a1b3d,#1D1612)}
+.fc .ins h4{margin:0 0 8px;font-size:16px;line-height:1.35;font-weight:900}
+.fc .ins h4 em{font-style:normal;color:var(--gold)}
+.fc .ins p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.6}
+.th-fmore{text-align:center;color:var(--muted);font-size:13px;padding:10px}

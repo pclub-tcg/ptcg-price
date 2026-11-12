@@ -522,6 +522,7 @@ else load().then(()=>{if(WANT_ADMIN&&ME&&ME.admin)return setTab("admin");
   const m=H.match(/^#m(\d+)/);if(m)openItem(+m[1]);const w=H.match(/^#w(\d+)/);if(w){setTab("wants");openWant(+w[1])}});
 })();
 </script>
+<script>if(/[?&]new=1/.test(location.search)){history.replaceState(null,"",location.pathname+location.hash);addEventListener("load",function(){setTimeout(function(){var b=document.getElementById("new");if(b)b.click()},700)})}</script>
 <script src="bell.js" defer></script>
 </body>
 </html>

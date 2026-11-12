@@ -220,7 +220,7 @@ addEventListener("popstate",()=>{const c=decodeURIComponent(location.hash.slice(
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sh").hidden){$("sh").hidden=true;draw()}});
 addEventListener("storage",e=>{if(e.key==="inv"||e.key==="dex_want"){WANT=LS.get("dex_want",[]);draw()}});
 fetch("dex.json").then(r=>r.json()).then(j=>{D=j;RATE=j.rate||RATE;for(const s of D.sets)for(const c of s.cards)BYSID[c[0]]=[s,c];migrate();tabs();
-  const c=decodeURIComponent(location.hash.slice(1));if(c&&D.sets.some(s=>s.c===c))openSet(c,false);else draw()})
+  let c=decodeURIComponent(location.hash.slice(1));if(!c&&/[?&]new=1/.test(location.search)){const n=D.sets.find(s=>s.cards.length>=30);if(n)c=n.c}if(c&&D.sets.some(s=>s.c===c))openSet(c,!location.hash);else draw()})
   .catch(()=>{$("view").innerHTML=`<p class="empty">圖鑑載入失敗，請重新整理。</p>`});
 </script>
 <script src="bell.js" defer></script>
