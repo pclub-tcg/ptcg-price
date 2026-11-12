@@ -29,7 +29,7 @@ function resolve(k){
   if(k.startsWith("us:")){const o=ROWS.find(x=>x.n===k);return o?{o}:null}
   if(k.startsWith("r:")){const o=ROWS.find(x=>x.n===k.slice(2));return o?{o}:null}
   return null}
-function live(r){const s=resolve(r.k);if(!s)return{nt:r.snap,src:r.ssrc,old:1,kk:r.kk};const i=info(s);if(i.img&&!r.img){r.img=i.img}if(i.kk&&!r.kk)r.kk=i.kk;return{nt:i.nt,src:i.src,kk:i.kk||r.kk}}
+function live(r){const s=resolve(r.k);if(!s){const la=r.k.startsWith("d:")?lastOf(r.kk):null;return la?{nt:la.nt,src:"SNKRDUNK",kk:r.kk}:{nt:r.snap,src:r.ssrc,old:1,kk:r.kk}}const i=info(s);if(i.img&&!r.img){r.img=i.img}if(i.kk&&!r.kk)r.kk=i.kk;return{nt:i.nt,src:i.src,kk:i.kk||r.kk}}
 function ref(r){const L=live(r),la=lastOf(L.kk);return la?{nt:la.nt,d:la.d,lab:"SNKRDUNK 最新成交",src:"SNKRDUNK"}:{nt:L.nt,d:"",lab:L.nt!=null?(L.src||"市場")+(r.k.startsWith("us:")?" 市場價":" 近期成交"):"行情",src:L.src}}
 /* SNKRDUNK 最新一筆成交（K 線最後一天）：{nt, d:"2026/10/23"} */
 let KDATA=null;function loadLast(){return KDATA?Promise.resolve(KDATA):typeof loadK=="function"?loadK().then(K=>(KDATA=K)).catch(()=>null):Promise.resolve(null)}
@@ -66,8 +66,10 @@ function open(){VIEW="list";bg.hidden=false;document.body.style.overflow="hidden
 function close(){bg.hidden=true;document.body.style.overflow="";if(OUTURL){URL.revokeObjectURL(OUTURL);OUTURL=null}}
 function draw(){if(bg.hidden)return;if(VIEW==="sell")return drawSell();if(VIEW==="out")return;drawList()}
 
+let KTRY=0;
 function drawList(){
   $("inv-h").firstChild.textContent="我的庫存";
+  if(!KDATA&&!KTRY&&INVL.some(r=>String(r.k).startsWith("d:"))){KTRY=1;loadLast().then(()=>{if(KDATA&&!$("inv-bg").hidden&&VIEW!=="sell")drawList()})} /* 從圖鑑加入的卡（d:）用鞋店最新成交估值 */
   let tc=0,tv=0,nq=0,nv=0;const rows=INVL.map((r,ix)=>{const L=live(r),c=r.cost*r.qty;tc+=c;nq+=r.qty;
     const v=L.nt!=null?L.nt*r.qty:null;if(v!=null){tv+=v;nv+=c}const pl=v!=null?v-c:null,pp=pl!=null&&c?pl/c*100:null;
     return `<div class="inv-row nochk" data-i="${ix}"><div class="inv-im">${imgTag(r,64)}</div><div class="inv-main"><div class="nm">${esc(r.n)}</div><div class="mt">${esc(r.meta||"")}${r.at?"・入庫 "+esc(r.at):""}</div>
@@ -77,8 +79,8 @@ function drawList(){
   B().innerHTML=`<dl class="inv-sum"><div><dt>品項／張數</dt><dd>${INVL.length}／${nq}</dd></div><div><dt>持有成本</dt><dd>${N(tc)}</dd></div><div><dt>目前估值</dt><dd>${N(tv)}</dd></div>
     <div><dt>未實現損益</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pl>=0?"+":"−"}${N(Math.abs(pl))}</dd></div><div><dt>報酬率</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pp!=null?(pp>=0?"+":"")+pp.toFixed(1)+"%":"—"}</dd></div><div><dt>有行情的品項</dt><dd>${INVL.filter(r=>live(r).nt!=null).length}／${INVL.length}</dd></div></dl>
     <p class="inv-note">估值＝SNKRDUNK（沒有就用 Mercari）近期成交中位 × 張數，換算台幣；美版用 TCGplayer 市場價。資料只存在這台裝置的瀏覽器，換手機或清除瀏覽資料前請先「匯出備份」。</p>
-    <div class="inv-acts"><button type="button" class="inv-btn main" id="inv-go"${INVL.length?"":" disabled"}>我要賣：出售清單出圖</button><button type="button" class="inv-btn sub" id="inv-pic"${INVL.length?"":" disabled"}>庫存出圖</button></div><div class="inv-opt"><label class="inv-chk"><input type="checkbox" id="inv-showc"${LS.get("invShowCost",1)?" checked":""}><span>庫存圖顯示成本／損益</span></label><span class="inv-bk"><button type="button" id="inv-exp"${INVL.length?"":" disabled"}>匯出備份</button><button type="button" id="inv-imp">匯入備份</button></span><input type="file" id="inv-file" accept="application/json,.json" hidden></div><span class="inv-msg" id="inv-err" style="color:var(--bad)"></span>
-    <div class="inv-list">${rows.join("")||`<div class="inv-empty">還沒有庫存。打開任何商品，按「＋ 加入我的庫存」就會出現在這裡。</div>`}</div>`;
+    <div class="inv-acts"><button type="button" class="inv-btn main" id="inv-go"${INVL.length?"":" disabled"}>我要賣：出售清單出圖</button><button type="button" class="inv-btn sub" id="inv-pic"${INVL.length?"":" disabled"}>庫存出圖</button><a class="inv-btn sub" href="dex.html?t=album" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">📚 卡冊收集進度</a></div><div class="inv-opt"><label class="inv-chk"><input type="checkbox" id="inv-showc"${LS.get("invShowCost",1)?" checked":""}><span>庫存圖顯示成本／損益</span></label><span class="inv-bk"><button type="button" id="inv-exp"${INVL.length?"":" disabled"}>匯出備份</button><button type="button" id="inv-imp">匯入備份</button></span><input type="file" id="inv-file" accept="application/json,.json" hidden></div><span class="inv-msg" id="inv-err" style="color:var(--bad)"></span>
+    <div class="inv-list">${rows.join("")||`<div class="inv-empty">還沒有庫存。打開任何商品按「＋ 加入我的庫存」，或到「圖鑑・卡冊」點卡片加入，就會出現在這裡。</div>`}</div>`;
   B().querySelectorAll(".inv-edit input").forEach(inp=>inp.onchange=()=>{const r=INVL[+inp.closest(".inv-row").dataset.i];if(!r)return;
     if(inp.dataset.f==="qty")r.qty=Math.max(1,Math.round(+inp.value||1));else r.cost=Math.max(0,+inp.value||0);save();drawList()});
   B().querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(b.dataset.sure){INVL.splice(+b.dataset.del,1);save();drawList()}else{b.dataset.sure=1;b.textContent="再按一次確認刪除"}});
