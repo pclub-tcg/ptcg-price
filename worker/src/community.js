@@ -64,11 +64,15 @@ export async function communityApi(req, env, url, h) {
 
     if (p === "list") {
       const before = +url.searchParams.get("before") || 1e15, kind = url.searchParams.get("kind") || "", shop = url.searchParams.get("shop") || "", ckey = url.searchParams.get("ckey") || "";
-      const w = ["id < ?", me && me.admin ? "status != 'del'" : "status = 'live'"], a = [before];
+      const hot = url.searchParams.get("sort") === "hot", off = Math.max(0, Math.min(400, +url.searchParams.get("off") || 0)), q = clip(url.searchParams.get("q"), 40);
+      const w = [hot ? "at > ?" : "id < ?", me && me.admin ? "status != 'del'" : "status = 'live'"], a = [hot ? now - 14 * 864e5 : before];
+      if (q) { const like = "%" + q.replace(/[\\%_]/g, c => "\\" + c) + "%"; w.push("(ctitle LIKE ? ESCAPE '\\' OR text LIKE ? ESCAPE '\\')"); a.push(like, like); }
       if (C_KINDS[kind]) { w.push("kind = ?"); a.push(kind); }
       if (shop) { w.push("shop = ?"); a.push(shop.slice(0, 40)); }
       if (ckey) { w.push("ckey = ?"); a.push(ckey.slice(0, 200)); }
-      const { results = [] } = await env.DB.prepare(`SELECT * FROM c_posts WHERE ${w.join(" AND ")} ORDER BY id DESC LIMIT 20`).bind(...a).all();
+      // 熱門：近 14 天，留言比按讚重，越新越前面
+      const order = hot ? `ORDER BY (likes * 2 + ncom * 3 + 1) * 1.0 / ((? - at) / 3600000.0 + 6) DESC, id DESC LIMIT 20 OFFSET ${off}` : "ORDER BY id DESC LIMIT 20";
+      const { results = [] } = await env.DB.prepare(`SELECT * FROM c_posts WHERE ${w.join(" AND ")} ${order}`).bind(...a, ...(hot ? [now] : [])).all();
       const L = await likedSet(results.map(r => r.id));
       return J(env, req, { items: results.map(r => pubPost(r, me, L)), me: me ? { name: me.name, shop: me.shop, admin: me.admin ? 1 : 0, banned: me.banned ? 1 : 0 } : null });
     }

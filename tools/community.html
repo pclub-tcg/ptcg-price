@@ -97,6 +97,8 @@ textarea:focus,input:focus{outline:none;border-color:var(--brand)}
 <section class="hero"><div class="wrap"><div><h1>P’CLUB 社群</h1><p>曬卡、開箱、分享抽卡戰績。貼文可以標記卡片，大家點一下就能看行情。</p><div style="height:20px"></div></div></div></section>
 <main class="wrap">
   <div class="top"><span class="who" id="who"></span></div>
+  <div class="chips" id="srt" role="group" aria-label="排序" style="margin-bottom:6px"></div>
+  <div id="qb"></div>
   <div class="chips" id="fl" role="group" aria-label="分類"></div>
   <div id="feed"><p class="empty">載入中…</p></div>
   <p style="text-align:center"><button type="button" class="btn" id="more" hidden>載入更多</button></p>
@@ -115,7 +117,7 @@ const nt=v=>"NT$"+Math.round(v).toLocaleString("en-US");
 (function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){try{localStorage.setItem("atok",m[1])}catch(e){}history.replaceState(null,"",location.pathname+location.search.replace(/[?&]openExternalBrowser=1/,""))}})();
 let TOK="";try{TOK=localStorage.getItem("atok")||""}catch(e){}
 const KINDS={show:"曬卡",open:"開箱",draw:"抽卡戰績",talk:"討論"},KC={show:"#ffe3c7",open:"#d9f2e6",draw:"#e5ddff",talk:"#e3eefc"};
-let ME=null,ITEMS=[],F="",MINE=0,LAST=1e15,BUSY=0;
+let ME=null,ITEMS=[],F="",MINE=0,LAST=1e15,BUSY=0,SORT="new",Q=(new URLSearchParams(location.search).get("q")||"").slice(0,40);
 const ago=t=>{const s=(Date.now()-t)/1000;return s<60?"剛剛":s<3600?Math.floor(s/60)+" 分鐘前":s<86400?Math.floor(s/3600)+" 小時前":s<86400*7?Math.floor(s/86400)+" 天前":new Date(t).toLocaleDateString("zh-TW")};
 const avc=s=>{let h=0;for(const c of String(s||""))h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 55% 48%)`};
 const av=(n,cls="av")=>`<span class="${cls}" style="background:${avc(n)}" aria-hidden="true">${esc([...String(n||"玩")][0])}</span>`;
@@ -127,7 +129,9 @@ async function api(path,body,raw){const o={headers:{}};if(TOK)o.headers["x-tok"]
   if(r.status===401&&j.login&&TOK){TOK="";try{localStorage.removeItem("atok")}catch(e){}ME=null;drawWho()}
   if(!r.ok||j.err){throw new Error(j.err||"發生錯誤")}return j}
 function drawWho(){$("who").innerHTML=ME?`已登入：<b>${esc(ME.name)}</b>${ME.admin?"（管理員）":""}`:`還沒登入，可以瀏覽；要發文或留言請在 LINE 傳「社群」給 <a href="https://line.me/R/ti/p/@916ctmro">P’CLUB</a>`}
-function drawChips(){$("fl").innerHTML=[["","全部"],...Object.entries(KINDS)].map(([k,t])=>`<button type="button" data-k="${k}" aria-pressed="${!MINE&&F===k}">${t}</button>`).join("")+(ME?`<button type="button" data-m="1" aria-pressed="${!!MINE}">我的貼文</button>`:"");
+function drawChips(){$("srt").innerHTML=[["new","🕒 最新"],["hot","🔥 熱門"]].map(([k,t])=>`<button type="button" data-s="${k}" aria-pressed="${SORT===k}">${t}</button>`).join("");$("srt").querySelectorAll("button").forEach(b=>b.onclick=()=>{SORT=b.dataset.s;reload()});
+  $("qb").innerHTML=Q?`<div class="card" style="margin:0 0 10px;justify-content:space-between"><span><b>「${esc(Q)}」的相關貼文</b><small>標記這張卡或內文提到的貼文</small></span><button type="button" class="btn" id="qx">看全部</button></div>`:"";if($("qx"))$("qx").onclick=()=>{Q="";history.replaceState(null,"",location.pathname);reload()};
+  $("fl").innerHTML=[["","全部"],...Object.entries(KINDS)].map(([k,t])=>`<button type="button" data-k="${k}" aria-pressed="${!MINE&&F===k}">${t}</button>`).join("")+(ME?`<button type="button" data-m="1" aria-pressed="${!!MINE}">我的貼文</button>`:"");
   $("fl").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.m){MINE=1;F=""}else{MINE=0;F=b.dataset.k}reload()})}
 function postHTML(p,full){const n=p.nphoto||0;
   return `<article class="post" data-id="${p.id}">${p.hidden?`<p class="note" style="margin:0 0 6px;color:#c2333a">⚠️ 這篇因為檢舉已被隱藏，只有你和管理員看得到</p>`:""}
@@ -145,8 +149,8 @@ function bind(root){root.querySelectorAll(".post").forEach(el=>{const id=+el.dat
     if(p.mine||ME.admin){if(confirm(p.mine?"刪除這篇貼文？":"以管理員身分刪除這篇貼文？")){try{await api("c/del/"+id,{});ITEMS=ITEMS.filter(x=>x.id!==id);closeSheet();drawFeed()}catch(e){alert(e.message)}}}
     else{const r=prompt("檢舉這篇貼文的原因（例如：詐騙、廣告、不雅、與卡牌無關）");if(r!==null){try{const j=await api("c/report/"+id,{reason:r});alert(j.msg||"已檢舉")}catch(e){alert(e.message)}}}}})}
 function rerender(p){document.querySelectorAll(`.post[data-id="${p.id}"]`).forEach(el=>{const full=!!el.closest("#pn"),t=document.createElement("div");t.innerHTML=postHTML(p,full);el.replaceWith(t.firstElementChild)});bind(document)}
-function drawFeed(){$("feed").innerHTML=ITEMS.length?ITEMS.map(p=>postHTML(p)).join(""):`<p class="empty">${MINE?"你還沒發過文":"這裡還沒有貼文"}，按右下角「＋ 發文」來當第一個吧！</p>`;bind($("feed"))}
-async function load(){if(BUSY)return;BUSY=1;try{const q=new URLSearchParams({before:LAST});if(F)q.set("kind",F);if(MINE&&ME)q.set("shop",ME.shop);
+function drawFeed(){$("feed").innerHTML=ITEMS.length?ITEMS.map(p=>postHTML(p)).join(""):`<p class="empty">${Q?`還沒有人分享「${esc(Q)}」`:MINE?"你還沒發過文":SORT==="hot"?"最近兩週還沒有熱門貼文":"這裡還沒有貼文"}，按右下角「＋ 發文」來當第一個吧！</p>`;bind($("feed"))}
+async function load(){if(BUSY)return;BUSY=1;try{const q=new URLSearchParams(SORT==="hot"?{sort:"hot",off:ITEMS.length}:{before:LAST});if(F)q.set("kind",F);if(MINE&&ME)q.set("shop",ME.shop);if(Q)q.set("q",Q);
   const j=await api("c/list?"+q);if(j.me&&!ME){ME=j.me;drawWho();drawChips()}if(!j.me&&ME){ME=null;drawWho()}
   ITEMS=ITEMS.concat(j.items||[]);if(j.items&&j.items.length)LAST=j.items[j.items.length-1].id;$("more").hidden=!(j.items&&j.items.length===20);drawFeed()}
   catch(e){$("feed").innerHTML=`<p class="empty">載入失敗：${esc(e.message)}</p>`}BUSY=0}
