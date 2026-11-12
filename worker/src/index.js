@@ -33,6 +33,14 @@ export default {
     }
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
     if (url.pathname.startsWith("/api/m/")) return marketApi(req, env, url);
+    if (url.pathname.startsWith("/s/p/") && env.DB) { // 社群貼文分享連結：給 LINE／FB 抓預覽（標題、照片），人點開就轉到社群頁
+      const id = +url.pathname.slice(5) || 0, site = new URL("community.html", env.SITE_URL).href + "#p" + id, he = x => String(x || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      let r = null; try { r = await env.DB.prepare("SELECT name, kind, text, nphoto, cimg, ctitle FROM c_posts WHERE id = ? AND status = 'live'").bind(id).first(); } catch (e) {}
+      const K = { show: "曬卡", open: "開箱", draw: "抽卡戰績", talk: "討論" }, title = r ? `${r.name || "玩家"} 的${K[r.kind] || "貼文"}｜P’CLUB 社群` : "P’CLUB 社群";
+      const desc = r ? (String(r.text || "").replace(/\s+/g, " ").slice(0, 120) || (r.ctitle ? "標記了 " + r.ctitle : "來看看卡友分享")) : "寶可夢、海賊王卡友曬卡、開箱、分享抽卡戰績";
+      const img = r && r.nphoto ? `${url.origin}/api/c/photo/${id}/0` : r && r.cimg ? r.cimg : new URL("app/icon-512.png", env.SITE_URL).href;
+      return new Response(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${he(title)}</title><meta property="og:type" content="article"><meta property="og:site_name" content="P’CLUB"><meta property="og:title" content="${he(title)}"><meta property="og:description" content="${he(desc)}"><meta property="og:image" content="${he(img)}"><meta property="og:url" content="${he(url.href)}"><meta name="twitter:card" content="summary_large_image"><meta http-equiv="refresh" content="0;url=${he(site)}"></head><body style="font-family:sans-serif;padding:24px"><p><a href="${he(site)}">打開 P’CLUB 社群貼文</a></p><script>location.replace(${JSON.stringify(site)})</script></body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
+    }
     if (url.pathname.startsWith("/api/c/")) return communityApi(req, env, url, { who, J, cors, clip, linePush, marketEnsure });
     if (url.pathname.startsWith("/api/n/")) return notesApi(req, env, url, who, J, cors);
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）

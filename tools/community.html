@@ -86,6 +86,7 @@ textarea:focus,input:focus{outline:none;border-color:var(--brand)}
 .lb{position:fixed;inset:0;z-index:60;background:#000e;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
 .lb[hidden]{display:none}.lb img{max-width:100%;max-height:100%;object-fit:contain}
 .fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;border-radius:999px;padding:14px 20px;box-shadow:0 8px 24px rgba(255,138,43,.45)}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -139,7 +140,7 @@ function bind(root){root.querySelectorAll(".post").forEach(el=>{const id=+el.dat
   el.querySelectorAll("[data-z]").forEach(b=>b.onclick=()=>{$("lbi").src=b.dataset.z;$("lb").hidden=false});
   el.querySelector('[data-a=like]').onclick=async()=>{if(!ME)return needLogin();try{const j=await api("c/like/"+id,{});p.liked=!!j.liked;p.likes=j.likes;rerender(p)}catch(e){alert(e.message)}};
   el.querySelector('[data-a=open]').onclick=()=>openPost(id);
-  el.querySelector('[data-a=share]').onclick=async()=>{const u=location.origin+location.pathname+"#p"+id;try{if(navigator.share)await navigator.share({title:"P’CLUB 社群",text:(p.text||KINDS[p.kind]).slice(0,60),url:u});else{await navigator.clipboard.writeText(u);alert("已複製連結")}}catch(e){}};
+  el.querySelector('[data-a=share]').onclick=async()=>{const u=API.replace(/api\/$/,"")+"s/p/"+id;try{if(navigator.share)await navigator.share({title:"P’CLUB 社群",text:(p.text||KINDS[p.kind]).slice(0,60),url:u});else{await navigator.clipboard.writeText(u);alert("已複製連結")}}catch(e){}};
   el.querySelector('[data-a=more]').onclick=async()=>{if(!ME)return needLogin();
     if(p.mine||ME.admin){if(confirm(p.mine?"刪除這篇貼文？":"以管理員身分刪除這篇貼文？")){try{await api("c/del/"+id,{});ITEMS=ITEMS.filter(x=>x.id!==id);closeSheet();drawFeed()}catch(e){alert(e.message)}}}
     else{const r=prompt("檢舉這篇貼文的原因（例如：詐騙、廣告、不雅、與卡牌無關）");if(r!==null){try{const j=await api("c/report/"+id,{reason:r});alert(j.msg||"已檢舉")}catch(e){alert(e.message)}}}}})}
