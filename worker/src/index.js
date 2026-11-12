@@ -214,7 +214,7 @@ async function handle(ev, env) {
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     const pts = Math.round(+String(r.points || "").replace(/[^\d.]/g, "")) || 0, pf = /dopa/i.test(r.platform || "") ? "DOPA" : /clove/i.test(r.platform || "") ? "CLOVE" : /トレカセンター|ジャパントレカ|japan ?toreca|jtcc|卡牌中心/i.test(r.platform || "") ? "日本卡牌中心" : "";
-    if (pts > 0 && !hits[0].us) { if (pf && r.confidence !== "low") await bbRecord(env, hits[0].k, pf, pts); const ms = [drawFlex(hits[0], pts, pf, 0, D, env, await bbLookup(env, hits[0].k))]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
+    if (pts > 0 && pf && !hits[0].us) { // 只有認出抽卡平台（DOPA、CLOVE、日本卡牌中心）的結果畫面才走抽卡助手，一般卡片照片照常查價 if (pf && r.confidence !== "low") await bbRecord(env, hits[0].k, pf, pts); const ms = [drawFlex(hits[0], pts, pf, 0, D, env, await bbLookup(env, hits[0].k))]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
     const card = await oneCard(hits, label, false, D, env);
     // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
     const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
