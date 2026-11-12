@@ -38,6 +38,7 @@ cp "$HERE/dex.html" "$OUT/dex.html"
 cp "$HERE/community.html" "$OUT/community.html"
 cp "$HERE/notes.html" "$OUT/notes.html"
 cp "$HERE/bell.js" "$OUT/bell.js"
+cp "$HERE/pages.css" "$OUT/pages.css"
 JP_DATA="$JPDIR/jp.json" python3 "$HERE/dex.py" "$OUT" || echo "dex.json 失敗（略過）"
 python3 "$HERE/pwa.py" "$OUT"
 python3 "$HERE/slim.py" "$OUT"   # 網站瘦身：商品照片拆檔、美版資料延後載入
