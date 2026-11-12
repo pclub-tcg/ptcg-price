@@ -12,6 +12,7 @@ import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.
 import { marketApi, marketCron, marketToken } from "./market.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
+import { bbRecord, bbLookup, bbDate } from "./buyback.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 let DATA = null, DATA_AT = 0;
@@ -23,7 +24,7 @@ export default {
     if (url.pathname === "/api/draw") { // 抽卡助手網頁：用商品 key 取行情
       const k = (url.searchParams.get("k") || "").slice(0, 200), D = await base(env);
       const p = k ? (D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE k = ?").bind(k).all())[0] : (D.products || []).find(x => x.k === k)) : null;
-      return new Response(JSON.stringify(p ? { item: catItem(p, D, env) } : { err: "not found" }), { status: p ? 200 : 404, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
+      return new Response(JSON.stringify(p ? { item: catItem(p, D, env), bb: (await bbLookup(env, k)).map(b => ({ pf: b.pf, pts: b.pts, d: bbDate(b.at) })) } : { err: "not found" }), { status: p ? 200 : 404, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" } });
     }
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
     if (url.pathname.startsWith("/api/m/")) return marketApi(req, env, url);
@@ -112,7 +113,7 @@ async function handle(ev, env) {
     const pd = String((ev.postback && ev.postback.data) || "");
     if (pd.startsWith("dr|")) { const [, pts, cost, pf, ...kk] = pd.split("|"), k = kk.join("|"), D = await base(env);
       const p = D.db ? rowsTo(await env.DB.prepare("SELECT j FROM products WHERE k = ?").bind(k).all())[0] : (D.products || []).find(x => x.k === k);
-      return reply(env, ev.replyToken, [p ? drawFlex(p, +pts || 0, pf, +cost || 0, D, env) : text("找不到這張卡，請重新傳截圖或打「卡號 點數點」。")]); }
+      return reply(env, ev.replyToken, [p ? drawFlex(p, +pts || 0, pf, +cost || 0, D, env, await bbLookup(env, k)) : text("找不到這張卡，請重新傳截圖或打「卡號 點數點」。")]); }
     const ab = await announcePostback(env, ev.source.userId, ev.postback && ev.postback.data);
     if (ab) return reply(env, ev.replyToken, ab);
     const D = await base(env), r = D.db ? await alertPostback(env, ev.source.userId, ev.postback && ev.postback.data, D, rowsTo) : null;
@@ -143,7 +144,13 @@ async function handle(ev, env) {
     const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p)?)?$/i) || q.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：卡號 點數點（花 xxx）
     if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us && !h.b);
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：100/078 PSA10 27000點（點數是平台畫面上的回收點數）`)]);
-      return reply(env, ev.replyToken, [drawFlex(p, pts, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env)]); }
+      return reply(env, ev.replyToken, [drawFlex(p, pts, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env, await bbLookup(env, p.k))]); }
+    const rl = q.match(/^(?:回收|抽卡|回收點數)\s+(.+?)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 只打卡號：帶入平台回收點數紀錄
+    if (rl) { const hits = D.db ? await dbSearch(rl[1], 0, env, D) : search(rl[1], D), p = hits.find(h => !h.us && !h.b);
+      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rl[1]}」，換個卡號或卡名試試，例如：回收 100/078 PSA10`)]);
+      const bb = await bbLookup(env, p.k);
+      if (!bb.length) return reply(env, ev.replyToken, [text(`${p.n}\n還沒有人傳過這張卡的平台回收截圖。\n\n請把抽卡結果畫面截圖傳給我，或打「卡號 回收點數點」，例如：${(p.num || "100/078")} 27000點`)]);
+      return reply(env, ev.replyToken, [drawFlex(p, bb[0].pts, bb[0].pf, rl[2] ? +rl[2].replace(/[,，]/g, "") : 0, D, env, bb)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
       return reply(env, ev.replyToken, [text(`¥${y.toLocaleString("en-US")} 的到手成本\n\nMercari（扣優惠券、加運費）：${nt(m)}\nSNKRDUNK（加運費）：${nt(sn)}\n\n匯率 ${D.rate}，未含跨境手續費與關稅。`)]); }
@@ -190,7 +197,7 @@ async function handle(ev, env) {
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
     const pts = Math.round(+String(r.points || "").replace(/[^\d.]/g, "")) || 0, pf = /dopa/i.test(r.platform || "") ? "DOPA" : /clove/i.test(r.platform || "") ? "CLOVE" : /トレカセンター|ジャパントレカ|japan ?toreca/i.test(r.platform || "") ? "日本卡牌中心" : "";
-    if (pts > 0 && !hits[0].us && !hits[0].b) { const ms = [drawFlex(hits[0], pts, pf, 0, D, env)]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
+    if (pts > 0 && !hits[0].us && !hits[0].b) { if (pf && r.confidence !== "low") await bbRecord(env, hits[0].k, pf, pts); const ms = [drawFlex(hits[0], pts, pf, 0, D, env, await bbLookup(env, hits[0].k))]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
     const card = await oneCard(hits, label, false, D, env);
     // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
     const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
@@ -400,7 +407,7 @@ function drawCalc(p, pts, D, cost = 0) {
 }
 const drawUrl = (env, p, pts, pf, cost, share) => { const u = new URL("draw.html", env.SITE_URL.replace(/\/?$/, "/")); u.searchParams.set("k", p.k); u.searchParams.set("pts", pts); if (pf) u.searchParams.set("pf", pf); if (cost) u.searchParams.set("cost", cost); if (share) u.searchParams.set("share", "1"); u.searchParams.set("openExternalBrowser", "1"); return u.href; };
 const COSTS = [500, 1000, 2000, 3000, 5000, 10000, 20000, 30000, 50000, 100000];
-function drawFlex(p, pts, pf, cost, D, env) {
+function drawFlex(p, pts, pf, cost, D, env, bb = []) {
   const c = drawCalc(p, pts, D, cost), img = p.img ? new URL(p.img, env.SITE_URL).href : null;
   const T = (t, o = {}) => ({ type: "text", text: String(t ?? "") || " ", wrap: true, ...o });
   const BG = "#1c0a06", INK = "#fff4e6", MUT = "#c9a98e", GOLD = "#ffd166", WIN = "#ff9a3c", GOOD = "#4fe39a", BAD = "#ff6b6b";
@@ -433,13 +440,19 @@ function drawFlex(p, pts, pf, cost, D, env) {
           T("≈ " + nt(c.pv), { size: "xs", color: MUT })] }] },
       res,
       { type: "box", layout: "horizontal", spacing: "sm", contents: [opt("換點數", `只能在${pf || "原平台"}用`, c.pv, c.sv && !c.ship), opt("出貨回台灣賣", c.sv ? c.sv.how : "沒有成交價", c.sv ? c.sv.v : null, c.ship)] },
+      ...(bb.length ? [{ type: "box", layout: "vertical", spacing: "xs", backgroundColor: "#2a1510", cornerRadius: "14px", paddingAll: "12px", contents: [
+        T("各平台回收點數（玩家截圖）", { size: "xs", weight: "bold", color: GOLD }),
+        ...bb.slice(0, 4).map((b, i) => ({ type: "box", layout: "horizontal", contents: [
+          T((i === 0 && bb.length > 1 ? "👑 " : "") + b.pf + (b.pf === pf ? "（這次）" : ""), { size: "xs", color: i === 0 ? INK : MUT, flex: 5 }),
+          T(b.pts.toLocaleString("en-US") + " 點", { size: "xs", weight: "bold", color: i === 0 ? GOLD : MUT, align: "end", flex: 4 }),
+          T(bbDate(b.at), { size: "xxs", color: "#8f735f", align: "end", flex: 2 })] }))] }] : []),
       T(`僅供試算・匯率 ${D.rate}・1 點＝1 日圓`, { size: "xxs", color: "#8f735f", align: "center" })] },
     footer: { type: "box", layout: "horizontal", spacing: "sm", paddingAll: "12px", contents: [
       { type: "button", style: "primary", color: WIN, height: "sm", action: { type: "uri", label: "存成分享圖", uri: drawUrl(env, p, pts, pf, cost, true) } },
       { type: "button", style: "secondary", height: "sm", action: { type: "uri", label: "調整運費", uri: drawUrl(env, p, pts, pf, cost, false) } }] } },
     quickReply: { items: COSTS.map(v => ({ type: "action", action: { type: "postback", label: `花 ${v.toLocaleString("en-US")} 點`, data: `dr|${pts}|${v}|${pf || ""}|${p.k}`.slice(0, 300), displayText: `這抽花 ${v.toLocaleString("en-US")} 點` } })) } };
 }
-const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1（最準）：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我，我會讀出卡片和平台給的回收點數\n\n方法 2：打「卡號 回收點數點」，回收點數是平台結果畫面上金幣旁邊的數字，例如\n100/078 PSA10 27000點\n\n要算賺虧就在後面加這抽花多少，例如：100/078 PSA10 27000點 花30000";
+const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1（最準）：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我，我會讀出卡片和平台給的回收點數\n\n方法 2：打「卡號 回收點數點」，回收點數是平台結果畫面上金幣旁邊的數字，例如\n100/078 PSA10 27000點\n\n方法 3：打「回收 卡號」，用玩家傳過的截圖紀錄，比較各平台回收幾點，例如\n回收 100/078 PSA10\n\n要算賺虧就在後面加這抽花多少，例如：100/078 PSA10 27000點 花30000";
 
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");

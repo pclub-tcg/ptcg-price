@@ -85,7 +85,8 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
   <ol style="margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--ink)">
     <li><b>LINE 最快</b>：把 DOPA、CLOVE、日本卡牌中心的抽卡結果截圖傳給 P’CLUB，馬上告訴你要換點數還是出貨。</li>
     <li><b>LINE 打字</b>：「卡號 回收點數點」，例如 <code>100/078 PSA10 27000點</code>（點數照平台畫面上金幣旁的數字）；要算賺虧加「花30000」。</li>
-    <li><b>這個網頁</b>：下面搜尋抽到的卡、選平台、填回收點數，想看賺虧就填「抽這張花了多少點」。</li>
+    <li><b>這個網頁</b>：下面搜尋抽到的卡，有玩家傳過截圖的卡會自動帶入各平台回收點數；想看賺虧就填「抽這張花了多少點」。</li>
+    <li><b>LINE 比較平台</b>：打「回收 卡號」，例如 <code>回收 100/078 PSA10</code>，看各平台回收幾點。</li>
     <li>按「📸 產生分享圖」存成圖片，可以分享到社團或限動。</li>
   </ol>
   <p class="note">出貨回台灣賣價＝鞋店成交價 × 85 折 − 轉運運費，折數和運費都能自己改。<a href="guide_draw.jpg" target="_blank" rel="noopener" style="color:var(--teal);font-weight:700">看圖解教學</a></p>
@@ -94,7 +95,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
   <h2><span class="step">1</span>抽到哪張卡</h2>
   <label>從卡片目錄找<input id="cs" type="search" placeholder="輸入卡名或卡號，例：201/165、ルギアV SR、噴火龍 PSA10" autocomplete="off"></label>
   <div class="cat-list" id="cl" hidden></div>
-  <div id="pk"></div>
+  <div id="pk"></div><div id="bb"></div>
   <details id="man"><summary>目錄找不到？自己填行情</summary>
     <div class="row2"><label>日本行情（日圓）<input id="mj" type="number" inputmode="numeric" min="0" placeholder="例：12000"></label><label>台灣行情（台幣，選填）<input id="mtw" type="number" inputmode="numeric" min="0" placeholder="例：2500"></label></div>
   </details>
@@ -134,7 +135,7 @@ const PF=["DOPA","CLOVE","日本卡牌中心","其他"];
 const DEF={pr:1,sh:150};
 const PFN={"DOPA":"1 點＝1 日圓；抽到的卡 3 天內沒選擇會自動換成點數，點數 6 個月到期。只寄日本國內，寄台灣要用轉運（如 Buy&Ship），日本國內寄送免運。","CLOVE":"1 點＝1 日圓；日本國內寄送免運。是否能寄海外請看官網，一般要用轉運。","日本卡牌中心":"幣值網路上沒有明確公告，預設先當 1 枚＝1 日圓，請依你看到的購買價格調整；每個獎品有發送期限，超過會換成幣或失去權利，幣 6 個月到期。日本國內寄送免運。","其他":"請自己填點數比例與運費。"};
 let S=Object.assign({pf:"DOPA",mf:10,sf:8,js:200,rt:0.21,tf:85},LS.get("set",{}));
-let PFS=LS.get("pfs",{});let CARD=null;
+let PFS=LS.get("pfs",{});let CARD=null,BB=[];
 
 function pfNote(){$("pfn").textContent=PFN[S.pf]||""}
 function pfVal(k){return (PFS[S.pf]||{})[k]??DEF[k]}
@@ -153,14 +154,21 @@ $("cs").oninput=()=>{clearTimeout(CT);const q=$("cs").value.trim();if(!q){$("cl"
     if(my!==CQ)return;HITS=r.items||[];
     $("cl").innerHTML=HITS.length?HITS.map((x,i)=>`<div class="cat-it" tabindex="0" data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy">`:`<span class="ni"></span>`}<span><b>${esc(x.n)}</b><small>${x.op?"海賊王・":""}${esc(x.meta)}</small></span><em>${x.ref?nt(x.ref):"—"}</em></div>`).join(""):`<p class="note" style="padding:12px">找不到，可以展開下面「自己填行情」</p>`;
     $("cl").hidden=false;
-    $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{CARD=HITS[+el.dataset.i];if(CARD.rate){S.rt=CARD.rate;$("rt").value=CARD.rate;save()}$("cl").hidden=true;$("cs").value="";drawCard();calc()};el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}});
+    $("cl").querySelectorAll(".cat-it").forEach(el=>{const pick=()=>{CARD=HITS[+el.dataset.i];if(CARD.rate){S.rt=CARD.rate;$("rt").value=CARD.rate;save()}$("cl").hidden=true;$("cs").value="";drawCard();calc();loadBB(CARD.k,true)};el.onclick=pick;el.onkeydown=e=>{if(e.key==="Enter")pick()}});
   },300)};
 
+async function loadBB(k,fill){BB=[];drawBB();if(!k)return;try{const j=await (await fetch(BASE+"draw?k="+encodeURIComponent(k))).json();if(!CARD||CARD.k!==k)return;BB=j.bb||[]}catch(e){}
+  drawBB();if(fill&&BB.length&&!$("pts").value){const b=BB.find(x=>x.pf===S.pf)||BB[0];useBB(b)}}
+function useBB(b){if(PF.includes(b.pf)&&b.pf!==S.pf){S.pf=b.pf;save();drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}$("pts").value=b.pts;calc();drawBB()}
+function drawBB(){const el=$("bb");if(!el)return;if(!CARD){el.innerHTML="";return}
+  el.innerHTML=BB.length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2)"><b style="font-size:13px">各平台回收點數（玩家截圖紀錄）</b>${BB.map((b,i)=>`<button type="button" data-i="${i}" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:8px 10px;border-radius:10px;border:2px solid ${b.pf===S.pf&&+$("pts").value===b.pts?"var(--brand)":"var(--line)"};background:var(--surface);cursor:pointer;font-size:14px;min-height:40px"><span>${i===0&&BB.length>1?"👑 ":""}${esc(b.pf)}</span><span><b style="font-family:var(--f-num)">${b.pts.toLocaleString("en-US")} 點</b> <small style="color:var(--muted)">${esc(b.d)}</small></span></button>`).join("")}<p class="note" style="margin-top:6px">點一下帶入；實際以平台畫面為準。</p></div>`
+    :`<p class="note">還沒有人傳過這張卡的回收截圖。把抽卡結果截圖傳給 P’CLUB LINE，之後大家都能看到各平台回收幾點。</p>`;
+  el.querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>useBB(BB[+b.dataset.i]))}
 function drawCard(){
   if(!CARD){$("pk").innerHTML="";return}
   const x=CARD,bits=[x.sj?`鞋店中位數 ${yen(x.sj)}`:"",x.mj?`Mercari 中位數 ${yen(x.mj)}`:"",x.tw?`台灣 ${nt(x.tw)}`:""].filter(Boolean).join("・")||"目錄裡還沒有成交價，可以自己填行情";
   $("pk").innerHTML=`<div class="picked">${x.img?`<img src="${esc(x.img)}" alt="">`:""}<div><b>${esc(x.n)}</b><small>${esc(x.meta)}<br>${bits}</small><br><button type="button" class="btn sm" id="pkx" style="margin-top:6px">換一張</button></div></div>`;
-  $("pkx").onclick=()=>{CARD=null;drawCard();calc();$("cs").focus()};
+  $("pkx").onclick=()=>{CARD=null;BB=[];drawCard();drawBB();calc();$("cs").focus()};
 }
 
 function calc(want){
@@ -195,7 +203,7 @@ function calc(want){
 drawPf();pfNote();
 $("pr").value=pfVal("pr");$("sh").value=pfVal("sh");$("rt").value=S.rt;$("tf").value=S.tf;
 ["pts","cost","pr","sh","rt","tf","mj","mtw"].forEach(id=>$(id).addEventListener("input",calc));
-const q0=new URLSearchParams(location.search);if(q0.get("k")){fetch(BASE+"draw?k="+encodeURIComponent(q0.get("k"))).then(r=>r.json()).then(j=>{if(j.item){CARD=j.item;if(CARD.rate){S.rt=CARD.rate;$("rt").value=CARD.rate}drawCard();calc();if(q0.get("share"))makeShare()}}).catch(()=>{})}if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");if(q0.get("cost"))$("cost").value=q0.get("cost");
+const q0=new URLSearchParams(location.search);if(q0.get("k")){fetch(BASE+"draw?k="+encodeURIComponent(q0.get("k"))).then(r=>r.json()).then(j=>{if(j.item){CARD=j.item;BB=j.bb||[];if(!q0.get("pts")&&BB.length){const b=BB.find(x=>x.pf===S.pf)||BB[0];$("pts").value=b.pts;if(PF.includes(b.pf)){S.pf=b.pf;drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}}drawBB();if(CARD.rate){S.rt=CARD.rate;$("rt").value=CARD.rate}drawCard();calc();if(q0.get("share"))makeShare()}}).catch(()=>{})}if(PF.includes(q0.get("pf"))){S.pf=q0.get("pf");drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}if(q0.get("q")){$("cs").value=q0.get("q");$("cs").dispatchEvent(new Event("input"))}if(q0.get("pts"))$("pts").value=q0.get("pts");if(q0.get("cost"))$("cost").value=q0.get("cost");
 
 /* 分享圖：用 canvas 畫 1040×1360 的結果圖 */
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
