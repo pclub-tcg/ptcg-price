@@ -1,3 +1,4 @@
+import { note } from "./notes.js";
 // 到價提醒：玩家在 LINE 查價卡片下方按「🔔 到價提醒」，選或打一個台幣價格；
 // 每天價格資料匯入 D1 後（meta.sha 改變），檢查一次，跌到設定價以下就推播，推播後這筆提醒結束（可以再設）。
 // 價格 = 查價卡片上的大數字：SNKRDUNK 成交中位（沒有就 Mercari）× 匯率；美版用 TCGplayer × 美元匯率。
@@ -113,6 +114,7 @@ export async function alertCron(env, D, rowsTo, card) {
     await env.DB.prepare("UPDATE p_alerts SET fired = ?, fprice = ? WHERE id = ?").bind(Date.now(), Math.round(cur), a.id).run();
     const msgs = [{ type: "text", text: `🔔 到價提醒\n${p.n}\n現在約 ${nt(cur)}，已經低於你設定的 ${nt(a.target)}！` }];
     try { msgs.push(await card(p)); } catch (e) {}
+    await note(env, a.uid, "alert", { t: "🔔 到價提醒：" + p.n, b: `現在約 ${nt(cur)}，已經低於你設定的 ${nt(a.target)}`, u: "./?q=" + encodeURIComponent(p.num || p.n) });
     const r = await fetch("https://api.line.me/v2/bot/message/push", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ to: a.uid, messages: msgs }) });
     if (!r.ok) console.error("alert push", r.status, await r.text());
     if (++sent >= 300) break; // 一次最多推 300 則，剩下的下次排程再推

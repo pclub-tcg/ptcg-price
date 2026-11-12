@@ -1,3 +1,4 @@
+import { note, noteOf } from "./notes.js";
 // P’CLUB 競標市場（Cloudflare Worker＋D1）
 // 身分：玩家在 LINE 傳「競標」→ 機器人回一個帶 token 的網址 → 網站存 token，之後出價都綁這個 LINE 帳號。
 // 不經手金流：結標後通知得標者與賣家，雙方自行聯絡交易。
@@ -63,6 +64,7 @@ function pub(a, me, W) {
 }
 
 async function push(env, to, messages) {
+  if (to) await note(env, to, "auction", noteOf(messages));
   if (!env.LINE_CHANNEL_ACCESS_TOKEN || !to) return;
   const r = await fetch("https://api.line.me/v2/bot/message/push", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ to, messages }) });
   if (!r.ok) console.error("push failed", r.status, await r.text());

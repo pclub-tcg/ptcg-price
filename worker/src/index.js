@@ -9,7 +9,9 @@
 //   ADMIN_KEY 選填：重建圖文選單 /setup/richmenu?key=… 用的密碼；沒設就關閉這個網址
 
 import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.js";
-import { marketApi, marketCron, marketToken } from "./market.js";
+import { marketApi, marketCron, marketToken, who, cors, J, clip, linePush, marketEnsure } from "./market.js";
+import { communityApi } from "./community.js";
+import { notesApi } from "./notes.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
 import { bbRecord, bbLookup, bbDate } from "./buyback.js";
@@ -31,6 +33,8 @@ export default {
     }
     if (url.pathname.startsWith("/api/a/")) return auctionApi(req, env, url);
     if (url.pathname.startsWith("/api/m/")) return marketApi(req, env, url);
+    if (url.pathname.startsWith("/api/c/")) return communityApi(req, env, url, { who, J, cors, clip, linePush, marketEnsure });
+    if (url.pathname.startsWith("/api/n/")) return notesApi(req, env, url, who, J, cors);
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
@@ -133,6 +137,8 @@ async function handle(ev, env) {
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
     if (/^(市集教學|市集說明|市集怎麼用|怎麼賣卡|怎麼刊登|求卡教學)$/.test(q)) return reply(env, ev.replyToken, marketGuide(env).length ? marketGuide(env) : [text(HELP)]);
+    if (/^(社群|社團|曬卡|開箱|動態|通知|通知中心)$/.test(q) && ev.source && ev.source.userId && env.DB) { const nt0 = /^通知/.test(q);
+      return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId, nt0 ? "notes.html" : "community.html", nt0 ? "P’CLUB 通知中心" : "P’CLUB 社群", nt0 ? "打開通知" : "打開社群", nt0 ? "看出價、成交、留言等通知" : "可以曬卡、開箱、分享抽卡戰績")), quickReply: { items: QUICK } }]); }
     if (/^(市集|刊登|賣卡|我要賣|買卡|交易|我的市集|刊登商品)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     if (/^(競標|拍賣|競標市場|我的競標|上架競標|登入競標)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await lineToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
     const more = q.match(/^(?:更多|全部)\s*(.{1,20})$/);
@@ -238,6 +244,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 🛒 市集：傳「市集」刊登要賣的卡，或直接購買、出價議價、貼出求卡；傳「市集教學」看圖解
 🔔 到價提醒：查價後按卡片下方「🔔 到價提醒」，跌到你要的價格時通知你；傳「我的提醒」管理
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
+💬 社群：傳「社群」曬卡、開箱、分享抽卡戰績；傳「通知」看所有通知
 🎴 抽卡助手：抽卡結果截圖傳給我，告訴你換點數還是出貨、這抽賺還是虧；傳「抽卡」看教學
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。

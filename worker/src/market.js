@@ -1,3 +1,4 @@
+import { note, noteOf } from "./notes.js";
 // P’CLUB 市集：玩家刊登卡片，買家直購或出價議價（Cloudflare Worker＋D1）
 // 身分和競標共用：LINE 傳「市集」或「競標」拿到 token（a_users），停權名單（a_banned）、管理員（meta.auction_admin）也共用。
 // 不經手金流：成交（保留）後通知雙方，互相看到聯絡方式，自行面交／寄送；完成後互相評價。
@@ -87,6 +88,7 @@ function pubWant(w, me) {
     created: w.created, bumped: w.bumped, nresp: w.nresp || 0, buyer: mask(w.name), shop: w.shop, mine: !!(me && w.uid === me.uid) };
 }
 async function push(env, to, messages) {
+  if (to) await note(env, to, "market", noteOf(messages)); // 通知中心也存一份
   if (!env.LINE_CHANNEL_ACCESS_TOKEN || !to) return;
   const r = await fetch("https://api.line.me/v2/bot/message/push", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN }, body: JSON.stringify({ to, messages }) });
   if (!r.ok) console.error("market push failed", r.status, await r.text());
@@ -95,7 +97,7 @@ const link = (env, id) => { const u = new URL("market.html", env.SITE_URL); u.se
 const btnMsg = (env, title, txt, id, label) => ({ type: "template", altText: title + "：" + txt, template: { type: "buttons", title: title.slice(0, 40), text: txt.slice(0, 60), actions: [{ type: "uri", label: (label || "查看商品").slice(0, 20), uri: link(env, id) }] } });
 
 // LINE 傳「市集」：發登入連結（token 和競標共用）
-export async function marketToken(env, uid) {
+export async function marketToken(env, uid, page = "market.html", title = "P’CLUB 市集", label = "打開市集", what = "可以刊登、購買、議價") {
   await ensure(env);
   let name = "";
   try { const r = await fetch("https://api.line.me/v2/bot/profile/" + uid, { headers: { authorization: "Bearer " + env.LINE_CHANNEL_ACCESS_TOKEN } }); if (r.ok) name = (await r.json()).displayName || ""; } catch (e) {}
@@ -107,8 +109,8 @@ export async function marketToken(env, uid) {
     token = btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     await env.DB.prepare("INSERT INTO a_users VALUES (?, ?, ?, ?)").bind(token, uid, clip(name, 30) || "玩家", Date.now()).run();
   }
-  const u = new URL("market.html", env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "t=" + token;
-  return { type: "template", altText: "P’CLUB 市集：" + u.href, template: { type: "buttons", title: "P’CLUB 市集", text: `${name ? name + "，" : ""}用這個按鈕打開就會自動登入，可以刊登、購買、議價。不要把連結給別人。`.slice(0, 60), actions: [{ type: "uri", label: "打開市集", uri: u.href }] } };
+  const u = new URL(page, env.SITE_URL); u.searchParams.set("openExternalBrowser", "1"); u.hash = "t=" + token;
+  return { type: "template", altText: title + "：" + u.href, template: { type: "buttons", title, text: `${name ? name + "，" : ""}用這個按鈕打開就會自動登入，${what}。不要把連結給別人。`.slice(0, 60), actions: [{ type: "uri", label, uri: u.href }] } };
 }
 
 // 每 10 分鐘：出價逾時失效、刊登過期
@@ -475,3 +477,6 @@ export async function marketApi(req, env, url, catalog) {
     return J(env, req, { err: "系統忙碌，請稍後再試（" + m.slice(0, 120) + "）" }, 500);
   }
 }
+
+// 社群、通知中心共用登入與 CORS
+export { who, cors, J, mask, clip, push as linePush, ensure as marketEnsure };

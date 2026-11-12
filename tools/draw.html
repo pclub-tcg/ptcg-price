@@ -73,7 +73,7 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
 <body>
 <header class="bar"><div class="wrap">
   <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
-  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="market.html">市集</a><a class="lk" href="dex.html">圖鑑</a><a class="lk" href="auction.html">競標</a></nav>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="market.html">市集</a><a class="lk" href="community.html">社群</a><a class="lk" href="dex.html">圖鑑</a><a class="lk" href="auction.html">競標</a></nav>
 </div></header>
 
 <section class="hero"><div class="wrap">
@@ -274,10 +274,12 @@ async function makeShare(){
 }
 function showShare(url,cv){
   let m=$("shm");if(!m){m=document.createElement("div");m.id="shm";m.style.cssText="position:fixed;inset:0;z-index:60;background:rgba(20,8,5,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px";document.body.appendChild(m)}
-  m.innerHTML=`<img src="${url}" alt="抽卡結果分享圖" style="max-width:100%;max-height:72vh;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)"><p style="color:#ffe0b8;font-size:13px;margin:0">手機可以長按圖片儲存</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button type="button" class="btn main" id="shs">分享</button><a class="btn" id="shd" download="pclub-draw.png" href="${url}">下載</a><button type="button" class="btn" id="shx">關閉</button></div>`;
+  m.innerHTML=`<img src="${url}" alt="抽卡結果分享圖" style="max-width:100%;max-height:72vh;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)"><p style="color:#ffe0b8;font-size:13px;margin:0">手機可以長按圖片儲存</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button type="button" class="btn main" id="shs">分享</button><button type="button" class="btn" id="shc">💬 發到社群</button><a class="btn" id="shd" download="pclub-draw.png" href="${url}">下載</a><button type="button" class="btn" id="shx">關閉</button></div>`;
   $("shx").onclick=()=>m.remove();
+  $("shc").onclick=()=>{const st=calc(true)||{};try{sessionStorage.setItem("pc_share",JSON.stringify({img:url,text:st.card?`${st.pf?st.pf+" ":""}抽到 ${st.card.n}，回收 ${Math.round(st.pts).toLocaleString("en-US")} 點。${st.rec?"建議："+st.rec.replace(/^\S+\s/,""):""}`:"",card:st.card&&st.card.k?{k:st.card.k,n:st.card.n,img:st.card.img,ref:st.card.ref}:null}))}catch(e){alert("圖片太大，請先下載再到社群上傳");return}location.href="community.html?compose=1"};
   $("shs").onclick=()=>cv.toBlob(async b=>{const f=new File([b],"pclub-draw.png",{type:"image/png"});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],text:"抽卡結果｜P’CLUB 抽卡助手 https://pclub-tcg.github.io/ptcg-price/draw.html"});else $("shd").click()}catch(e){}});
 }
 </script>
+<script src="bell.js" defer></script>
 </body>
 </html>

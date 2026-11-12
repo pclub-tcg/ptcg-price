@@ -351,6 +351,7 @@ rep('</style>\n\n<header class="bar">', open(_os.path.join(_D, "inv.css"), encod
 rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div>\n   <div class="sh-links">${links.map')
 rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}')
 h += "\n<script>\n" + open(_os.path.join(_D, "inv.js"), encoding="utf-8").read() + "\n</script>\n"
+h += '<script src="bell.js" defer></script>\n'  # 頁首 🔔 通知中心（tools/bell.js）
 # 11b. 網址帶 ?q=關鍵字 時直接搜尋（圖鑑頁「查行情・K 線」連過來用）
 h += """<script>(function(){var q=new URLSearchParams(location.search).get("q");if(!q)return;var go=function(n){var i=document.getElementById("q");if(!i){if(n<40)setTimeout(function(){go(n+1)},150);return}i.value=q;i.dispatchEvent(new Event("input",{bubbles:true}));var f=document.getElementById("f");if(f)f.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));try{i.scrollIntoView({block:"center"})}catch(e){}};addEventListener("load",function(){setTimeout(function(){go(0)},300)})})();</script>
 """
