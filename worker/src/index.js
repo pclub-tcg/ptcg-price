@@ -157,16 +157,20 @@ async function handle(ev, env) {
       quickReply: { items: ["噴火龍 PSA10", "皮卡丘 SAR", "30th", "純白閃焰 BOX", "超級耿鬼ex", "噴火龍 美版"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]);
     if (/^(匯率|匯率試算|試算)$/.test(q)) return reply(env, ev.replyToken, [text(`目前匯率：1 日圓 = ${D.rate} 台幣\n\n傳「試算 日圓價格」幫你算到手成本，例如：\n試算 25000\n\n到手成本 = Mercari 價格 × 匯率 − 優惠券 NT$${D.coupon} + 運費 NT$${D.ship}\nSNKRDUNK 則是 價格 × 匯率 + 運費 NT$${D.sship}`)]);
     if (/^(抽卡|抽卡助手|抽卡教學|回收|換點數|回收點數|點數)$/.test(q)) { const u = x => new URL(x, env.SITE_URL).href;
-      return reply(env, ev.replyToken, [{ type: "image", originalContentUrl: u("guide_draw.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_draw_s.jpg?v=" + RICHMENU_V) }, { ...text(DRAW_HELP), quickReply: { items: ["100/078 PSA10 27000點", "100/078 PSA10 27000點 花30000"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]); }
-    const rc = q.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p)?)?$/i) || q.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 抽卡助手：卡號 點數點（花 xxx）
-    if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
-      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：100/078 PSA10 27000點（點數是平台畫面上的回收點數）`)]);
-      return reply(env, ev.replyToken, [drawFlex(p, pts, "", rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env, await bbLookup(env, p.k))]); }
+      return reply(env, ev.replyToken, [{ type: "image", originalContentUrl: u("guide_draw.jpg?v=" + RICHMENU_V), previewImageUrl: u("guide_draw_s.jpg?v=" + RICHMENU_V) }, { ...text(DRAW_HELP), quickReply: { items: ["DOPA 100/078 PSA10 27000點", "DOPA 100/078 PSA10 27000點 花30000"].map(t => ({ type: "action", action: { type: "message", label: t, text: t } })) } }]); }
+    // 抽卡助手：「[平台] 卡號 回收點數點 [花 xxx]」，例如「DOPA 100/078 PSA10 27000點 花30000」；有寫平台才記進各平台回收點數
+    const PFRE = /^(DOPA|CLOVE|JTCC|日本卡牌中心|日本トレカセンター|ジャパントレカ|卡牌中心)\s+/i, pfm = q.match(PFRE), qd = pfm ? q.slice(pfm[0].length) : q;
+    const pfOf = x => /dopa/i.test(x) ? "DOPA" : /clove/i.test(x) ? "CLOVE" : x ? "日本卡牌中心" : "";
+    const rc = qd.match(/^回收\s+(.+?)\s+([\d,，]+)\s*(?:點|pt|p|coin)?(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|p|coin)?)?$/i) || qd.match(/^(.+?)\s+([\d,，]+)\s*(?:點|pt|coin)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt|coin)?)?$/i) || (pfm ? qd.match(/^(.+?)\s+([\d,，]+)()$/) : null);
+    if (rc) { const pts = +rc[2].replace(/[,，]/g, ""), pf = pfOf(pfm ? pfm[1] : ""), hits = D.db ? await dbSearch(rc[1], 0, env, D) : search(rc[1], D), p = hits.find(h => !h.us);
+      if (!p) return reply(env, ev.replyToken, [text(`找不到「${rc[1]}」，換個卡號或卡名試試，例如：DOPA 100/078 PSA10 27000點`)]);
+      if (pf && pts > 0) await bbRecord(env, p.k, pf, pts);
+      return reply(env, ev.replyToken, [drawFlex(p, pts, pf, rc[3] ? +rc[3].replace(/[,，]/g, "") : 0, D, env, await bbLookup(env, p.k))]); }
     const rl = q.match(/^(?:回收|抽卡|回收點數)\s+(.+?)(?:\s*(?:花費?|成本)\s*([\d,，]+)\s*(?:點|pt)?)?$/i); // 只打卡號：帶入平台回收點數紀錄
     if (rl) { const hits = D.db ? await dbSearch(rl[1], 0, env, D) : search(rl[1], D), p = hits.find(h => !h.us);
       if (!p) return reply(env, ev.replyToken, [text(`找不到「${rl[1]}」，換個卡號或卡名試試，例如：回收 100/078 PSA10`)]);
       const bb = await bbLookup(env, p.k);
-      if (!bb.length) return reply(env, ev.replyToken, [text(`${p.n}\n還沒有人傳過這張卡的平台回收截圖。\n\n請把抽卡結果畫面截圖傳給我，或打「卡號 回收點數點」，例如：${(p.num || "100/078")} 27000點`)]);
+      if (!bb.length) return reply(env, ev.replyToken, [text(`${p.n}\n還沒有這張卡的平台回收紀錄。\n\n打「平台 卡號 回收點數點」就會記下來，例如：DOPA ${(p.num || "100/078")} 27000點`)]);
       return reply(env, ev.replyToken, [drawFlex(p, bb[0].pts, bb[0].pf, rl[2] ? +rl[2].replace(/[,，]/g, "") : 0, D, env, bb)]); }
     const t = q.match(/^試算\s*[¥￥]?\s*([\d,，]+)/);
     if (t) { const y = +t[1].replace(/[,，]/g, ""); const m = Math.max(0, y * D.rate - D.coupon) + D.ship, sn = y * D.rate + D.sship;
@@ -213,9 +217,6 @@ async function handle(ev, env) {
     const label = [r.name_zh || r.name_ja || r.name_en, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
-    const pts = Math.round(+String(r.points || "").replace(/[^\d.]/g, "")) || 0, pf = /dopa/i.test(r.platform || "") ? "DOPA" : /clove/i.test(r.platform || "") ? "CLOVE" : /トレカセンター|ジャパントレカ|japan ?toreca|jtcc|卡牌中心/i.test(r.platform || "") ? "日本卡牌中心" : "";
-    // 只有認出抽卡平台（DOPA、CLOVE、日本卡牌中心）的結果畫面才走抽卡助手，一般卡片照片照常查價
-    if (pts > 0 && pf && !hits[0].us) { if (pf && r.confidence !== "low") await bbRecord(env, hits[0].k, pf, pts); const ms = [drawFlex(hits[0], pts, pf, 0, D, env, await bbLookup(env, hits[0].k))]; if (r.confidence === "low") ms.unshift(text(`辨識結果：${hits[0].n}（把握度低）\n不是這張的話，請打「卡號 ${pts}點」`)); return reply(env, ev.replyToken, ms); }
     const card = await oneCard(hits, label, false, D, env);
     // 不確定時：其他候選卡放在下方按鈕，點了直接查那張
     const seen = new Set([baseName(hits[0].n) + "|" + norm(hits[0].num)]), cands = [];
@@ -254,7 +255,7 @@ const HELP = `P’CLUB｜日本成交價 × 台灣社團價
 🔔 到價提醒：查價後按卡片下方「🔔 到價提醒」，跌到你要的價格時通知你；傳「我的提醒」管理
 🔨 競標：傳「競標」打開競標市場，可以出價、上架自己的卡
 💬 社群：傳「社群」曬卡、開箱、分享抽卡戰績；傳「通知」看所有通知
-🎴 抽卡助手：抽卡結果截圖傳給我，告訴你換點數還是出貨、這抽賺還是虧；傳「抽卡」看教學
+🎴 抽卡助手：打「DOPA 卡號 回收點數點」，告訴你換點數還是出貨、這抽賺還是虧；傳「抽卡」看教學
 
 價格說明：日本價為 SNKRDUNK 每日成交均價與 Mercari 近期成交中位數；到手成本 = Mercari 扣優惠券 NT$600 加運費，或 SNKRDUNK 加運費，取較便宜的；台灣價多為社團開價。
 點卡片上的「看 K 線」可以看日 K、週 K 走勢。
@@ -462,7 +463,7 @@ function drawFlex(p, pts, pf, cost, D, env, bb = []) {
       res,
       { type: "box", layout: "horizontal", spacing: "sm", contents: [opt("換點數", `只能在${pf || "原平台"}用`, c.pv, c.sv && !c.ship), opt("出貨回台灣賣", c.sv ? c.sv.how : "沒有成交價", c.sv ? c.sv.v : null, c.ship)] },
       ...(bb.length ? [{ type: "box", layout: "vertical", spacing: "xs", backgroundColor: "#2a1510", cornerRadius: "14px", paddingAll: "12px", contents: [
-        T("各平台回收點數（玩家截圖）", { size: "xs", weight: "bold", color: GOLD }),
+        T("各平台回收點數（玩家回報）", { size: "xs", weight: "bold", color: GOLD }),
         ...bb.slice(0, 4).map((b, i) => ({ type: "box", layout: "horizontal", contents: [
           T((i === 0 && bb.length > 1 ? "👑 " : "") + b.pf + (b.pf === pf ? "（這次）" : ""), { size: "xs", color: i === 0 ? INK : MUT, flex: 5 }),
           T(b.pts.toLocaleString("en-US") + " 點", { size: "xs", weight: "bold", color: i === 0 ? GOLD : MUT, align: "end", flex: 4 }),
@@ -473,7 +474,7 @@ function drawFlex(p, pts, pf, cost, D, env, bb = []) {
       { type: "button", style: "secondary", height: "sm", action: { type: "uri", label: "調整運費", uri: drawUrl(env, p, pts, pf, cost, false) } }] } },
     quickReply: { items: COSTS.map(v => ({ type: "action", action: { type: "postback", label: `花 ${v.toLocaleString("en-US")} 點`, data: `dr|${pts}|${v}|${pf || ""}|${p.k}`.slice(0, 300), displayText: `這抽花 ${v.toLocaleString("en-US")} 點` } })) } };
 }
-const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n方法 1（最準）：把 DOPA、CLOVE 的抽卡結果畫面截圖直接傳給我，我會讀出卡片和平台給的回收點數\n\n方法 2：打「卡號 回收點數點」，回收點數是平台結果畫面上金幣旁邊的數字，例如\n100/078 PSA10 27000點\n\n方法 3：打「回收 卡號」，用玩家傳過的截圖紀錄，比較各平台回收幾點，例如\n回收 100/078 PSA10\n\n要算賺虧就在後面加這抽花多少，例如：100/078 PSA10 27000點 花30000";
+const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n打「平台 卡號 回收點數點」，回收點數照平台畫面上金幣旁的數字，例如\nDOPA 100/078 PSA10 27000點\nCLOVE 201/165 15000點\n（平台可以不寫：100/078 PSA10 27000點）\n\n要算賺虧就在後面加這抽花多少：\nDOPA 100/078 PSA10 27000點 花30000\n\n比較各平台回收點數：回收 100/078 PSA10";
 
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
@@ -504,10 +505,9 @@ Pokémon: read the card number printed at the bottom left (e.g. "132/106", "143/
 ONE PIECE: the card code is printed at the bottom right, like "OP01-120", "EB01-003", "ST10-006", "PRB01-001" or "P-001" — put the whole code in "number" and the prefix (e.g. "OP01") in "set"; rarity is L, SEC, SR, R, UC, C, SP or P; the character name is in katakana at the bottom.
 Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label (the PSA label also prints the card name, set and number).
 The photo may be a screenshot of a shop or online-lottery app with the card shown small: also use any caption or title text around the card (e.g. "(Japanese) Lugia V (PSA10)", "ルギアV SR") to identify it.
-If it is an online-lottery (オリパ) result screen such as DOPA, CLOVE or 日本トレカセンター/ジャパントレカ: put the platform in "platform": DOPA shows a "DOPA!" watermark/logo and prizes like "二等獎"; CLOVE shows a "clove" logo and English titles like "PSA10 Miriam (JP)"; 日本トレカセンター (JTCC) shows titles like "[JP]Mega Blave (1BOX)", prize ranks like "5等", codes like "pokemon-M1L-1" and values ending in "coin" — use "日本トレカセンター" for that layout and put the buyback value shown next to the coin/point icon (e.g. "105,000", "27,000") as a plain integer in "points" (also when written like "9,600coin"). For a sealed box on such a screen set box true and read the Japanese box name from the package art (e.g. メガブレイブ). Never use tracking numbers (追蹤號), dates, card numbers or prices in yen for "points"; use 0 when there is no coin/point value.
 ALWAYS fill name_ja and name_en when you can recognise the Pokémon or character, even if the number is unreadable; if you are unsure of a digit, give your best reading and lower the confidence.
 Reply with only one JSON object and nothing else:
-{"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "platform": "DOPA/CLOVE/日本トレカセンター/other/empty", "points": 0, "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
+{"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
 
 // Cloudflare Workers AI（免費額度）能看圖的模型，依序嘗試
 const CF_MODELS = ["@cf/meta/llama-4-scout-17b-16e-instruct", "@cf/mistralai/mistral-small-3.1-24b-instruct", "@cf/google/gemma-3-12b-it"];

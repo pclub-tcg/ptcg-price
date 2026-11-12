@@ -83,14 +83,13 @@ details{margin-top:10px}summary{cursor:pointer;font-weight:700;font-size:14px;co
 </div></section>
 
 <main class="wrap">
-<details class="panel" style="padding:12px 16px"><summary style="font-size:15px">📖 使用教學（LINE 傳截圖也能用）</summary>
+<details class="panel" style="padding:12px 16px"><summary style="font-size:15px">📖 使用教學（LINE 打指令也能用）</summary>
   <ol style="margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--ink)">
-    <li><b>LINE 最快</b>：把 DOPA、CLOVE、日本卡牌中心的抽卡結果截圖傳給 P’CLUB，馬上告訴你要換點數還是出貨。</li>
-    <li><b>LINE 打字</b>：「卡號 回收點數點」，例如 <code>100/078 PSA10 27000點</code>（點數照平台畫面上金幣旁的數字）；要算賺虧加「花30000」。</li>
-    <li><b>這個網頁</b>：下面搜尋抽到的卡，有玩家傳過截圖的卡會自動帶入各平台回收點數；想看賺虧就填「抽這張花了多少點」。</li>
+    <li><b>LINE 打指令</b>：「平台 卡號 回收點數點」，例如 <code>DOPA 100/078 PSA10 27000點</code>（點數照平台畫面上金幣旁的數字）；要算賺虧加「花30000」。</li>
     <li><b>LINE 比較平台</b>：打「回收 卡號」，例如 <code>回收 100/078 PSA10</code>，看各平台回收幾點。</li>
-    <li>按「📸 產生分享圖」存成圖片，可以分享到社團或限動。</li>
-  </ol>
+    <li><b>這個網頁</b>：下面搜尋抽到的卡，有紀錄的卡會自動帶入各平台回收點數；想看賺虧就填「抽這張花了多少點」。</li>
+    <li>按「📸 產生分享圖」存成圖片，可以分享到社群或限動。</li>
+</ol>
   <p class="note">出貨回台灣賣價＝鞋店成交價 × 85 折 − 轉運運費，折數和運費都能自己改。<a href="guide_draw.jpg" target="_blank" rel="noopener" style="color:var(--teal);font-weight:700">看圖解教學</a></p>
 </details>
 <section class="panel">
@@ -163,8 +162,8 @@ async function loadBB(k,fill){BB=[];drawBB();if(!k)return;try{const j=await (awa
   drawBB();if(fill&&BB.length&&!$("pts").value){const b=BB.find(x=>x.pf===S.pf)||BB[0];useBB(b)}}
 function useBB(b){if(PF.includes(b.pf)&&b.pf!==S.pf){S.pf=b.pf;save();drawPf();pfNote();$("pr").value=pfVal("pr");$("sh").value=pfVal("sh")}$("pts").value=b.pts;calc();drawBB()}
 function drawBB(){const el=$("bb");if(!el)return;if(!CARD){el.innerHTML="";return}
-  el.innerHTML=BB.length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2)"><b style="font-size:13px">各平台回收點數（玩家截圖紀錄）</b>${BB.map((b,i)=>`<button type="button" data-i="${i}" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:8px 10px;border-radius:10px;border:2px solid ${b.pf===S.pf&&+$("pts").value===b.pts?"var(--brand)":"var(--line)"};background:var(--surface);cursor:pointer;font-size:14px;min-height:40px"><span>${i===0&&BB.length>1?"👑 ":""}${esc(b.pf)}</span><span><b style="font-family:var(--f-num)">${b.pts.toLocaleString("en-US")} 點</b> <small style="color:var(--muted)">${esc(b.d)}</small></span></button>`).join("")}<p class="note" style="margin-top:6px">點一下帶入；實際以平台畫面為準。</p></div>`
-    :`<p class="note">還沒有人傳過這張卡的回收截圖。把抽卡結果截圖傳給 P’CLUB LINE，之後大家都能看到各平台回收幾點。</p>`;
+  el.innerHTML=BB.length?`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2)"><b style="font-size:13px">各平台回收點數（玩家回報）</b>${BB.map((b,i)=>`<button type="button" data-i="${i}" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:8px 10px;border-radius:10px;border:2px solid ${b.pf===S.pf&&+$("pts").value===b.pts?"var(--brand)":"var(--line)"};background:var(--surface);cursor:pointer;font-size:14px;min-height:40px"><span>${i===0&&BB.length>1?"👑 ":""}${esc(b.pf)}</span><span><b style="font-family:var(--f-num)">${b.pts.toLocaleString("en-US")} 點</b> <small style="color:var(--muted)">${esc(b.d)}</small></span></button>`).join("")}<p class="note" style="margin-top:6px">點一下帶入；實際以平台畫面為準。</p></div>`
+    :`<p class="note">還沒有這張卡的回收紀錄。在 LINE 打「DOPA 卡號 回收點數點」就會記下來，之後大家都能看到各平台回收幾點。</p>`;
   el.querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>useBB(BB[+b.dataset.i]))}
 function drawCard(){
   if(!CARD){$("pk").innerHTML="";return}
@@ -215,7 +214,7 @@ async function makeShare(){
   const st=calc(true);if(!st||!st.card){alert("先選一張卡、填回收點數");return}
   const W=1040,H=1360,cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
   const F='"Noto Sans TC",sans-serif',N='"Barlow Condensed","Noto Sans TC",sans-serif';
-  const txt=[st.card.n,st.how||"","建議換點數出貨回台灣賣賺虧拿到這抽花點平台回收抽到的卡僅供試算實際以成交為準匯率行情截圖傳給不知道怎麼辦比多兩邊差不多只能在用原",st.pf].join("");
+  const txt=[st.card.n,st.how||"","建議換點數出貨回台灣賣賺虧拿到這抽花點平台回收抽到的卡僅供試算實際以成交為準匯率行情截圖傳給不知道怎麼辦比多兩邊差不多只能在用原加試算",st.pf].join("");
   try{await Promise.all([document.fonts.load('900 40px "Noto Sans TC"',txt),document.fonts.load('700 40px "Noto Sans TC"',txt),document.fonts.load('500 40px "Noto Sans TC"',txt),document.fonts.load('800 40px "Barlow Condensed"',"0123456789,NT$+−")])}catch(e){}
   const [img,qr]=await Promise.all([loadImg(st.card.img),loadImg("icons/line-qr.png")]);
   // 背景
@@ -270,7 +269,7 @@ async function makeShare(){
   // 頁尾
   const d=new Date();c.font=`500 19px ${F}`;c.fillStyle="#8f735f";c.fillText(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} 行情・匯率 ${st.R}`,64,H-82);c.fillText("僅供試算，實際以成交為準",64,H-52);
   if(qr){rr(c,W-168,H-148,104,104,12);c.fillStyle="#fff";c.fill();c.drawImage(qr,W-162,H-142,92,92)}
-  c.textAlign="right";c.font=`500 21px ${F}`;c.fillStyle="#c9a98e";c.fillText("抽到卡不知道怎麼辦？",W-188,H-104);c.font=`900 21px ${F}`;c.fillStyle="#fff4e6";c.fillText("截圖傳給 P’CLUB",W-188,H-72);c.textAlign="left";
+  c.textAlign="right";c.font=`500 21px ${F}`;c.fillStyle="#c9a98e";c.fillText("抽到卡不知道怎麼辦？",W-188,H-104);c.font=`900 21px ${F}`;c.fillStyle="#fff4e6";c.fillText("LINE 加 P’CLUB 試算",W-188,H-72);c.textAlign="left";
   let url;try{url=cv.toDataURL("image/png")}catch(e){alert("卡圖無法產生分享圖，請稍後再試");return}
   showShare(url,cv);
 }
