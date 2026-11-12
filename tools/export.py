@@ -545,8 +545,15 @@ if os.path.isdir(os.path.join(out, "cut")):
     for p in prods:
         if str(p.get("img", "")).startswith("cut/") and os.path.basename(p["img"]) not in keep:
             p["img"] = "hi/" + os.path.basename(p["img"])[:-4] + ".jpg"
+# 拍照辨識用：目錄卡（只有中文名）補上日版卡目錄的日文名、英文名，AI 讀到「リーリエの全力」「Lillie's Full Force」也對得到
+JNAME = {}
+if jp_path and os.path.exists(jp_path):
+    for c in json.load(open(jp_path, encoding="utf-8"))["cards"]:
+        if c.get("set") and c.get("num"):
+            k = (str(c["set"]).lower(), str(c["num"]))
+            JNAME[k] = (JNAME.get(k, "") + " " + (c.get("b") or "") + " " + re.split(r"[:\[(]", c.get("en") or "")[0]).strip()
 for p in bprods:  # 搜尋用字串先算好（Worker 不用每次冷啟動都做 NFKC，省 CPU）
-    p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar"))
+    p["h"] = unicodedata.normalize("NFKC", " ".join(str(p.get(k) or "") for k in ("n", "j", "kw", "cn", "num", "set", "rar")) + ("" if p.get("us") else " " + JNAME.get((str(p.get("set") or "").lower(), str(p.get("num") or "")), ""))
                                    + (" box 原盒" if p.get("b") else "") + (" psa10 鑑定" if p.get("p") else "") + (" 美版 us en" if p.get("us") or p.get("en") else " 日版 jp")).lower()
     for k in ("kw", "cn"):  # 已併進 h（kd＝最新成交日期，機器人要顯示）
         p.pop(k, None)

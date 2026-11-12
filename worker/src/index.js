@@ -321,6 +321,7 @@ const numHead = n => { const m = String(n || "").match(/^0*(\d{1,3})\//); return
 // 英文名只取主要的字（「Lugia V」→「lugia」，「Pikachu ex」→「pikachu」），用來對 SNKRDUNK 英文名
 const enKey = s => { const t = norm(s).replace(/\(.*?\)|japanese|psa\s*\d+/g, " ").trim().split(/\s+/)[0] || ""; return /^[a-z][a-z'.-]{2,}$/.test(t) ? t : ""; };
 // 卡號差一兩個字（照片小、反光常把 110/098 讀成 112/099）
+const numDen = n => (String(n || "").match(/\/(\S+)$/) || [])[1] || ""; // 分母（系列總張數）
 const numNear = (a, b) => { const x = String(a || "").match(/^(\d{1,3})\/(\d{1,3})$/), y = String(b || "").match(/^(\d{1,3})\/(\d{1,3})$/); return !!(x && y && Math.abs(x[1] - y[1]) <= 3 && Math.abs(x[2] - y[2]) <= 2); };
 async function dbImage(r, env) {
   if (r.box) return rowsTo(await env.DB.prepare("SELECT j FROM products WHERE us = 0 AND b = 1").all());
@@ -478,17 +479,21 @@ const DRAW_HELP = "🎴 抽卡助手：換點數還是出貨賣？\n\n打「平�
 
 function matchImage(r, D) {
   const nz = norm, num = fixNum(r.number), head = numHead(num), en = enKey(r.name_en), set = nz(r.set), rar = String(r.rarity || "").toUpperCase(), zh = String(r.name_zh || "").trim(), ja = nz(r.name_ja || "").replace(/\s/g, "");
-  const wantPsa = /PSA\s*10/i.test(r.grade || "");
+  const wantPsa = /PSA\s*10/i.test(r.grade || ""), enFull = norm(r.name_en || "").replace(/\(.*?\)|japanese|psa\s*\d+/g, " ").replace(/\s+/g, " ").trim();
   const sc = D.products.map(p => {
     let s = 0;
     if (r.box) { if (!p.b) return [p, -1]; const bn = nz(r.box_name_ja).replace(/box$/, ""), bz = jaSet(String(r.box_name_ja || "").replace(/\s*box$/i, "")).trim(); if (zh && p.n.includes(zh)) s += 6; if (bn && p.h.includes(bn)) s += 6; if (bz && bz !== String(r.box_name_ja || "").trim() && p.n.includes(bz)) s += 10; return [p, s]; }
     if (p.b) return [p, -1];
     const pn = fixNum(p.num);
     let named = false;
+    const hasName = ja.length >= 2 || !!en || !!zh;
     if (ja.length >= 2 && p.h.includes(ja)) { s += 3; named = true; }
     if (en && p.h.includes(en)) { s += 3; named = true; }
+    if (enFull.length > 5 && enFull !== en && p.h.includes(enFull)) s += 3; // 英文全名也對上（Lillie's Full Force 和 Lillie's Clefairy 分得開）
     if (zh && p.h.includes(norm(zh))) { s += 3; named = true; }
-    if (num && pn === num) s += 6; else if (head && numHead(pn) === head) s += 2; else if (named && numNear(pn, num)) s += 2; else if (num) s -= 3;
+    // 有讀到卡名時，卡名優先：卡名不對的扣分（卡號讀錯一個字就會配到別張卡）；卡名對的卡號差幾號也算
+    if (hasName && !named) s -= 5;
+    if (num && pn === num) s += 6; else if (head && numHead(pn) === head) s += named ? 4 : 2; else if (named && numNear(pn, num)) s += 3; else if (named && numDen(pn) === numDen(num)) s += 2; else if (num && !named) s -= 3;
     if (set && nz(p.set) === set) s += 3;
     if (rar && String(p.rar || "").toUpperCase() === rar) s += 1;
     if (wantPsa === !!p.p) s += 2;
@@ -496,7 +501,8 @@ function matchImage(r, D) {
     return [p, s];
   });
   const exact = num ? sc.filter(x => !x[0].b && fixNum(x[0].num) === num && x[1] >= 6) : [];
-  return (exact.length ? exact : sc.filter(x => x[1] >= 6)).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
+  // 卡號完全相同、卡名也對的最優先；否則看分數（卡名對、同系列、等級對都會加分）
+  return (exact.length ? exact : sc.filter(x => x[1] >= 5)).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
 }
 
 // ---------- Claude 看圖 ----------
@@ -505,6 +511,7 @@ Pokémon: read the card number printed at the bottom left (e.g. "132/106", "143/
 ONE PIECE: the card code is printed at the bottom right, like "OP01-120", "EB01-003", "ST10-006", "PRB01-001" or "P-001" — put the whole code in "number" and the prefix (e.g. "OP01") in "set"; rarity is L, SEC, SR, R, UC, C, SP or P; the character name is in katakana at the bottom.
 Copy digits exactly as printed, keep leading zeros. If it is in a grading slab, read the grade from the label (the PSA label also prints the card name, set and number).
 The photo may be a screenshot of a shop or online-lottery app with the card shown small: also use any caption or title text around the card (e.g. "(Japanese) Lugia V (PSA10)", "ルギアV SR") to identify it.
+For "lang" judge the language printed on the card itself (Japanese text on the card = "ja"); an English caption in a shop or lottery app does not make it English, and "(Japanese)" or "(JP)" in a caption means "ja".
 ALWAYS fill name_ja and name_en when you can recognise the Pokémon or character, even if the number is unreadable; if you are unsure of a digit, give your best reading and lower the confidence.
 Reply with only one JSON object and nothing else:
 {"game": "pokemon/onepiece", "name_ja": "", "name_en": "", "name_zh": "Traditional Chinese (Taiwan) name", "number": "", "set": "", "rarity": "", "grade": "PSA10 / PSA9 / other / empty if raw", "box": false, "box_name_ja": "", "lang": "ja/zh/en/other", "confidence": "high/medium/low", "note": "one short Traditional Chinese sentence on anything uncertain, or empty"}`;
