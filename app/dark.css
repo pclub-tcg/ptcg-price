@@ -1,0 +1,100 @@
+/* 競標、市集：跟首頁一樣的深色噴火龍主題（pwa.py 注入），只改顏色和手機排版，不動任何功能 */
+:root{--bg:#110D0B;--surface:#1D1612;--surface-2:#251C17;--line:#2F241D;--ink:#F6EDE3;--muted:#A8988A;--navy:#110D0B;--navy-fg:#F6EDE3;--brand:#FF8A2B;--brand-ink:#1D130E;--good:#2FC59A;--bad:#FF5A5F;--hot:#FF6B3D;--teal:#2BB3A6;--rev:#FF9A45;color-scheme:dark}
+body{font-feature-settings:"tnum"}
+.bar{background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.logo svg{width:28px;height:28px;padding:4px;border-radius:8px;background:var(--brand);color:var(--brand-ink)}
+.logo{color:var(--ink)}
+.hero{background:radial-gradient(640px 280px at 100% -30%,rgba(255,138,43,.24),transparent 70%),var(--bg)}
+.bidrow input,.f input,.f select,.f textarea,.fld input,.fld textarea,.rate textarea,.seg2 button,.cat-list,select,input[type=search],#q{background:var(--surface-2)!important;color:var(--ink);border-color:var(--line)}
+.ph,.gal .main,.gal .th button,.cat-it img,.cat-it .ni{background:radial-gradient(120% 90% at 50% 12%,#3a2a1f 0%,#1d1612 72%)}
+.win{background:rgba(47,197,154,.12);border-color:rgba(47,197,154,.35)}
+.warn{background:rgba(255,138,43,.12);border-color:rgba(255,138,43,.35)}
+.cat-list{box-shadow:0 18px 40px -12px rgba(0,0,0,.7)}
+.card{border:1px solid var(--line);box-shadow:none}
+.sheet-bg{background:rgba(0,0,0,.6)}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ipseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);border-color:var(--brand)}
+@media (max-width:640px){
+  .hero{padding:14px 0 16px}
+  .hero h1{font-size:24px;margin:0 0 4px}
+  .hero p{font-size:12.5px;margin:0;color:var(--muted)}
+  .trow,.tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex:none;white-space:nowrap}
+  .sheet{min-height:calc(100dvh - 8px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0}
+  .sheet-bg{padding:calc(8px + env(safe-area-inset-top,0px)) 0 0!important;z-index:40}
+}
+
+/* ===== 2026-11 改版：競標「拍賣場」、市集「好逛好比價」 ===== */
+.num,.fp,.cd,.pr b,.v{font-variant-numeric:tabular-nums}
+/* 競標：即將結標大看板 */
+.feat{margin:6px 0 14px}
+.fcard{width:100%;display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;padding:14px;border-radius:20px;border:1px solid #3A2C23;background:radial-gradient(120% 120% at 100% 0%,#5A2A12 0%,#241712 55%,#1D1612 100%);color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.fph{width:120px;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#110D0B;display:grid;place-items:center}
+.fph img{width:100%;height:100%;object-fit:cover}
+.fph .nophoto{font-size:11px;padding:6px;text-align:center;color:var(--muted)}
+.fin{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fin .live{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:#FF5A5F;background:rgba(255,90,95,.14);padding:3px 9px;border-radius:999px}
+.fin .live i{width:6px;height:6px;border-radius:50%;background:#FF5A5F;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.fin .ft{font-size:16px;line-height:1.35}
+.fin small{font-size:11.5px;color:var(--muted)}
+.fin .fp{font-family:Inter,var(--f-num);font-size:26px;font-weight:800;color:#FFB627;line-height:1.1}
+.fin .fcd{align-self:flex-start;margin-top:2px;font-family:Inter,var(--f-num);font-size:17px;font-weight:800;background:#110D0B;border-radius:10px;padding:5px 10px}
+.fin .fcd.hot{color:#FF5A5F}
+.aref{font-size:11.5px;color:var(--muted);margin-top:4px}
+/* 競標商品頁 */
+.hist li:first-child{background:rgba(255,182,39,.1);border-radius:10px}
+.hist li:first-child b{color:#FFB627}
+.outbid{margin:0 0 8px;text-align:center;font-size:12.5px;font-weight:800;color:#FF5A5F}
+/* 市集：有人在收 */
+.wstrip{margin:4px 0 14px}
+.wstrip .wh{display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.wstrip .lk{border:0;background:none;color:var(--teal);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0}
+.wrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:8px;padding-bottom:2px}
+.wrow::-webkit-scrollbar{display:none}
+.wi{flex:none;display:flex;align-items:center;gap:9px;padding:8px 12px 8px 8px;border-radius:12px;background:rgba(43,179,166,.1);border:1px solid rgba(43,179,166,.32);color:var(--ink);font:inherit;text-align:left;cursor:pointer;max-width:230px}
+.wi img,.wi .wn{width:30px;height:42px;border-radius:5px;object-fit:contain;background:#110D0B;flex:none;display:grid;place-items:center;color:var(--teal);font-weight:900;font-size:13px}
+.wi span{display:flex;flex-direction:column;min-width:0;font-size:12px;line-height:1.35}
+.wi b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wi small{color:var(--teal);font-weight:800;font-family:Inter,var(--f-num)}
+/* 市集：行情比較條（綠＝便宜、白線＝日本行情、紅＝偏貴） */
+.rbar{position:relative;height:5px;border-radius:3px;margin:6px 0 4px;background:linear-gradient(90deg,#2FC59A,#FFB627 55%,#FF5A5F)}
+.rbar::after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:11px;margin-left:-1px;background:#110D0B;border-radius:1px}
+.rbar i{position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#F6EDE3;border:2px solid #110D0B;z-index:1}
+.rbar.big{height:8px;margin:12px 0 6px}
+.rbar.big::after{top:-4px;height:16px}
+.rbar.big i{width:18px;height:18px;margin:-9px 0 0 -9px;border-width:3px}
+.rbar-box{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
+.rbar-box>small{font-size:12.5px;font-weight:800;color:var(--ink)}
+.rbar-l{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.rbar-l b{color:var(--ink);font-family:Inter,var(--f-num)}
+.ipseg button small{font-size:11px}
+@media (max-width:640px){
+  /* 競標列表：左圖右資訊的橫列 */
+  body:not(:has(#wstrip)) #grid.grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+  body:not(:has(#wstrip)) #grid .card{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:12px;padding:10px;border-radius:16px}
+  body:not(:has(#wstrip)) #grid .card .ph{width:72px;aspect-ratio:3/4;border-radius:9px;overflow:hidden}
+  body:not(:has(#wstrip)) #grid .card .ph .tags{display:none}
+  body:not(:has(#wstrip)) #grid .card .cb{padding:0}
+  body:not(:has(#wstrip)) #grid .card h3{font-size:14.5px;margin:0 0 4px}
+  body:not(:has(#wstrip)) #grid .card .pr{margin:0}
+  body:not(:has(#wstrip)) #grid .card .meta{margin-top:4px}
+  /* 競標商品頁：出價列固定在底部 */
+  .bidbar{position:fixed;left:0;right:0;bottom:0;z-index:45;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(29,22,18,.97);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+  .bidbar .bidrow input{font-size:17px}
+  .bidbar .quick{margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .bidbar .quick .btn{width:100%;min-height:42px;padding:0 6px;font-size:13px}
+  .bidbar .quick #buy{grid-column:1/-1}
+  .sheet:has(.bidbar) #sb{padding-bottom:190px}
+  /* 市集：刊登變成浮動按鈕、商品頁購買列固定在底部 */
+  #new{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:31;min-height:50px;padding:0 20px;border-radius:999px;font-size:15px;box-shadow:0 12px 28px -8px rgba(255,138,43,.6)}
+  .newbox{justify-content:flex-start}
+  .acts:has(#buy){position:fixed;left:0;right:0;bottom:0;z-index:45;display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:0;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:rgba(29,22,18,.97);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+  .acts:has(#buy) .btn{min-height:50px;font-size:15px}
+  .sheet:has(#buy) #sb{padding-bottom:110px}
+  .d-ph,.gal .main{aspect-ratio:auto!important;height:min(300px,40vh);background:radial-gradient(70% 80% at 50% 40%,#3a2a1f 0%,#1d1612 75%)}
+  .d-ph img,.gal .main img{width:100%;height:100%;object-fit:contain}
+  .hero .ipseg{margin-top:10px}
+  .hero .ipseg button{padding:8px 10px;font-size:14px}
+}

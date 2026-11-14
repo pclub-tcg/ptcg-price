@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P’CLUB 社群</title>
+<meta name="description" content="P’CLUB 社群：寶可夢、海賊王卡友曬卡、開箱、分享抽卡戰績，附日本與台灣行情。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&family=Barlow+Condensed:wght@800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6ea;--surface:#fff;--surface-2:#fff3e6;--line:#f3dcc0;--ink:#2a1c17;--muted:#7a6656;--navy:#2a1c17;--navy-fg:#ffe0b8;--brand:#ff8a2b;--brand-ink:#2a1c17;--good:#1f8a5b;--bad:#c2333a;--hot:#e5482b;--teal:#0f7c74;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;--f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;--logo:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.bar{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;font-size:18px;color:var(--brand)}
+.logo b{font-family:var(--logo);letter-spacing:.02em}.logo svg{width:24px;height:24px}
+.nav{display:flex;align-items:center;gap:6px;font-size:13px}
+.nav a.lk{color:var(--navy-fg);text-decoration:none;padding:6px 8px;border-radius:8px;font-weight:700}.nav a.lk:hover{background:rgba(255,255,255,.08)}
+.who{display:flex;align-items:center;gap:8px}.who .nm{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3e4;font-weight:700}
+@media (max-width:520px){.nav a.lk{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;min-height:42px;text-decoration:none;white-space:nowrap;background:var(--surface-2);color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:999px}
+.btn.ghost{background:transparent;border-color:rgba(255,224,184,.35);color:var(--navy-fg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hero{background:radial-gradient(700px 280px at 0% 120%,rgba(15,124,116,.45),transparent 70%),radial-gradient(700px 300px at 100% -40%,rgba(255,138,43,.35),transparent 70%),var(--navy);color:var(--navy-fg);padding:22px 0 0}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:900;color:#fff3e4;letter-spacing:.04em}
+.hero p{margin:6px 0 0;font-size:14px;color:#d9bfa6;max-width:520px;line-height:1.6}main{padding:12px 16px 100px;max-width:720px}
+.top{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:14px 0 10px;flex-wrap:wrap}
+.who{font-size:13px;color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}
+.chips button{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 14px;font-weight:700;font-size:13px;cursor:pointer;min-height:38px}
+.chips button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 16px;font-weight:900;font-size:14px;cursor:pointer;text-decoration:none;min-height:42px;color:inherit}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.post{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.ph{display:flex;align-items:center;gap:10px}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:900;color:#fff;flex:none;font-size:16px}
+.ph b{font-size:15px}.ph small{display:block;color:var(--muted);font-size:12px}
+.kd{margin-left:auto;font-size:12px;font-weight:900;border-radius:999px;padding:3px 10px;background:var(--surface-2);white-space:nowrap}
+.tx{margin:10px 0 0;font-size:15px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.pics{display:grid;gap:4px;margin-top:10px;border-radius:12px;overflow:hidden}
+.pics.n1{grid-template-columns:1fr}.pics.n2,.pics.n4{grid-template-columns:1fr 1fr}.pics.n3{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr}.pics.n3 button:first-child{grid-row:1/3}
+.pics button{border:0;padding:0;background:var(--surface-2);cursor:zoom-in;display:block;min-height:120px}
+.pics img{width:100%;height:100%;object-fit:cover;display:block;max-height:420px}
+.pics.n1 img{max-height:520px;object-fit:contain;background:#1c0a06}
+.card{display:flex;gap:10px;align-items:center;margin-top:10px;padding:8px 10px;border-radius:12px;background:var(--surface-2);text-decoration:none;color:inherit}
+.card img{width:36px;height:50px;object-fit:cover;border-radius:4px;flex:none}.card b{font-size:13px;display:block}.card small{font-size:12px;color:var(--muted)}
+.acts{display:flex;gap:4px;margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.acts button{border:0;background:none;padding:8px 12px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted);min-height:40px}
+.acts button:hover{background:var(--surface-2)}.acts .on{color:#e5484d}
+.acts .mo{margin-left:auto}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px;line-height:1.8;background:var(--surface);border:1px dashed var(--line);border-radius:16px}
+.note{color:var(--muted);font-size:12px;line-height:1.7}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(20,10,6,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.pn{background:var(--bg);width:100%;max-width:620px;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:94vh;overflow:auto}
+.pn h2{margin:0 0 10px;font-size:18px;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+.pn h2 button{border:0;background:var(--surface-2);border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer}
+textarea,input[type=search]{width:100%;padding:12px;border:2px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px;font-family:inherit}
+textarea{min-height:110px;resize:vertical}
+textarea:focus,input:focus{outline:none;border-color:var(--brand)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.thumbs span{position:relative}.thumbs img{width:76px;height:76px;object-fit:cover;border-radius:10px;display:block}
+.thumbs button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:0;background:#000a;color:#fff;cursor:pointer}
+.addp{width:76px;height:76px;border-radius:10px;border:2px dashed var(--line);display:grid;place-items:center;font-size:26px;color:var(--muted);cursor:pointer;background:var(--surface)}
+.res{border:1px solid var(--line);border-radius:12px;margin-top:6px;max-height:240px;overflow:auto;background:var(--surface)}
+.res div{display:flex;gap:8px;align-items:center;padding:8px;cursor:pointer;border-bottom:1px solid var(--line)}.res div:last-child{border:0}
+.res img{width:30px;height:42px;object-fit:cover;border-radius:3px}
+.cm{display:flex;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cm .av{width:32px;height:32px;font-size:13px}.cm b{font-size:13px}.cm b em{font-style:normal;font-size:11px;background:var(--brand);color:var(--brand-ink);border-radius:6px;padding:0 5px;margin-left:4px}
+.cm p{margin:2px 0;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}.cm small{color:var(--muted);font-size:12px}
+.cm button{border:0;background:none;color:var(--muted);font-size:12px;cursor:pointer;padding:0 0 0 8px}
+.cbox{display:flex;gap:8px;position:sticky;bottom:0;background:var(--bg);padding-top:10px}
+.cbox input{flex:1;padding:10px 12px;border:2px solid var(--line);border-radius:12px;font-size:16px;background:var(--surface)}
+.lb{position:fixed;inset:0;z-index:60;background:#000e;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+.lb[hidden]{display:none}.lb img{max-width:100%;max-height:100%;object-fit:contain}
+.fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;border-radius:999px;padding:14px 20px;box-shadow:0 8px 24px rgba(255,138,43,.45)}
+[hidden]{display:none!important}
+</style>
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="dex.html">圖鑑</a><a class="lk" href="market.html">市集</a></nav>
+</div></header>
+<section class="hero"><div class="wrap"><div><h1>P’CLUB 社群</h1><p>曬卡、開箱、分享抽卡戰績。貼文可以標記卡片，大家點一下就能看行情。</p><div style="height:20px"></div></div></div></section>
+<main class="wrap">
+  <div class="top"><span class="who" id="who"></span></div>
+  <div class="chips" id="srt" role="group" aria-label="排序" style="margin-bottom:6px"></div>
+  <div id="qb"></div>
+  <div class="chips" id="fl" role="group" aria-label="分類"></div>
+  <div id="feed"><p class="empty">載入中…</p></div>
+  <p style="text-align:center"><button type="button" class="btn" id="more" hidden>載入更多</button></p>
+  <p class="note">社群規則：只分享和卡牌有關的內容；不要貼個資、私下交易的匯款資訊或外部抽卡推廣連結；買賣請用 P’CLUB 市集。被 3 個人檢舉的貼文會先隱藏。</p>
+</main>
+<button type="button" class="btn main fab" id="new">＋ 發文</button>
+
+<div class="sheet" id="sh" hidden><div class="pn" role="dialog" aria-modal="true" id="pn"></div></div>
+<div class="lb" id="lb" hidden><img alt="" id="lbi"></div>
+
+<script>
+const API="https://ptcg-line-bot.spickertop.workers.dev/api/";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nt=v=>"NT$"+Math.round(v).toLocaleString("en-US");
+(function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){try{localStorage.setItem("atok",m[1])}catch(e){}history.replaceState(null,"",location.pathname+location.search.replace(/[?&]openExternalBrowser=1/,""))}})();
+let TOK="";try{TOK=localStorage.getItem("atok")||""}catch(e){}
+const KINDS={show:"曬卡",open:"開箱",draw:"抽卡戰績",talk:"討論"},KC={show:"#ffe3c7",open:"#d9f2e6",draw:"#e5ddff",talk:"#e3eefc"};
+let ME=null,ITEMS=[],F="",MINE=0,LAST=1e15,BUSY=0,SORT="new",Q=(new URLSearchParams(location.search).get("q")||"").slice(0,40);
+const ago=t=>{const s=(Date.now()-t)/1000;return s<60?"剛剛":s<3600?Math.floor(s/60)+" 分鐘前":s<86400?Math.floor(s/3600)+" 小時前":s<86400*7?Math.floor(s/86400)+" 天前":new Date(t).toLocaleDateString("zh-TW")};
+const avc=s=>{let h=0;for(const c of String(s||""))h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 55% 48%)`};
+const av=(n,cls="av")=>`<span class="${cls}" style="background:${avc(n)}" aria-hidden="true">${esc([...String(n||"玩")][0])}</span>`;
+const photo=(id,n)=>API+"c/photo/"+id+"/"+n;
+async function api(path,body,raw){const o={headers:{}};if(TOK)o.headers["x-tok"]=TOK;
+  if(raw){o.method="POST";o.headers["content-type"]=raw.type;o.body=raw}else if(body){o.method="POST";o.headers["content-type"]="application/json";o.body=JSON.stringify(body)}
+  let r;try{r=await fetch(API+path,o)}catch(e){throw new Error("連線失敗，請檢查網路")}
+  const j=await r.json().catch(()=>({err:"系統忙碌，請稍後再試"}));
+  if(r.status===401&&j.login&&TOK){TOK="";try{localStorage.removeItem("atok")}catch(e){}ME=null;drawWho()}
+  if(!r.ok||j.err){throw new Error(j.err||"發生錯誤")}return j}
+function drawWho(){$("who").innerHTML=ME?`已登入：<b>${esc(ME.name)}</b>${ME.admin?"（管理員）":""}`:`還沒登入，可以瀏覽；要發文或留言請在 LINE 傳「社群」給 <a href="https://line.me/R/ti/p/@916ctmro">P’CLUB</a>`}
+function drawChips(){$("srt").innerHTML=[["new","🕒 最新"],["hot","🔥 熱門"]].map(([k,t])=>`<button type="button" data-s="${k}" aria-pressed="${SORT===k}">${t}</button>`).join("");$("srt").querySelectorAll("button").forEach(b=>b.onclick=()=>{SORT=b.dataset.s;reload()});
+  $("qb").innerHTML=Q?`<div class="card" style="margin:0 0 10px;justify-content:space-between"><span><b>「${esc(Q)}」的相關貼文</b><small>標記這張卡或內文提到的貼文</small></span><button type="button" class="btn" id="qx">看全部</button></div>`:"";if($("qx"))$("qx").onclick=()=>{Q="";history.replaceState(null,"",location.pathname);reload()};
+  $("fl").innerHTML=[["","全部"],...Object.entries(KINDS)].map(([k,t])=>`<button type="button" data-k="${k}" aria-pressed="${!MINE&&F===k}">${t}</button>`).join("")+(ME?`<button type="button" data-m="1" aria-pressed="${!!MINE}">我的貼文</button>`:"");
+  $("fl").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(b.dataset.m){MINE=1;F=""}else{MINE=0;F=b.dataset.k}reload()})}
+function postHTML(p,full){const n=p.nphoto||0;
+  return `<article class="post" data-id="${p.id}">${p.hidden?`<p class="note" style="margin:0 0 6px;color:#c2333a">⚠️ 這篇因為檢舉已被隱藏，只有你和管理員看得到</p>`:""}
+    <div class="ph">${av(p.name)}<span><b>${esc(p.name)}</b><small>${ago(p.at)}</small></span><span class="kd" style="background:${KC[p.kind]||""}">${esc(KINDS[p.kind]||"貼文")}</span></div>
+    ${p.text?`<p class="tx">${esc(p.text)}</p>`:""}
+    ${n?`<div class="pics n${n}">${Array.from({length:n},(_,i)=>`<button type="button" data-z="${photo(p.id,i)}" aria-label="看大圖"><img src="${photo(p.id,i)}" alt="" loading="lazy"></button>`).join("")}</div>`:""}
+    ${p.ctitle?`<a class="card" href="./?q=${encodeURIComponent(p.ctitle)}">${p.cimg?`<img src="${esc(p.cimg)}" alt="" loading="lazy">`:""}<span><b>${esc(p.ctitle)}</b><small>${p.cref?"行情約 "+nt(p.cref)+"・":""}點我看最新行情 ›</small></span></a>`:""}
+    <div class="acts"><button type="button" data-a="like" class="${p.liked?"on":""}" aria-pressed="${p.liked}">${p.liked?"❤️":"🤍"} ${p.likes||""}</button><button type="button" data-a="open">💬 ${p.ncom||""}${full?"":" 留言"}</button><button type="button" data-a="share">↗ 分享</button><button type="button" data-a="more" class="mo" aria-label="更多">⋯</button></div></article>`}
+function bind(root){root.querySelectorAll(".post").forEach(el=>{const id=+el.dataset.id,p=ITEMS.find(x=>x.id===id)||(CURP&&CURP.id===id?CURP:null);if(!p)return;
+  el.querySelectorAll("[data-z]").forEach(b=>b.onclick=()=>{$("lbi").src=b.dataset.z;$("lb").hidden=false});
+  el.querySelector('[data-a=like]').onclick=async()=>{if(!ME)return needLogin();try{const j=await api("c/like/"+id,{});p.liked=!!j.liked;p.likes=j.likes;rerender(p)}catch(e){alert(e.message)}};
+  el.querySelector('[data-a=open]').onclick=()=>openPost(id);
+  el.querySelector('[data-a=share]').onclick=async()=>{const u=API.replace(/api\/$/,"")+"s/p/"+id;try{if(navigator.share)await navigator.share({title:"P’CLUB 社群",text:(p.text||KINDS[p.kind]).slice(0,60),url:u});else{await navigator.clipboard.writeText(u);alert("已複製連結")}}catch(e){}};
+  el.querySelector('[data-a=more]').onclick=async()=>{if(!ME)return needLogin();
+    if(p.mine||ME.admin){if(confirm(p.mine?"刪除這篇貼文？":"以管理員身分刪除這篇貼文？")){try{await api("c/del/"+id,{});ITEMS=ITEMS.filter(x=>x.id!==id);closeSheet();drawFeed()}catch(e){alert(e.message)}}}
+    else{const r=prompt("檢舉這篇貼文的原因（例如：詐騙、廣告、不雅、與卡牌無關）");if(r!==null){try{const j=await api("c/report/"+id,{reason:r});alert(j.msg||"已檢舉")}catch(e){alert(e.message)}}}}})}
+function rerender(p){document.querySelectorAll(`.post[data-id="${p.id}"]`).forEach(el=>{const full=!!el.closest("#pn"),t=document.createElement("div");t.innerHTML=postHTML(p,full);el.replaceWith(t.firstElementChild)});bind(document)}
+function drawFeed(){$("feed").innerHTML=ITEMS.length?ITEMS.map(p=>postHTML(p)).join(""):`<p class="empty">${Q?`還沒有人分享「${esc(Q)}」`:MINE?"你還沒發過文":SORT==="hot"?"最近兩週還沒有熱門貼文":"這裡還沒有貼文"}，按右下角「＋ 發文」來當第一個吧！</p>`;bind($("feed"))}
+async function load(){if(BUSY)return;BUSY=1;try{const q=new URLSearchParams(SORT==="hot"?{sort:"hot",off:ITEMS.length}:{before:LAST});if(F)q.set("kind",F);if(MINE&&ME)q.set("shop",ME.shop);if(Q)q.set("q",Q);
+  const j=await api("c/list?"+q);if(j.me&&!ME){ME=j.me;drawWho();drawChips()}if(!j.me&&ME){ME=null;drawWho()}
+  ITEMS=ITEMS.concat(j.items||[]);if(j.items&&j.items.length)LAST=j.items[j.items.length-1].id;$("more").hidden=!(j.items&&j.items.length===20);drawFeed()}
+  catch(e){$("feed").innerHTML=`<p class="empty">載入失敗：${esc(e.message)}</p>`}BUSY=0}
+function reload(){ITEMS=[];LAST=1e15;drawChips();load()}
+function needLogin(){if(confirm("要先登入才能發文、留言、按讚。\n在 LINE 傳「社群」給 P’CLUB，點機器人回的按鈕就會自動登入。\n\n現在打開 P’CLUB LINE？"))location.href="https://line.me/R/ti/p/@916ctmro"}
+function openSheet(html){$("pn").innerHTML=html;$("sh").hidden=false;document.body.style.overflow="hidden"}
+function closeSheet(){$("sh").hidden=true;document.body.style.overflow="";CURP=null;if(/^#p\d+/.test(location.hash))history.replaceState(null,"",location.pathname+location.search)}
+$("sh").onclick=e=>{if(e.target.id==="sh")closeSheet()};$("lb").onclick=()=>{$("lb").hidden=true;$("lbi").src=""};
+addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("lb").hidden)$("lb").hidden=true;else if(!$("sh").hidden)closeSheet()}});
+/* 貼文＋留言 */
+let CURP=null;
+async function openPost(id,focus){openSheet(`<h2>貼文<button type="button" id="x" aria-label="關閉">✕</button></h2><p class="empty">載入中…</p>`);$("x").onclick=closeSheet;
+  try{const j=await api("c/post/"+id);CURP=j.post;const draw1=cs=>{$("pn").innerHTML=`<h2>貼文<button type="button" id="x" aria-label="關閉">✕</button></h2>${postHTML(CURP,1)}
+    <div id="cms">${cs.length?cs.map(c=>`<div class="cm">${av(c.name,"av")}<div style="flex:1;min-width:0"><b>${esc(c.name)}${c.op?"<em>作者</em>":""}</b><p>${esc(c.text)}</p><small>${ago(c.at)}</small>${c.mine||CURP.mine||(j.me&&j.me.admin)?`<button type="button" data-dc="${c.id}">刪除</button>`:""}</div></div>`).join(""):`<p class="note">還沒有留言</p>`}</div>
+    <form class="cbox" id="cf"><input id="ci" maxlength="200" placeholder="${ME?"留言…":"登入後才能留言"}" aria-label="留言" ${ME?"":"disabled"}><button type="submit" class="btn main" ${ME?"":"disabled"}>送出</button></form>`;
+    $("x").onclick=closeSheet;bind($("pn"));
+    $("pn").querySelectorAll("[data-dc]").forEach(b=>b.onclick=async()=>{if(confirm("刪除這則留言？")){try{await api("c/delc/"+b.dataset.dc,{});CURP.ncom=Math.max(0,CURP.ncom-1);const k=await api("c/post/"+id);draw1(k.comments)}catch(e){alert(e.message)}}});
+    $("cf").onsubmit=async e=>{e.preventDefault();const t=$("ci").value.trim();if(!t)return;try{await api("c/comment/"+id,{text:t});const k=await api("c/post/"+id);CURP=k.post;const it=ITEMS.find(x=>x.id===id);if(it)it.ncom=CURP.ncom;draw1(k.comments);drawFeed();$("ci").focus()}catch(er){alert(er.message)}};
+    if(focus&&ME)$("ci").focus()};
+    draw1(j.comments);try{history.replaceState(null,"","#p"+id)}catch(e){}}
+  catch(e){$("pn").innerHTML=`<h2>貼文<button type="button" id="x" aria-label="關閉">✕</button></h2><p class="empty">${esc(e.message)}</p>`;$("x").onclick=closeSheet}}
+/* 發文 */
+function shrink(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=async()=>{URL.revokeObjectURL(u);
+  let w=im.naturalWidth,h=im.naturalHeight,s=Math.min(1,1400/Math.max(w,h)),q=.85,out=null;
+  for(let i=0;i<7;i++){const c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+    out=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(out&&out.size<450*1024)break;s*=.85;q=Math.max(.6,q-.05)}
+  out&&out.size<590*1024?res(out):rej()};im.onerror=()=>{URL.revokeObjectURL(u);rej()};im.src=u})}
+let NP={kind:"show",text:"",pics:[],card:null};
+function compose(pre){if(!ME)return needLogin();if(ME.banned)return alert("你的帳號已被停權");if(pre)NP=Object.assign({kind:"show",text:"",pics:[],card:null},pre);
+  const draw2=()=>{$("pn").innerHTML=`<h2>發文<button type="button" id="x" aria-label="關閉">✕</button></h2>
+    <div class="chips" role="group" aria-label="分類">${Object.entries(KINDS).map(([k,t])=>`<button type="button" data-k="${k}" aria-pressed="${NP.kind===k}">${t}</button>`).join("")}</div>
+    <textarea id="tt" maxlength="500" placeholder="${NP.kind==="draw"?"這抽花多少、抽到什麼？":"分享你的卡⋯"}" aria-label="內容">${esc(NP.text)}</textarea>
+    <div class="thumbs">${NP.pics.map((b,i)=>`<span><img src="${URL.createObjectURL(b)}" alt=""><button type="button" data-rm="${i}" aria-label="移除照片">✕</button></span>`).join("")}${NP.pics.length<4?`<label class="addp" aria-label="加照片">＋<input type="file" accept="image/*" multiple id="pf" hidden></label>`:""}</div>
+    <label class="note" style="display:block;font-weight:700;margin-top:4px">標記卡片（選填，大家可以點進去看行情）</label>
+    ${NP.card?`<div class="card">${NP.card.img?`<img src="${esc(NP.card.img)}" alt="">`:""}<span style="flex:1"><b>${esc(NP.card.n)}</b><small>${NP.card.ref?"行情約 "+nt(NP.card.ref):""}</small></span><button type="button" class="btn" id="uc">移除</button></div>`:`<input type="search" id="cs" placeholder="搜尋卡名或卡號，例如 201/165" autocomplete="off"><div class="res" id="cr" hidden></div>`}
+    <p class="note" id="er" style="color:#c2333a"></p>
+    <button type="button" class="btn main" id="go" style="width:100%">發布</button>`;
+    $("x").onclick=closeSheet;
+    $("pn").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{NP.text=$("tt").value;NP.kind=b.dataset.k;draw2()});
+    $("tt").oninput=e=>NP.text=e.target.value;
+    $("pn").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{NP.text=$("tt").value;NP.pics.splice(+b.dataset.rm,1);draw2()});
+    if($("pf"))$("pf").onchange=async e=>{NP.text=$("tt").value;for(const f of [...e.target.files].slice(0,4-NP.pics.length)){try{NP.pics.push(await shrink(f))}catch(_){alert("有一張照片讀不到，請換一張")}}draw2()};
+    if($("uc"))$("uc").onclick=()=>{NP.text=$("tt").value;NP.card=null;draw2()};
+    if($("cs")){let T=null;$("cs").oninput=e=>{clearTimeout(T);const q=e.target.value.trim();if(!q){$("cr").hidden=true;return}T=setTimeout(async()=>{try{const r=await (await fetch(API+"a/search?q="+encodeURIComponent(q))).json(),L=r.items||[];
+      $("cr").innerHTML=L.length?L.map((x,i)=>`<div data-i="${i}">${x.img?`<img src="${esc(x.img)}" alt="">`:""}<span><b style="font-size:13px">${esc(x.n)}</b><br><small class="note">${esc(x.meta||"")}${x.ref?"・"+nt(x.ref):""}</small></span></div>`).join(""):`<p class="note" style="padding:8px">找不到</p>`;$("cr").hidden=false;
+      $("cr").querySelectorAll("[data-i]").forEach(d=>d.onclick=()=>{NP.text=$("tt").value;NP.card=L[+d.dataset.i];draw2()})}catch(_){}},300)}}
+    $("go").onclick=async()=>{NP.text=$("tt").value.trim();if(!NP.text&&!NP.pics.length){$("er").textContent="寫點什麼或放一張照片吧";return}
+      $("go").disabled=true;$("go").textContent="發布中…";
+      try{const c=NP.card,j=await api("c/create",{kind:NP.kind,text:NP.text,nphoto:NP.pics.length,ckey:c&&c.k,ctitle:c&&c.n,cimg:c&&c.img,cref:c&&c.ref});
+        for(let i=0;i<NP.pics.length;i++){$("go").textContent=`上傳照片 ${i+1}/${NP.pics.length}…`;await api("c/photo/"+j.id+"?n="+i,null,NP.pics[i])}
+        NP={kind:"show",text:"",pics:[],card:null};closeSheet();MINE=0;F="";reload()}
+      catch(e){$("er").textContent=e.message;$("go").disabled=false;$("go").textContent="發布"}}};
+  openSheet("");draw2()}
+$("new").onclick=()=>compose();$("more").onclick=load;
+/* 抽卡助手的分享圖帶過來 */
+async function fromDraw(){let d=null;try{d=JSON.parse(sessionStorage.getItem("pc_share")||"null");sessionStorage.removeItem("pc_share")}catch(e){}
+  if(!d||!d.img)return;try{const b=await (await fetch(d.img)).blob();compose({kind:"draw",text:d.text||"",pics:[await shrink(new File([b],"draw.png",{type:b.type}))],card:d.card||null})}catch(e){}}
+drawWho();drawChips();
+load().then(()=>{const m=location.hash.match(/^#p(\d+)(c?)/);if(m)openPost(+m[1],!!m[2]);if(/[?&]compose=1/.test(location.search)){history.replaceState(null,"",location.pathname+location.hash);fromDraw().then(()=>{if($("sh").hidden)compose()})}});
+</script>
+<script src="bell.js" defer></script>
+</body>
+</html>
