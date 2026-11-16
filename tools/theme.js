@@ -60,12 +60,15 @@ setInterval(()=>{const b=$("inv-fab"),o=$("th-invn");if(b&&o){const v=(b.querySe
   const avc=s=>{let h=0;for(const c of String(s||""))h=(h*31+c.charCodeAt(0))%360;return `hsl(${h} 55% 48%)`};
   const left=t=>{const s=(t-Date.now())/1000;return s<=0?"已結標":s<3600?Math.ceil(s/60)+" 分後結標":s<86400?Math.floor(s/3600)+" 小時後結標":Math.floor(s/86400)+" 天後結標"};
   const ago=t=>{const s=(Date.now()-t)/1000;return s<3600?Math.max(1,Math.floor(s/60))+" 分鐘前":s<86400?Math.floor(s/3600)+" 小時前":Math.floor(s/86400)+" 天前"};
+  // 走勢小圖：整張卡片寬的面積圖
+  const area=(a,up)=>{if(!a||a.length<2)return "";const W=120,H=30,mn=Math.min(...a),mx=Math.max(...a),d=mx-mn||1,pt=a.map((v,i)=>[i/(a.length-1)*W,H-3-(v-mn)/d*(H-6)]),l=pt.map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" "),c=up?"var(--up)":"var(--down)",id="g"+Math.random().toString(36).slice(2,7);
+    return `<svg class="ar" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up?"#FF5A5F":"#2FC59A"}" stop-opacity=".35"/><stop offset="1" stop-color="${up?"#FF5A5F":"#2FC59A"}" stop-opacity="0"/></linearGradient></defs><polygon points="0,${H} ${l} ${W},${H}" fill="url(#${id})"/><polyline points="${l}" fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`};
   let ALL=[],F="";
   const card=x=>{
     if(x.t==="cm"){const p=x.p,img=p.nphoto?A+"c/photo/"+p.id+"/0":p.cimg;return `<a class="fc${img?"":" txt"}" href="community.html#p${p.id}">${img?`<span class="pic${p.nphoto?"":" card"}"><img src="${E(img)}" alt="" loading="lazy"><span class="tg cm">💬 ${({show:"曬卡",open:"開箱",draw:"抽卡戰績",talk:"討論"})[p.kind]||"社群"}</span></span>`:""}<span class="bd">${!img?`<span class="tg cm" style="position:static;display:inline-block;margin-bottom:6px">💬 討論</span>`:""}<span class="t">${E(p.text||p.ctitle||"")}</span><span class="m"><span class="who"><i class="av" style="background:${avc(p.name)}">${E([...String(p.name||"玩")][0])}</i><span>${E(p.name)}</span></span><span>❤️ ${p.likes||0}</span></span></span></a>`}
     if(x.t==="mk"){const m=x.p,img=m.nphoto?A+"m/photo/"+m.id+"/0":m.cimg,cheap=m.ref&&m.price<m.ref?Math.round((1-m.price/m.ref)*100):0;return `<a class="fc" href="market.html#m${m.id}"><span class="pic${m.nphoto?"":" card"}">${img?`<img src="${E(img)}" alt="" loading="lazy">`:`<span style="display:block;height:90px"></span>`}<span class="tg mk">🛒 市集${m.nego?"・可議":""}</span></span><span class="bd"><span class="t">${E(m.title)}</span><span class="m"><b>${R(m.price)}</b>${cheap>=5?`<span class="dn">比行情便宜 ${cheap}%</span>`:`<span>${ago(m.bumped||m.created)}</span>`}</span></span></a>`}
     if(x.t==="au"){const a=x.p;return `<a class="fc" href="auction.html#a${a.id}"><span class="pic${a.photo?"":" card"}">${a.photo?`<img src="${A}a/photo/${a.id}" alt="" loading="lazy">`:`<span style="display:block;height:90px"></span>`}<span class="tg au">🔨 競標・${a.nbids||0} 次出價</span></span><span class="bd"><span class="t">${E(a.title)}</span><span class="m"><b>${R(a.price||a.start)}</b><span>${left(a.ends)}</span></span></span></a>`}
-    if(x.t==="tr"){const p=x.p,up=x.up;return `<div class="fc" role="button" tabindex="0" data-k="${E(p.k)}"><span class="pic card"><img src="${E(p.img)}" alt="" loading="lazy"><span class="tg ${up?"tr":"dn"}">${up?"📈 30 天漲":"📉 30 天跌"} ${E(p.c)}%</span></span><span class="bd"><span class="t">${E(nm(p))}</span><span class="m"><b>${P(p.y)}</b>${spark(p.sp,60,20)||""}</span></span></div>`}
+    if(x.t==="tr"){const p=x.p,up=x.up,c=Math.abs(+p.c||0);return `<div class="fc tr ${up?"u":"d"}" role="button" tabindex="0" data-k="${E(p.k)}"><span class="tr-top"><span class="tr-ch">${up?"▲":"▼"} ${c.toFixed(c>=100?0:1)}%<small>30 天</small></span><img src="${E(p.img)}" alt="" loading="lazy"${p.b?' class="bx"':""}></span><span class="bd"><span class="t1">${E(nm(p))}</span><span class="pr">${P(p.y)}</span>${area(p.sp,up)}</span></div>`}
     return ""};
   function draw(){const L=ALL.filter(x=>!F||x.t===F);const el=document.getElementById("th-mas");
     el.innerHTML=L.length?L.map(card).join(""):`<p class="th-fmore">${F==="cm"?"社群還沒有貼文，<a href=\"community.html\">來發第一篇</a>":F==="mk"?"市集目前沒有商品，<a href=\"market.html?new=1\">刊登一件</a>":F==="au"?"目前沒有進行中的競標":"目前沒有動態"}</p>`}
@@ -76,6 +79,7 @@ setInterval(()=>{const b=$("inv-fab"),o=$("th-invn");if(b&&o){const v=(b.querySe
   const j=u=>fetch(A+u).then(r=>r.json()).catch(()=>({}));
   async function load(){
     const [c,m,a]=await Promise.all([j("c/list"),j("m/list"),j("a/list")]);
+    for(let i=0;i<30&&!(window.TJ&&window.TJ.up);i++)await new Promise(r=>setTimeout(r,200)); // 等漲跌資料（trend.json）載好
     const cm=(c.items||[]).slice(0,12).map(p=>({t:"cm",p})),
       mk=(m.items||[]).filter(x=>x.status==="live").slice(0,10).map(p=>({t:"mk",p})),
       au=(a.items||[]).filter(x=>x.status==="live").slice(0,6).map(p=>({t:"au",p})),
