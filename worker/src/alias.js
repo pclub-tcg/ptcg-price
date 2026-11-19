@@ -46,6 +46,15 @@ export async function aliasApi(req, env, url, { who, J, cors, rowsTo, catItem, b
     const D = await base(env);
     return J(env, req, { alias: list[0].alias, items: list.slice(0, 12).map(x => catItem(x, D, env)) });
   }
+  if (p === "all") { // 網站一次載入：{k: [暱稱...]}，卡片格子顯示暱稱、目錄搜尋也搜得到
+    const out = {};
+    for (const [, a, ks] of SEEDN) for (const k of ks) (out[k] = out[k] || []).includes(a) || out[k].push(a);
+    const { results = [] } = await env.DB.prepare("SELECT a, k FROM al_alias ORDER BY at LIMIT 20000").all();
+    for (const r of results) (out[r.k] = out[r.k] || []).includes(r.a) || out[r.k].push(r.a);
+    const res = J(env, req, { map: out });
+    const h = new Headers(res.headers); h.set("cache-control", "public, max-age=120");
+    return new Response(res.body, { status: res.status, headers: h });
+  }
   if (p === "list") {
     const k = url.searchParams.get("k") || "";
     const { results = [] } = await env.DB.prepare("SELECT a FROM al_alias WHERE k = ? ORDER BY at LIMIT 20").bind(k).all();

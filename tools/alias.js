@@ -18,12 +18,21 @@
     }).catch(function(){})}
   document.addEventListener("input",function(e){if(e.target&&e.target.id==="q"){clearTimeout(T);T=setTimeout(run,450)}});
   addEventListener("load",function(){setTimeout(run,800)});
+  /* 卡片格子顯示暱稱（像呼卡）：有暱稱顯示 🏷️，沒有的顯示「＋取暱稱」（點卡片進詳情就能取） */
+  st.textContent+=".nick{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(255,138,43,.16);color:#FF8A2B;font-size:12px;font-weight:800;vertical-align:middle}.nick.add{background:transparent;border:1px dashed rgba(127,127,127,.45);color:inherit;opacity:.55;font-weight:600}";
+  window.NICKS={};
+  window.NICK=function(k){var L=NICKS[k];return L&&L.length?'<span class="nick" title="玩家暱稱">🏷️ '+es(L[0])+'</span>':'<span class="nick add" title="點卡片，在詳情裡幫它取暱稱">＋取暱稱</span>'};
+  fetch(A+"all").then(function(r){return r.json()}).then(function(j){var M=(j&&j.map)||{};NICKS=window.NICKS=M;
+    try{ROWS.forEach(function(o){var L=M["r:"+o.n];if(L)o.hay+=" "+L.join(" ").toLowerCase()})}catch(e){}
+    try{ITEMS.forEach(function(it){var L=M["i:"+it.n];if(L)it.kw=(it.kw||"")+" "+L.join(" ")})}catch(e){}
+    try{render(false)}catch(e){}
+  }).catch(function(){});
   /* 商品詳情：這張卡的暱稱＋補一個 */
   window.PCA=function(src){var el=$("calias");if(!el)return;var k="";try{k=window.INV&&INV.keyOf?INV.keyOf(src):""}catch(e){}if(!k)return;
     var draw=function(L,msg){el.innerHTML='<div class="al-box"><b>🏷️ 玩家暱稱</b>'+(L.length?'<div>'+L.map(function(a){return '<span class="tg">'+es(a)+'</span>'}).join("")+'</div>':'<span class="msg" style="margin-top:2px">還沒有暱稱。大家都叫它什麼？例如「睡覺伊布」</span>')
       +(tok()?'<form><input maxlength="12" placeholder="幫這張卡取暱稱" aria-label="暱稱"><button>新增</button></form>':'<span class="msg"><a href="https://line.me/R/oaMessage/@916ctmro/?'+encodeURIComponent("登入")+'" target="_blank" rel="noopener" style="color:#FF8A2B;font-weight:800">用 LINE 登入</a>後可以幫卡片加暱稱，大家就能用暱稱搜到。</span>')
       +(msg?'<span class="msg">'+es(msg)+'</span>':'')+'</div>';
       var f=el.querySelector("form");if(f)f.onsubmit=function(e){e.preventDefault();var a=f.querySelector("input").value.trim();if(!a)return;
-        fetch(A+"add",{method:"POST",headers:{"x-tok":tok(),"content-type":"application/json"},body:JSON.stringify({k:k,a:a})}).then(function(r){return r.json()}).then(function(j){if(j.ok){L.indexOf(j.a)<0&&L.push(j.a);draw(L,"已新增，搜尋「"+a+"」就找得到這張卡")}else draw(L,j.err||"新增失敗")}).catch(function(){draw(L,"連不上，稍後再試")})}};
+        fetch(A+"add",{method:"POST",headers:{"x-tok":tok(),"content-type":"application/json"},body:JSON.stringify({k:k,a:a})}).then(function(r){return r.json()}).then(function(j){if(j.ok){L.indexOf(j.a)<0&&L.push(j.a);(NICKS[k]=NICKS[k]||[]).indexOf(j.a)<0&&NICKS[k].push(j.a);draw(L,"已新增，搜尋「"+a+"」就找得到這張卡")}else draw(L,j.err||"新增失敗")}).catch(function(){draw(L,"連不上，稍後再試")})}};
     fetch(A+"list?k="+encodeURIComponent(k)).then(function(r){return r.json()}).then(function(j){draw((j&&j.items)||[])}).catch(function(){})};
 })();

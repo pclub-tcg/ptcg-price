@@ -348,6 +348,8 @@ rep('document.addEventListener("load",e=>{', 'document.querySelectorAll(".cur bu
 # 11. 我的庫存＋出售清單一鍵出圖（tools/inv.css、tools/inv.js）：商品詳情多一顆「加入我的庫存」，右下角開庫存
 _D = _os.path.dirname(_os.path.abspath(__file__))
 rep('</style>\n\n<header class="bar">', open(_os.path.join(_D, "inv.css"), encoding="utf-8").read() + '</style>\n\n<header class="bar">')
+rep('<div class="cmain"><div class="nm">${esc(o.base)}', '<div class="cmain"><div class="nm">${esc(o.base)}${window.NICK?NICK("r:"+o.n):""}')  # 卡片暱稱（tools/alias.js）
+rep('<div class="top"><h3>${esc(it.n)}</h3>', '<div class="top"><h3>${esc(it.n)}${window.NICK?NICK("i:"+it.n):""}</h3>')
 rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div><div id="cthread"></div><div id="calias"></div>\n   <div class="sh-links">${links.map')
 rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}window.PCT&&PCT(src);window.PCA&&PCA(src);')
 h += "\n<script>\n" + open(_os.path.join(_D, "sync.js"), encoding="utf-8").read() + "\n</script>\n"  # 雲端同步（要在 inv.js 之前）
