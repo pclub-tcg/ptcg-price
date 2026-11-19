@@ -1,0 +1,9 @@
+name: TCG Japan API 連線測試
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS -m 30 -o /tmp/r.json -w "HTTP %{http_code}\n" -H "accept: application/json" -H "origin: https://store.tcg-japan.com" "https://api.store.tcg-japan.com/api/v1/bff/storefront-card-list-page/search?langSlug=zh_hant&currencyCode=TWD&listType=all&limit=3&sort=StorefrontPriceAsc&ecBrandSlug=pokemon"
+          head -c 400 /tmp/r.json; echo
