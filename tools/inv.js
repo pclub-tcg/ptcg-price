@@ -85,13 +85,14 @@ function drawList(){
   else if(INVL.length)trend=`<p class="inv-note">庫存總值走勢：每天打開庫存會記一筆，明天起就看得到漲跌曲線。</p>`;
   B().innerHTML=trend+`<dl class="inv-sum"><div><dt>品項／張數</dt><dd>${INVL.length}／${nq}</dd></div><div><dt>持有成本</dt><dd>${N(tc)}</dd></div><div><dt>目前估值</dt><dd>${N(tv)}</dd></div>
     <div><dt>未實現損益</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pl>=0?"+":"−"}${N(Math.abs(pl))}</dd></div><div><dt>報酬率</dt><dd class="${pl>0?"up-t":pl<0?"down-t":""}">${pp!=null?(pp>=0?"+":"")+pp.toFixed(1)+"%":"—"}</dd></div><div><dt>有行情的品項</dt><dd>${INVL.filter(r=>live(r).nt!=null).length}／${INVL.length}</dd></div></dl>
-    <p class="inv-note">估值＝SNKRDUNK（沒有就用 Mercari）近期成交中位 × 張數，換算台幣；美版用 TCGplayer 市場價。資料只存在這台裝置的瀏覽器，換手機或清除瀏覽資料前請先「匯出備份」。</p>
+    <p class="inv-note">估值＝SNKRDUNK（沒有就用 Mercari）近期成交中位 × 張數，換算台幣；美版用 TCGplayer 市場價。</p><p class="inv-note" id="inv-sync"></p>
     <div class="inv-acts"><button type="button" class="inv-btn main" id="inv-go"${INVL.length?"":" disabled"}>我要賣：出售清單出圖</button><button type="button" class="inv-btn sub" id="inv-pic"${INVL.length?"":" disabled"}>庫存出圖</button><a class="inv-btn sub" href="dex.html?t=album" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">📚 卡冊收集進度</a></div><div class="inv-opt"><label class="inv-chk"><input type="checkbox" id="inv-showc"${LS.get("invShowCost",1)?" checked":""}><span>庫存圖顯示成本／損益</span></label><span class="inv-bk"><button type="button" id="inv-exp"${INVL.length?"":" disabled"}>匯出備份</button><button type="button" id="inv-imp">匯入備份</button></span><input type="file" id="inv-file" accept="application/json,.json" hidden></div><span class="inv-msg" id="inv-err" style="color:var(--bad)"></span>
     <div class="inv-list">${rows.join("")||`<div class="inv-empty">還沒有庫存。打開任何商品按「＋ 加入我的庫存」，或到「圖鑑・卡冊」點卡片加入，就會出現在這裡。</div>`}</div>`;
   B().querySelectorAll(".inv-edit input").forEach(inp=>inp.onchange=()=>{const r=INVL[+inp.closest(".inv-row").dataset.i];if(!r)return;
     if(inp.dataset.f==="qty")r.qty=Math.max(1,Math.round(+inp.value||1));else r.cost=Math.max(0,+inp.value||0);save();drawList()});
   B().querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(b.dataset.sure){INVL.splice(+b.dataset.del,1);save();drawList()}else{b.dataset.sure=1;b.textContent="再按一次確認刪除"}});
   $("inv-go").onclick=()=>{VIEW="sell";SEL={};drawSell()};$("inv-showc").onchange=e=>LS.set("invShowCost",e.target.checked?1:0);$("inv-pic").onclick=makeInv;
+  try{window.PCSync&&PCSync.render()}catch(e){}
   $("inv-exp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({v:1,inv:INVL},null,1)],{type:"application/json"}));a.download="pclub-庫存-"+today().replace(/\//g,"")+".json";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
   $("inv-imp").onclick=()=>$("inv-file").click();
   $("inv-file").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{const j=JSON.parse(t),a=Array.isArray(j)?j:j.inv;if(!Array.isArray(a))throw 0;
@@ -198,3 +199,5 @@ if(location.hash==="#inv")setTimeout(open,0);
   const q=P.get("q");if(q&&!P.get("p")){setTimeout(()=>{const i=document.getElementById("q"),f=document.getElementById("f");if(i&&f){i.value=q;f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}))}},600)}
 })();
 })();
+/* 雲端同步（sync.js）拉到較新的庫存時重新讀取 */
+window.INV.reload=function(){INVL=LS.get("inv",[]);if(!Array.isArray(INVL))INVL=[];try{if(!$("inv-bg").hidden&&VIEW!=="sell")drawList()}catch(e){}};

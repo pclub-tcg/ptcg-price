@@ -350,6 +350,7 @@ _D = _os.path.dirname(_os.path.abspath(__file__))
 rep('</style>\n\n<header class="bar">', open(_os.path.join(_D, "inv.css"), encoding="utf-8").read() + '</style>\n\n<header class="bar">')
 rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div><div id="cthread"></div>\n   <div class="sh-links">${links.map')
 rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}window.PCT&&PCT(src);')
+h += "\n<script>\n" + open(_os.path.join(_D, "sync.js"), encoding="utf-8").read() + "\n</script>\n"  # 雲端同步（要在 inv.js 之前）
 h += "\n<script>\n" + open(_os.path.join(_D, "inv.js"), encoding="utf-8").read() + "\n</script>\n"
 h += "\n<script>\n" + open(_os.path.join(_D, "cthread.js"), encoding="utf-8").read() + "</script>\n"  # 商品詳情的社群相關貼文
 h += '<script src="bell.js" defer></script>\n'  # 頁首 🔔 通知中心（tools/bell.js）

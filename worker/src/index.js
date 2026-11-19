@@ -12,6 +12,7 @@ import { auctionApi, settle, lineToken, lineAdmin, setCatalog } from "./auction.
 import { marketApi, marketCron, marketToken, who, cors, J, clip, linePush, marketEnsure } from "./market.js";
 import { communityApi } from "./community.js";
 import { notesApi } from "./notes.js";
+import { userApi } from "./userdata.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
 import { bbRecord, bbLookup, bbDate } from "./buyback.js";
@@ -43,6 +44,7 @@ export default {
     }
     if (url.pathname.startsWith("/api/c/")) return communityApi(req, env, url, { who, J, cors, clip, linePush, marketEnsure });
     if (url.pathname.startsWith("/api/n/")) return notesApi(req, env, url, who, J, cors);
+    if (url.pathname.startsWith("/api/u/")) return userApi(req, env, url, who, J, cors);
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
@@ -159,6 +161,8 @@ async function handle(ev, env) {
     if (/^(文字說明|說明文字)$/.test(q)) return reply(env, ev.replyToken, [text(HELP)]);
     if (/^(管理競標|競標管理)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [await lineAdmin(env, ev.source.userId)]);
     if (/^(市集教學|市集說明|市集怎麼用|怎麼賣卡|怎麼刊登|求卡教學)$/.test(q)) return reply(env, ev.replyToken, marketGuide(env).length ? marketGuide(env) : [text(HELP)]);
+    if (/^(登入|登錄|備份|雲端備份|同步|雲端同步)$/.test(q) && ev.source && ev.source.userId && env.DB)
+      return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId, "./", "P’CLUB 登入", "登入並同步", "庫存和卡冊會自動備份到雲端")), quickReply: { items: QUICK } }]);
     if (/^(社群|社團|曬卡|開箱|動態|通知|通知中心)$/.test(q) && ev.source && ev.source.userId && env.DB) { const nt0 = /^通知/.test(q);
       return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId, nt0 ? "notes.html" : "community.html", nt0 ? "P’CLUB 通知中心" : "P’CLUB 社群", nt0 ? "打開通知" : "打開社群", nt0 ? "看出價、成交、留言等通知" : "可以曬卡、開箱、分享抽卡戰績")), quickReply: { items: QUICK } }]); }
     if (/^(市集|刊登|賣卡|我要賣|買卡|交易|我的市集|刊登商品)$/.test(q) && ev.source && ev.source.userId && env.DB) return reply(env, ev.replyToken, [{ ...(await marketToken(env, ev.source.userId)), quickReply: { items: QUICK } }]);
