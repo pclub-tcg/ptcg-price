@@ -446,6 +446,16 @@ import theme as _theme
 h = _theme.apply(h)
 
 # 19. 載入畫面（tools/boot.py）：深色開場＋進度條，資料到齊後淡出；商品圖載入前顯示流光骨架
+
+# 20. 網站以圖搜尋：改用 LINE 機器人那套辨識＋比對結果（卡名優先、讀不準換模型再看一次），伺服器回傳的候選卡直接顯示
+if "const hits=matchRows(r||{});" in h:
+    h = h.replace("const hits=matchRows(r||{});", "const SH=(r&&Array.isArray(r.hits))?r.hits:null,hits=SH?[]:matchRows(r||{});", 1)
+    h = h.replace("const q=$(\"ir-q\");if(q)q.onclick=()=>{$(\"q\").value=r.number;setTab(\"tcg\")};",
+      "const q=$(\"ir-q\");if(q)q.onclick=()=>{$(\"q\").value=r.number;setTab(\"tcg\")};"
+      "if(SH&&SH.length){$(\"ir-list\").innerHTML=SH.map(x=>`<button type=\"button\" class=\"ir-hit\" data-k=\"${esc(x.k)}\">${x.img?`<img src=\"${esc(x.img)}\" alt=\"\" style=\"width:34px;height:48px;object-fit:cover;border-radius:4px;flex:none\">`:\"\"}<span class=\"ir-t\"><b>${esc(x.n)}</b><small>${esc(x.meta||\"\")}</small></span><span class=\"ir-p\">${x.ref?\"NT$\"+Math.round(x.ref).toLocaleString(\"en-US\"):\"—\"}</span></button>`).join(\"\");"
+      "$(\"ir-list\").querySelectorAll(\"[data-k]\").forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(/^[rijx]:/.test(k))openKey(k);else{$(\"q\").value=b.querySelector(\"b\").textContent;setTab(\"tcg\")}})}", 1)
+    h = h.replace("const label=[r.name_zh||r.name_ja,r.number", "const label=[r.name_zh||r.name_ja||r.name_en,r.number", 1)
+    print("web image search → server matches")
 import boot as _boot
 h = _boot.apply(h)
 

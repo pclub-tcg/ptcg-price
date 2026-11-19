@@ -218,20 +218,9 @@ async function handle(ev, env) {
     if (!img.ok) return reply(env, ev.replyToken, [text("讀不到這張照片，請再傳一次。")]);
     const buf = new Uint8Array(await img.arrayBuffer());
     if (buf.length > 4.5 * 1024 * 1024) return reply(env, ev.replyToken, [text("照片太大了，請傳 4MB 以下的照片。")]);
-    let r;
-    try { r = await identify(buf, img.headers.get("content-type") || "image/jpeg", env); }
+    let r, hits;
+    try { ({ r, hits } = await recognize(buf, img.headers.get("content-type") || "image/jpeg", env, D)); }
     catch (e) { console.error(e); return reply(env, ev.replyToken, [text("辨識失敗，請再試一次，或改用文字查詢。")]); }
-    let hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
-    // 找不到、或卡號沒有完全對上：換另一個模型再看一次，取比對得到的那個（只在失敗時多呼叫一次，維持免費額度）
-    if ((!hits.length || !hits.some(x => fixNum(x.num) === fixNum(r.number))) && !env.ANTHROPIC_API_KEY && r._model) {
-      try {
-        const r2 = await identify(buf, img.headers.get("content-type") || "image/jpeg", env, [r._model]);
-        const h2 = matchImage(r2, D.db ? { ...D, products: await dbImage(r2, env) } : D);
-        const exact2 = h2.some(x => fixNum(x.num) === fixNum(r2.number));
-        if (h2.length && (!hits.length || exact2)) { r = { ...r2, name_ja: r2.name_ja || r.name_ja, name_en: r2.name_en || r.name_en, name_zh: r2.name_zh || r.name_zh }; hits = h2; }
-        else if (!hits.length) { const r3 = { ...r, name_ja: r.name_ja || r2.name_ja, name_en: r.name_en || r2.name_en, name_zh: r.name_zh || r2.name_zh }; const h3 = matchImage(r3, D.db ? { ...D, products: await dbImage(r3, env) } : D); if (h3.length) { r = r3; hits = h3; } }
-      } catch (e) { console.error("second look", e && e.message); }
-    }
     const label = [r.name_zh || r.name_ja || r.name_en, r.number, r.set, r.rarity, r.grade, r.box ? "原盒" : ""].filter(Boolean).join("・") || "看不出是哪張卡";
     const head = text(`辨識結果：${label}${r.confidence && r.confidence !== "high" ? "（把握度" + (r.confidence === "medium" ? "中" : "低") + "）" : ""}${r.note ? "\n" + r.note : ""}${r.lang && r.lang !== "ja" ? "\n這張看起來不是日版，下面是同卡號的日版行情。" : ""}`);
     if (!hits.length) return reply(env, ev.replyToken, [head, text(r.number ? `目錄裡沒有這張卡。可以試著傳「${r.number}」搜尋看看。` : "目錄裡找不到相符的商品，請拍清楚卡號再試一次。")]);
@@ -574,6 +563,23 @@ async function identify(buf, mediaType, env, skip = []) {
   return m ? JSON.parse(m[0]) : {};
 }
 
+// 照片辨識＋比對（LINE 傳照片和網站以圖搜尋共用）：讀不準時換另一個模型再看一次
+async function recognize(buf, type, env, D) {
+  let r = await identify(buf, type, env);
+  let hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
+  // 找不到、或卡號沒有完全對上：換另一個模型再看一次，取比對得到的那個（只在失敗時多呼叫一次，維持免費額度）
+  if ((!hits.length || !hits.some(x => fixNum(x.num) === fixNum(r.number))) && !env.ANTHROPIC_API_KEY && r._model) {
+    try {
+      const r2 = await identify(buf, type, env, [r._model]);
+      const h2 = matchImage(r2, D.db ? { ...D, products: await dbImage(r2, env) } : D);
+      const exact2 = h2.some(x => fixNum(x.num) === fixNum(r2.number));
+      if (h2.length && (!hits.length || exact2)) { r = { ...r2, name_ja: r2.name_ja || r.name_ja, name_en: r2.name_en || r.name_en, name_zh: r2.name_zh || r.name_zh }; hits = h2; }
+      else if (!hits.length) { const r3 = { ...r, name_ja: r.name_ja || r2.name_ja, name_en: r.name_en || r2.name_en, name_zh: r.name_zh || r2.name_zh }; const h3 = matchImage(r3, D.db ? { ...D, products: await dbImage(r3, env) } : D); if (h3.length) { r = r3; hits = h3; } }
+    } catch (e) { console.error("second look", e && e.message); }
+  }
+  return { r, hits };
+}
+
 // ---------- 網站以圖搜尋：POST /identify（照片原始位元組） ----------
 async function identifyRoute(req, env) {
   const site = env.SITE_URL ? new URL(env.SITE_URL).origin : "";
@@ -595,7 +601,7 @@ async function identifyRoute(req, env) {
   const used = +((await (await cache.match(key))?.text()) || 0), max = +(env.IMAGE_LIMIT_PER_IP || 30);
   if (used >= max) return out({ code: "daily_limit" }, 429);
   await cache.put(key, new Response(String(used + 1), { headers: { "cache-control": "max-age=90000" } }));
-  try { return out(await identify(buf, type, env)); }
+  try { const D = await base(env), { r, hits } = await recognize(buf, type, env, D); return out({ ...r, hits: hits.filter(p => !p.us).slice(0, 6).map(p => catItem(p, D, env)) }); }
   catch (e) { console.error(e); return out({ code: "failed" }, 502); }
 }
 
