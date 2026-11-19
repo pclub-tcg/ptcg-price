@@ -1,0 +1,16 @@
+name: mtw probe
+on: workflow_dispatch
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          U='https://tw.mercari.com/zh-hant/search?keyword=%E3%83%94%E3%82%AB%E3%83%81%E3%83%A5%E3%82%A6+SAR&status=sold-out&availability=2'
+          curl -s -o p.html -w '%{http_code} %{size_download}\n' -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36' -H 'Accept-Language: zh-TW' "$U"
+          grep -o '已售完' p.html | wc -l
+          python3 -c "
+          import re
+          s=open('p.html',encoding='utf-8',errors='ignore').read()
+          for k in ['price','Jpy','jpy','itemId','sold']:
+              i=s.find(k); print(k, i, s[max(0,i-100):i+200].replace('\n',' ') if i>=0 else '')
+          "
