@@ -26,4 +26,7 @@ if [ "$GOT" = 1 ]; then
 else
   echo "網站上還沒有 data/d1.sql（下次 publish 後就會有），先只部署"
 fi
+# 記下電腦每日更新最後一次推 tpl 的時間（LINE 機器人超過 36 小時沒更新會提醒管理員）
+TPLT="$(curl -fsS https://api.github.com/repos/pclub-tcg/ptcg-price/commits/tpl 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(Date.parse(JSON.parse(s).commit.committer.date)||"")}catch(e){console.log("")}})' || true)"
+if [ -n "$TPLT" ]; then $W d1 execute ptcg-bot --remote --command "CREATE TABLE IF NOT EXISTS meta(k TEXT, v TEXT); DELETE FROM meta WHERE k='tpl_at'; INSERT INTO meta VALUES('tpl_at','$TPLT')" >/dev/null || true; echo "tpl 最後更新 $TPLT"; fi
 $W deploy

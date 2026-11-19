@@ -70,8 +70,22 @@ export default {
     ctx.waitUntil(marketCron(env).catch(e => console.error("market cron", e && e.stack || e)));
     ctx.waitUntil((async () => { const D = await base(env); if (D.db) await alertCron(env, D, rowsTo, p => ({ type: "flex", altText: p.n.slice(0, 300), contents: bubble({ ...p, _rel: null }, D, env) })); })().catch(e => console.error("alert cron", e && e.stack || e)));
     ctx.waitUntil(autoRichMenu(env).catch(e => console.error("richmenu", e && e.stack || e)));
+    ctx.waitUntil(staleCheck(env).catch(e => console.error("stale", e && e.stack || e)));
   },
 };
+
+// 電腦上的每日更新（Mercari、台灣社團、TCG Japan）超過 36 小時沒跑：每天提醒管理員一次（台北 10:00 以後）
+async function staleCheck(env) {
+  if (!env.DB) return;
+  const now = Date.now(), tw = new Date(now + 8 * 3600e3), day = tw.toISOString().slice(0, 10);
+  if (tw.getUTCHours() < 10) return;
+  const m = Object.fromEntries(((await env.DB.prepare("SELECT k, v FROM meta WHERE k IN ('tpl_at', 'stale_alert', 'auction_admin')").all()).results || []).map(r => [r.k, r.v]));
+  const at = +m.tpl_at || 0;
+  if (!at || !m.auction_admin || now - at < 36 * 3600e3 || m.stale_alert === day) return;
+  await env.DB.batch([env.DB.prepare("DELETE FROM meta WHERE k = 'stale_alert'"), env.DB.prepare("INSERT INTO meta VALUES ('stale_alert', ?)").bind(day)]);
+  const d = new Date(at + 8 * 3600e3), days = Math.floor((now - at) / 864e5);
+  await linePush(env, m.auction_admin, [{ type: "text", text: `⚠️ 電腦每日更新已經 ${days} 天沒跑了（最後一次 ${d.getUTCMonth() + 1}/${d.getUTCDate()}）\nMercari、台灣社團價格和 TCG Japan 目錄都停在那天，鞋店成交價不受影響。\n\n請打開那台電腦和 Claude 桌面 App。如果排程顯示「已暫停」，到 Claude App 的排程任務把「P’CLUB 每日更新」重新開啟。` }]);
+}
 
 async function safeEq(a, b) { // 固定時間比較，避免從回應時間猜密碼
   const e = new TextEncoder(), x = new Uint8Array(await crypto.subtle.digest("SHA-256", e.encode(a))), y = new Uint8Array(await crypto.subtle.digest("SHA-256", e.encode(b)));
