@@ -17,6 +17,7 @@ import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
 import { bbRecord, bbLookup, bbDate } from "./buyback.js";
 import SETS_TW from "./setnames_tw.json"; // 日文系列名 → 台灣中文名（tools/setnames_tw.json 的副本）
+import POKE_JA from "./pokenames_ja.json";
 const SET_KEYS = Object.keys(SETS_TW).sort((a, b) => b.length - a.length);
 const jaSet = q => { let o = String(q || ""); for (const k of SET_KEYS) if (o.includes(k)) o = o.split(k).join(SETS_TW[k]); return o; }; // 「メガブレイブ BOX」→「超級勇氣 BOX」
 
@@ -505,11 +506,14 @@ function matchImage(r, D) {
     if (rar && String(p.rar || "").toUpperCase() === rar) s += 1;
     if (wantPsa === !!p.p) s += 2;
     if (p.s || p.m) s += 0.5; // 同分時優先有成交價的
-    return [p, s];
+    return [p, s, named];
   });
   const exact = num ? sc.filter(x => !x[0].b && fixNum(x[0].num) === num && x[1] >= 6) : [];
   // 卡號完全相同、卡名也對的最優先；否則看分數（卡名對、同系列、等級對都會加分）
-  return (exact.length ? exact : sc.filter(x => x[1] >= 5)).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
+  let pick = exact.length ? exact : sc.filter(x => x[1] >= 5);
+  // 卡號讀不到／讀錯、目錄又沒有日文名時，卡名對上的分數會不夠：至少把卡名對上的列成候選（有成交價、熱門的排前面）
+  if (!pick.length) pick = sc.filter(x => x[2] && x[1] >= 3).sort((a, b) => b[1] - a[1] || (b[0].kn || 0) - (a[0].kn || 0));
+  return pick.sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
 }
 
 // ---------- Claude 看圖 ----------
@@ -564,13 +568,21 @@ async function identify(buf, mediaType, env, skip = []) {
 }
 
 // 照片辨識＋比對（LINE 傳照片和網站以圖搜尋共用）：讀不準時換另一個模型再看一次
+// 模型只給日文名（イーブイ）時補上中文名（伊布）：目錄是中文卡名，日文名常對不到
+const POKE_KEYS = Object.keys(POKE_JA).sort((a, b) => b.length - a.length);
+function addZh(r) {
+  if (!r || r.box || String(r.name_zh || "").trim()) return r;
+  const ja = String(r.name_ja || "").normalize("NFKC").replace(/\s/g, "");
+  const k = ja && POKE_KEYS.find(x => ja.includes(x));
+  return k ? { ...r, name_zh: POKE_JA[k] } : r;
+}
 async function recognize(buf, type, env, D) {
-  let r = await identify(buf, type, env);
+  let r = addZh(await identify(buf, type, env));
   let hits = matchImage(r, D.db ? { ...D, products: await dbImage(r, env) } : D);
   // 找不到、或卡號沒有完全對上：換另一個模型再看一次，取比對得到的那個（只在失敗時多呼叫一次，維持免費額度）
   if ((!hits.length || !hits.some(x => fixNum(x.num) === fixNum(r.number))) && !env.ANTHROPIC_API_KEY && r._model) {
     try {
-      const r2 = await identify(buf, type, env, [r._model]);
+      const r2 = addZh(await identify(buf, type, env, [r._model]));
       const h2 = matchImage(r2, D.db ? { ...D, products: await dbImage(r2, env) } : D);
       const exact2 = h2.some(x => fixNum(x.num) === fixNum(r2.number));
       if (h2.length && (!hits.length || exact2)) { r = { ...r2, name_ja: r2.name_ja || r.name_ja, name_en: r2.name_en || r.name_en, name_zh: r2.name_zh || r.name_zh }; hits = h2; }
