@@ -13,6 +13,7 @@ import { marketApi, marketCron, marketToken, who, cors, J, clip, linePush, marke
 import { communityApi } from "./community.js";
 import { notesApi } from "./notes.js";
 import { userApi } from "./userdata.js";
+import { aliasApi, aliasProducts } from "./alias.js";
 import { alertText, alertPostback, alertCron, alertQuick } from "./alerts.js";
 import { announceText, announcePostback } from "./announce.js";
 import { bbRecord, bbLookup, bbDate } from "./buyback.js";
@@ -46,6 +47,7 @@ export default {
     if (url.pathname.startsWith("/api/c/")) return communityApi(req, env, url, { who, J, cors, clip, linePush, marketEnsure });
     if (url.pathname.startsWith("/api/n/")) return notesApi(req, env, url, who, J, cors);
     if (url.pathname.startsWith("/api/u/")) return userApi(req, env, url, who, J, cors);
+    if (url.pathname.startsWith("/api/al/")) return aliasApi(req, env, url, { who, J, cors, rowsTo, catItem, base, admin: async (env, uid) => { const r = await env.DB.prepare("SELECT v FROM meta WHERE k = 'auction_admin'").first().catch(() => null); return !!(r && r.v === uid); } });
     if (url.pathname === "/debug/flex") { // 暫時：檢查查價卡片格式是否被 LINE 接受（只驗證，不會傳訊息）
       const q = (url.searchParams.get("q") || "").slice(0, 40), D = await base(env);
       const hits = D.db ? await dbSearch(q, wantUS(q) ? 2 : 0, env, D) : search(q, D);
@@ -290,6 +292,12 @@ const rowsTo = res => { const list = (res.results || []).map(r => JSON.parse(r.j
 const esc = t => t.replace(/[\\%_]/g, m => "\\" + m);
 const USW = us => us === 1 ? " AND us = 1" : us === 0 ? " AND us = 0" : "";
 async function dbSearch(q, us, env, D) {
+  // 暱稱（睡覺伊布、梵谷皮卡丘…）對到的卡排最前面
+  const al = us === 1 ? [] : await aliasProducts(q, env, rowsTo).catch(() => []);
+  if (al.length) { const rest = await dbSearch0(q, us, env, D).catch(() => []), seen = new Set(al.map(p => p.k)); return [...al, ...rest.filter(p => !seen.has(p.k))]; }
+  return dbSearch0(q, us, env, D);
+}
+async function dbSearch0(q, us, env, D) {
   q = jaSet(q);
   const toks = norm(q).split(/[\s　,，]+/).filter(Boolean);
   if (!toks.length) return [];

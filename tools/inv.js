@@ -38,7 +38,7 @@ function lastOf(kk){if(!kk||!KDATA||!KDATA.d||typeof decodeK!="function")return 
 const imgTag=(r,w)=>r.img?`<img src="${esc(r.img)}" alt="" loading="lazy">`:r.spr!=null?sprBox(r.spr,w):`<span>${esc((r.n||"").slice(0,6))}</span>`;
 
 /* 商品詳情的「加入我的庫存」 */
-window.INV={addFrom(src,btn){
+window.INV={keyOf(src){return info(src).k},addFrom(src,btn){
   const i=info(src),box=btn.parentNode;let f=box.querySelector(".inv-form");if(f){f.remove();return}
   f=document.createElement("div");f.className="inv-form";
   f.innerHTML=`<label>買入單價（NT$）<input type="number" inputmode="numeric" min="0" step="10" value="${i.nt!=null?r10(i.nt):""}" class="c"></label><label>張數<input type="number" inputmode="numeric" min="1" step="1" value="1" class="q" style="width:80px"></label><button type="button" class="ok">加入</button><span class="inv-msg" aria-live="polite"></span>`;

@@ -198,7 +198,7 @@ rep('<div class="cprice">${gp}', '<div class="cprice">${c&&c.m?`<span class="pbi
 # 「看 K 線」連結處理改成函式，首頁趨勢卡片也能用
 rep('(()=>{try{const q=new URLSearchParams(location.search).get("p");if(!q)return;', 'function openKey(q){try{if(!q)return;')
 rep('if(o)openDetail({o})})}}catch(e){}})();', r"""if(o)openDetail({o})})}}catch(e){}}
-openKey(new URLSearchParams(location.search).get("p"));
+window.openKey=openKey;openKey(new URLSearchParams(location.search).get("p"));
 /* 首頁漲跌 TOP（trend.json 由 publish 每天產生） */
 if(/github\.io$/.test(location.hostname))fetch("trend.json").then(r=>r.ok?r.json():null).then(window.TREND=j=>{window.TJ=j;if(!j||!(j.up||[]).length)return;
   const tc=(x,i)=>`<div class="tcard" data-k="${esc(x.k)}" tabindex="0" role="button" aria-label="${esc(x.n)} 詳情與 K 線"><span class="rk">${i+1}</span><div class="ti"><img src="${esc(x.img)}" alt="${esc(x.n)}" loading="lazy"></div><div class="tb"><div class="tn">${esc(x.n)}</div><div class="ts">${esc([x.set,x.num,x.b?"原盒":x.rar].filter(Boolean).join("・"))}</div><div class="tp"><b>¥${fmt(x.y)}</b><span class="${x.c>0?"up-t":"down-t"}">${x.c>0?"+":""}${x.c}%</span></div><div class="tnt">≈ NT$${fmt(Math.round(x.y*(j.rate||0.2)))}</div></div></div>`;
@@ -348,11 +348,12 @@ rep('document.addEventListener("load",e=>{', 'document.querySelectorAll(".cur bu
 # 11. 我的庫存＋出售清單一鍵出圖（tools/inv.css、tools/inv.js）：商品詳情多一顆「加入我的庫存」，右下角開庫存
 _D = _os.path.dirname(_os.path.abspath(__file__))
 rep('</style>\n\n<header class="bar">', open(_os.path.join(_D, "inv.css"), encoding="utf-8").read() + '</style>\n\n<header class="bar">')
-rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div><div id="cthread"></div>\n   <div class="sh-links">${links.map')
-rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}window.PCT&&PCT(src);')
+rep('<div class="sh-links">${links.map', '<div><button type="button" class="inv-add" id="inv-add">＋ 加入我的庫存</button></div><div id="cthread"></div><div id="calias"></div>\n   <div class="sh-links">${links.map')
+rep('$("sh-close").onclick=closeDetail;', '$("sh-close").onclick=closeDetail;{const ib=$("inv-add");if(ib)ib.onclick=()=>window.INV&&INV.addFrom(src,ib)}window.PCT&&PCT(src);window.PCA&&PCA(src);')
 h += "\n<script>\n" + open(_os.path.join(_D, "sync.js"), encoding="utf-8").read() + "\n</script>\n"  # 雲端同步（要在 inv.js 之前）
 h += "\n<script>\n" + open(_os.path.join(_D, "inv.js"), encoding="utf-8").read() + "\n</script>\n"
 h += "\n<script>\n" + open(_os.path.join(_D, "cthread.js"), encoding="utf-8").read() + "</script>\n"  # 商品詳情的社群相關貼文
+h += "\n<script>\n" + open(_os.path.join(_D, "alias.js"), encoding="utf-8").read() + "</script>\n"  # 卡片暱稱（睡覺伊布…）
 h += '<script src="bell.js" defer></script>\n'  # 頁首 🔔 通知中心（tools/bell.js）
 # 11b. 網址帶 ?q=關鍵字 時直接搜尋（圖鑑頁「查行情・K 線」連過來用）
 h += """<script>(function(){var q=new URLSearchParams(location.search).get("q");if(!q)return;var go=function(n){var i=document.getElementById("q");if(!i){if(n<40)setTimeout(function(){go(n+1)},150);return}i.value=q;i.dispatchEvent(new Event("input",{bubbles:true}));var f=document.getElementById("f");if(f)f.dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));try{i.scrollIntoView({block:"center"})}catch(e){}};addEventListener("load",function(){setTimeout(function(){go(0)},300)})})();</script>
