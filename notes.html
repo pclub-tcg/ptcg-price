@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>P’CLUB 通知中心</title>
+<meta name="description" content="P’CLUB 通知中心：市集出價成交、競標、到價提醒、社群留言按讚，一次看。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&family=Barlow+Condensed:wght@800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff6ea;--surface:#fff;--surface-2:#fff3e6;--line:#f3dcc0;--ink:#2a1c17;--muted:#7a6656;--navy:#2a1c17;--navy-fg:#ffe0b8;--brand:#ff8a2b;--brand-ink:#2a1c17;--good:#1f8a5b;--bad:#c2333a;--hot:#e5482b;--teal:#0f7c74;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;--f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;--logo:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-text-size-adjust:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.bar{background:var(--navy);color:var(--navy-fg);position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;font-size:18px;color:var(--brand)}
+.logo b{font-family:var(--logo);letter-spacing:.02em}.logo svg{width:24px;height:24px}
+.nav{display:flex;align-items:center;gap:6px;font-size:13px}
+.nav a.lk{color:var(--navy-fg);text-decoration:none;padding:6px 8px;border-radius:8px;font-weight:700}.nav a.lk:hover{background:rgba(255,255,255,.08)}
+.who{display:flex;align-items:center;gap:8px}.who .nm{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff3e4;font-weight:700}
+@media (max-width:520px){.nav a.lk{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;min-height:42px;text-decoration:none;white-space:nowrap;background:var(--surface-2);color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dark{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px;border-radius:999px}
+.btn.ghost{background:transparent;border-color:rgba(255,224,184,.35);color:var(--navy-fg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hero{background:radial-gradient(700px 280px at 0% 120%,rgba(15,124,116,.45),transparent 70%),radial-gradient(700px 300px at 100% -40%,rgba(255,138,43,.35),transparent 70%),var(--navy);color:var(--navy-fg);padding:22px 0 0}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,40px);font-weight:900;color:#fff3e4;letter-spacing:.04em}
+.hero p{margin:6px 0 0;font-size:14px;color:#d9bfa6;max-width:520px;line-height:1.6}main{padding:16px 16px 80px;max-width:720px}
+.nt{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;text-decoration:none;color:inherit}
+.nt.un{border-color:var(--brand);background:#fff8f0}
+.nt .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--surface-2);flex:none}
+.nt b{display:block;font-size:15px;line-height:1.4}.nt p{margin:2px 0 0;font-size:13px;color:var(--muted);line-height:1.5;white-space:pre-line;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.nt small{font-size:12px;color:var(--muted)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:14px;line-height:1.8;background:var(--surface);border:1px dashed var(--line);border-radius:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 16px;font-weight:900;font-size:14px;cursor:pointer;text-decoration:none;min-height:42px}
+.btn.main{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px}
+.chips button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px;cursor:pointer;min-height:36px}
+.chips button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:var(--brand)}
+[hidden]{display:none!important}
+</style>
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="logo" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="3" width="18" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="2.4" transform="rotate(-8 16 16)"/><path d="M16.4 5.2c.9 3.9 5.6 5.9 5.6 11.4a6 6 0 0 1-12 0c0-2.6 1.3-4.3 2.8-5.4-.1 2.1.7 3.5 2.1 3.9-.5-3.7.2-6.9 1.5-9.9z" fill="currentColor"/></svg><b>P’CLUB</b></a>
+  <nav class="nav"><a class="lk" href="./">查行情</a><a class="lk" href="community.html">社群</a><a class="lk" href="market.html">市集</a></nav>
+</div></header>
+<section class="hero"><div class="wrap"><div><h1>通知中心</h1><p>市集出價成交、競標、到價提醒、社群留言按讚，都在這裡。LINE 也會同時通知你。</p><div style="height:20px"></div></div></div></section>
+<main class="wrap">
+  <div class="chips" id="fl" role="group" aria-label="篩選"></div>
+  <div id="ls"><p class="empty">載入中…</p></div>
+  <p style="text-align:center"><button type="button" class="btn" id="more" hidden>載入更多</button></p>
+</main>
+<script>
+const API="https://ptcg-line-bot.spickertop.workers.dev/api/";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+(function(){const m=location.hash.match(/t=([A-Za-z0-9_-]{20,64})/);if(m){try{localStorage.setItem("atok",m[1])}catch(e){}history.replaceState(null,"",location.pathname)}})();
+let TOK="";try{TOK=localStorage.getItem("atok")||""}catch(e){}
+const IC={market:"🛒",auction:"🔨",alert:"🔔",c_like:"❤️",c_report:"🚩",c_comment:"💬"},KL=[["","全部"],["market","市集"],["auction","競標"],["alert","到價"],["c","社群"]];
+let ALL=[],F="",LAST=1e15;
+const ago=t=>{const s=(Date.now()-t)/1000;return s<3600?Math.max(1,Math.floor(s/60))+" 分鐘前":s<86400?Math.floor(s/3600)+" 小時前":s<86400*7?Math.floor(s/86400)+" 天前":new Date(t).toLocaleDateString("zh-TW")};
+const safe=u=>{if(!u)return"";try{const x=new URL(u,location.href);return /^https?:$/.test(x.protocol)&&(x.origin===location.origin||/(^|\.)pclub-tcg\.github\.io$/.test(x.hostname))?x.href:""}catch(e){return""}};
+function draw(){
+  $("fl").innerHTML=KL.map(([k,t])=>`<button type="button" data-k="${k}" aria-pressed="${F===k}">${t}</button>`).join("");
+  $("fl").querySelectorAll("button").forEach(b=>b.onclick=()=>{F=b.dataset.k;draw()});
+  const L=ALL.filter(n=>!F||(F==="c"?/^c_/.test(n.kind):n.kind===F));
+  $("ls").innerHTML=L.length?L.map(n=>{const u=safe(n.url),tag=u?"a":"div";return `<${tag} class="nt${n.rd?"":" un"}"${u?` href="${esc(u)}"`:""}><span class="ic">${IC[n.kind]||"📣"}</span><span style="min-width:0;flex:1"><b>${esc(n.title)}</b>${n.body?`<p>${esc(n.body)}</p>`:""}<small>${ago(n.at)}</small></span></${tag}>`}).join(""):`<p class="empty">${ALL.length?"這個分類沒有通知":"還沒有通知。<br>市集有人出價、競標結果、到價提醒、社群有人留言按讚時，會出現在這裡。"}</p>`;
+}
+async function load(){
+  if(!TOK){$("ls").innerHTML=`<p class="empty">要先登入才看得到你的通知。<br>在 LINE 傳「通知」給 P’CLUB，點機器人回的按鈕就會自動登入。<br><br><a class="btn main" href="https://line.me/R/ti/p/@916ctmro">打開 P’CLUB LINE</a></p>`;$("fl").innerHTML="";return}
+  try{const r=await fetch(API+"n/list?before="+LAST,{headers:{"x-tok":TOK}}),j=await r.json();
+    if(r.status===401){try{localStorage.removeItem("atok")}catch(e){}TOK="";return load()}
+    ALL=ALL.concat(j.items||[]);if(j.items&&j.items.length){LAST=j.items[j.items.length-1].id}$("more").hidden=!(j.items&&j.items.length===40);draw();
+    if(ALL.some(n=>!n.rd))fetch(API+"n/read",{method:"POST",headers:{"x-tok":TOK}}).catch(()=>{});
+  }catch(e){$("ls").innerHTML=`<p class="empty">載入失敗，請重新整理。</p>`}
+}
+$("more").onclick=load;load();
+</script>
+<script src="bell.js" defer></script>
+</body>
+</html>
