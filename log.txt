@@ -1,0 +1,6 @@
+search fail ST11 17 HTTP Error 404: Not Found
+search fail ST20 35 HTTP Error 404: Not Found
+search fail ST28 4 HTTP Error 404: Not Found
+search fail PRB03 2 HTTP Error 404: Not Found
+candidate ids 4405 old cards 1563 skip 4834
+cards 1567 ja 1490 en 77 with A 1413 with PSA10 1315 {'http 404': 4, 'kept': 2963, 'not op card': 199, 'updated ja': 1490, 'common skipped': 24, 'no sales': 23, 'updated en': 77}
